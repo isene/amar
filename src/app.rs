@@ -75,8 +75,60 @@ pub struct App {
     /// Lore tab navigation state.
     pub lore_idx: usize,
     pub lore_expanded: Vec<String>,
-    /// Campaign / PCs cursor in the PC list.
-    pub pcs_idx: usize,
+    /// Campaign tab navigation state. `camp_idx` is the cursor in the
+    /// flattened tree (Sections + items: PCs, Adventures, …).
+    /// `camp_expanded` holds the expanded-sections set.
+    pub camp_idx: usize,
+    pub camp_expanded: Vec<String>,
+}
+
+/// Sections in the Campaign tree, in display order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CampSection {
+    Pcs,
+    Adventures,
+    Npcs,
+    Locations,
+    Calendar,
+    Factions,
+}
+
+impl CampSection {
+    fn id(self) -> &'static str {
+        match self {
+            CampSection::Pcs        => "PCs",
+            CampSection::Adventures => "Adventures",
+            CampSection::Npcs       => "NPCs",
+            CampSection::Locations  => "Locations",
+            CampSection::Calendar   => "Calendar",
+            CampSection::Factions   => "Factions",
+        }
+    }
+    fn all() -> [CampSection; 6] {
+        [CampSection::Pcs, CampSection::Adventures, CampSection::Npcs,
+         CampSection::Locations, CampSection::Calendar, CampSection::Factions]
+    }
+}
+
+/// One row in the Campaign tree. Either a section header (expandable)
+/// or a leaf belonging to a section.
+#[derive(Debug, Clone)]
+enum CampNode {
+    Section(CampSection),
+    Pc(usize),
+    Adventure(usize),
+    Npc(usize),
+    Location(usize),
+    /// Placeholder shown under an expanded section that has no items.
+    Placeholder { section: CampSection, msg: String },
+}
+
+#[derive(Debug, Clone)]
+struct CampTreeItem {
+    node: CampNode,
+    depth: u8,
+    expandable: bool,
+    expanded: bool,
 }
 
 impl App {
@@ -129,7 +181,8 @@ impl App {
             footer, status: None,
             lore_idx: 0,
             lore_expanded: Vec::new(),
-            pcs_idx: 0,
+            camp_idx: 0,
+            camp_expanded: vec!["PCs".to_string()],  // PCs auto-expanded on first run
         }
     }
 
@@ -217,32 +270,74 @@ impl App {
             _ => {}
         }
         match self.focus {
-            Focus::Left  => self.handle_pcs_list_key(key),
-            Focus::Right => self.handle_pc_sheet_key(key),
+            Focus::Left  => self.handle_camp_tree_key(key),
+            Focus::Right => self.handle_camp_content_key(key),
         }
     }
 
-    fn handle_pcs_list_key(&mut self, key: &str) {
-        let Some(camp) = self.campaign.as_ref() else { return; };
-        let n = camp.pcs.len();
+    fn handle_camp_tree_key(&mut self, key: &str) {
+        // Universal "add a PC" / "add an adventure" — work even when
+        // the cursor is on a section header or on the wrong section.
+        match key {
+            "n" => { self.pc_new(); return; }
+            "D" => { self.try_delete_under_cursor(); return; }
+            _ => {}
+        }
+        let Some(camp) = self.campaign.as_ref() else {
+            // No campaign yet → only a few keys make sense.
+            if key == "C" { /* handled at top of run() */ }
+            return;
+        };
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        let n = tree.len();
         match key {
             "j" | "DOWN" => {
-                if self.pcs_idx + 1 < n { self.pcs_idx += 1; self.right_pane.ix = 0; }
+                if self.camp_idx + 1 < n { self.camp_idx += 1; self.right_pane.ix = 0; }
             }
             "k" | "UP" => {
-                if self.pcs_idx > 0 { self.pcs_idx -= 1; self.right_pane.ix = 0; }
+                if self.camp_idx > 0 { self.camp_idx -= 1; self.right_pane.ix = 0; }
             }
-            "g" | "HOME" => { self.pcs_idx = 0; self.right_pane.ix = 0; }
-            "G" | "END"  => {
-                self.pcs_idx = n.saturating_sub(1); self.right_pane.ix = 0;
+            "g" => { self.camp_idx = 0; self.right_pane.ix = 0; }
+            "G" => { self.camp_idx = n.saturating_sub(1); self.right_pane.ix = 0; }
+            "ENTER" | "l" | "RIGHT" => {
+                if let Some(item) = tree.get(self.camp_idx) {
+                    if let CampNode::Section(sec) = &item.node {
+                        let id = sec.id().to_string();
+                        if !self.camp_expanded.iter().any(|e| e == &id) {
+                            self.camp_expanded.push(id);
+                        }
+                    }
+                }
             }
-            "n" => self.pc_new(),
-            "D" => self.pc_delete(),
+            "h" | "LEFT" => {
+                if let Some(item) = tree.get(self.camp_idx) {
+                    let parent_section = match &item.node {
+                        CampNode::Section(sec) => Some(*sec),
+                        CampNode::Pc(_)        => Some(CampSection::Pcs),
+                        CampNode::Adventure(_) => Some(CampSection::Adventures),
+                        CampNode::Npc(_)       => Some(CampSection::Npcs),
+                        CampNode::Location(_)  => Some(CampSection::Locations),
+                        CampNode::Placeholder { section, .. } => Some(*section),
+                    };
+                    if let Some(sec) = parent_section {
+                        let id = sec.id().to_string();
+                        // Collapse + jump cursor to the section header.
+                        self.camp_expanded.retain(|e| e != &id);
+                        if let Some(pos) = build_camp_tree(camp, &self.camp_expanded)
+                            .iter().position(|it| matches!(&it.node,
+                                CampNode::Section(s) if *s == sec))
+                        {
+                            self.camp_idx = pos;
+                            self.right_pane.ix = 0;
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }
 
-    fn handle_pc_sheet_key(&mut self, key: &str) {
+    fn handle_camp_content_key(&mut self, key: &str) {
         match key {
             "j" | "DOWN" => self.right_pane.linedown(),
             "k" | "UP"   => self.right_pane.lineup(),
@@ -257,17 +352,17 @@ impl App {
     }
 
     /// New PC — prompts for name + weight, picks SIZE from the
-    /// half-size table, blanks all 3-tier abilities. The user fills
-    /// in the rest by editing fields (next iteration).
+    /// half-size table, blanks all 3-tier abilities. Auto-expands the
+    /// PCs section so the new entry is visible.
     fn pc_new(&mut self) {
-        let Some(_camp) = self.campaign.as_ref() else {
-            self.status = Some(("No campaign loaded — press C to create one.".into(), 208));
+        if self.campaign.is_none() {
+            self.status_msg("No campaign loaded — press C to create one first.", 208);
             return;
-        };
+        }
         let name = self.footer.ask(" PC name: ", "");
         let name = name.trim().to_string();
         if name.is_empty() {
-            self.status = Some(("Cancelled.".into(), 208));
+            self.status_msg("Cancelled.", 208);
             return;
         }
         let weight_str = self.footer.ask(" Weight (kg) [70]: ", "70");
@@ -282,27 +377,54 @@ impl App {
 
         if let Some(c) = self.campaign.as_mut() {
             c.pcs.push(pc);
-            self.pcs_idx = c.pcs.len() - 1;
             let _ = c.save();
         }
-        self.status = Some((format!("Added '{}'.", name), 46));
+        // Make sure PCs section is expanded and cursor lands on the
+        // freshly added PC.
+        if !self.camp_expanded.iter().any(|e| e == "PCs") {
+            self.camp_expanded.push("PCs".into());
+        }
+        if let Some(camp) = self.campaign.as_ref() {
+            let tree = build_camp_tree(camp, &self.camp_expanded);
+            let new_pc_idx = camp.pcs.len() - 1;
+            if let Some(pos) = tree.iter().position(|it| matches!(&it.node,
+                CampNode::Pc(i) if *i == new_pc_idx))
+            {
+                self.camp_idx = pos;
+            }
+        }
+        self.status_msg(&format!("Added '{}'.", name), 46);
     }
 
-    /// Delete the currently-selected PC (with confirmation).
-    fn pc_delete(&mut self) {
+    /// Delete whatever the cursor is currently on (PC for now).
+    fn try_delete_under_cursor(&mut self) {
         let Some(camp) = self.campaign.as_ref() else { return; };
-        let Some(pc) = camp.pcs.get(self.pcs_idx) else { return; };
-        let pc_name = pc.name.clone();
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        let Some(item) = tree.get(self.camp_idx) else { return; };
+        let CampNode::Pc(idx) = item.node.clone() else {
+            self.status_msg("Move cursor onto a PC to delete it (D).", 208);
+            return;
+        };
+        let pc_name = camp.pcs.get(idx).map(|p| p.name.clone()).unwrap_or_default();
         let answer = self.footer.ask(&format!(" Delete '{}'? (y/N): ", pc_name), "");
         if answer.trim() != "y" && answer.trim() != "Y" { return; }
         if let Some(c) = self.campaign.as_mut() {
-            c.pcs.remove(self.pcs_idx);
-            if self.pcs_idx >= c.pcs.len() {
-                self.pcs_idx = c.pcs.len().saturating_sub(1);
-            }
+            c.pcs.remove(idx);
             let _ = c.save();
         }
-        self.status = Some((format!("Deleted '{}'.", pc_name), 46));
+        // Re-anchor cursor near the previous position.
+        if let Some(camp) = self.campaign.as_ref() {
+            let tree = build_camp_tree(camp, &self.camp_expanded);
+            if self.camp_idx >= tree.len() {
+                self.camp_idx = tree.len().saturating_sub(1);
+            }
+        }
+        self.status_msg(&format!("Deleted '{}'.", pc_name), 46);
+    }
+
+    fn status_msg(&mut self, msg: &str, color: u8) {
+        self.status = Some((msg.to_string(), color));
+        self.render_footer();
     }
 
     fn handle_lore_key(&mut self, key: &str) {
@@ -560,8 +682,8 @@ impl App {
             Tab::Session  => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Forge    => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Campaign => match self.focus {
-                Focus::Left  => " TAB:focus-sheet  j/k:PC list  n:new  D:delete  C:new-camp  L:load-camp",
-                Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
+                Focus::Left  => " TAB:focus-detail  j/k:tree  l/h:expand/collapse  n:add-PC  D:delete  C:new-camp  L:load",
+                Focus::Right => " TAB:focus-tree   ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
             },
             Tab::Lore     => match self.focus {
                 Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
@@ -643,61 +765,125 @@ impl App {
             return;
         };
 
-        // Left pane: PC list. One line per PC; the cursor line gets
-        // the bright-yellow + bold highlight when the left pane has
-        // focus, dim grey otherwise.
-        let left_active = self.focus == Focus::Left;
-        let pcs_total = camp.pcs.len();
-        if self.pcs_idx >= pcs_total.max(1) {
-            self.pcs_idx = pcs_total.saturating_sub(1);
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        if self.camp_idx >= tree.len().max(1) {
+            self.camp_idx = tree.len().saturating_sub(1);
         }
+        let tree_active = self.focus == Focus::Left;
 
+        // Left pane: section headers + their items.
         let mut left_lines: Vec<String> = Vec::new();
         left_lines.push(style::bold(&format!(" {}", camp.name)));
         left_lines.push(style::fg(&format!(" {}", camp.date.fmt_header()), 245));
         left_lines.push(String::new());
-        left_lines.push(style::bold(" PCs"));
-        if pcs_total == 0 {
-            left_lines.push(style::fg("  (none yet — press n to add)", 245).to_string());
-        } else {
-            for (i, pc) in camp.pcs.iter().enumerate() {
-                let cursor = if i == self.pcs_idx { "→" } else { " " };
-                let race = if pc.race.is_empty() { "—".to_string() } else { pc.race.clone() };
-                let row = format!("{} {:<14}  L{}  {}",
-                    cursor,
-                    truncate_or_pad(&pc.name, 14),
-                    pc.level,
-                    race);
-                let line = if i == self.pcs_idx {
-                    if left_active {
-                        style::bold(&style::fg(&row, 226))
-                    } else {
-                        style::fg(&row, 244)
-                    }
+        for (i, item) in tree.iter().enumerate() {
+            let cursor = if i == self.camp_idx { "→" } else { " " };
+            let indent = "  ".repeat(item.depth as usize);
+            let glyph = if item.expandable {
+                if item.expanded { "-" } else { "+" }
+            } else {
+                " "
+            };
+            let title = camp_node_title(camp, &item.node);
+            let row = format!("{} {}{} {}", cursor, indent, glyph, title);
+            let line = if i == self.camp_idx {
+                if tree_active {
+                    style::bold(&style::fg(&row, 226))
                 } else {
-                    row
-                };
-                left_lines.push(line);
-            }
+                    style::fg(&row, 244)
+                }
+            } else {
+                match &item.node {
+                    CampNode::Section(_) => style::fg(&row, 117),
+                    CampNode::Placeholder { .. } => style::fg(&row, 245),
+                    _ => row,
+                }
+            };
+            left_lines.push(line);
         }
         self.left_pane.set_text(&left_lines.join("\n"));
+        self.left_pane.ix = scroll_offset(self.camp_idx + 3, // +3 for header lines
+            tree.len() + 3, self.left_pane.h as usize);
         self.left_pane.full_refresh();
 
-        // Right pane: full character sheet for the selected PC, or a
-        // welcome blurb if there are no PCs yet.
-        let sheet = if let Some(pc) = camp.pcs.get(self.pcs_idx) {
-            self.render_pc_sheet(pc)
-        } else {
-            vec![
-                String::new(),
-                style::bold("  Welcome").to_string(),
-                String::new(),
-                "  Press n on the left pane to add your first PC.".into(),
-                "  TAB toggles focus; ESC drops focus back to the list.".into(),
-            ]
+        // Right pane: content for the selected node.
+        let content = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
+            Some(CampNode::Section(sec)) => self.render_camp_section(camp, sec),
+            Some(CampNode::Pc(idx)) => {
+                if let Some(pc) = camp.pcs.get(idx) {
+                    self.render_pc_sheet(pc)
+                } else {
+                    vec!["(PC not found)".into()]
+                }
+            }
+            Some(CampNode::Adventure(idx)) => {
+                let _ = idx;
+                vec![style::fg("Adventure detail coming in v0.6+.", 245).to_string()]
+            }
+            Some(CampNode::Npc(_)) | Some(CampNode::Location(_)) => {
+                vec![style::fg("(Coming in a later version.)", 245).to_string()]
+            }
+            Some(CampNode::Placeholder { msg, .. }) => {
+                vec![String::new(), style::fg(&format!("  {}", msg), 245).to_string()]
+            }
+            None => vec![],
         };
-        self.right_pane.set_text(&sheet.join("\n"));
+        self.right_pane.set_text(&content.join("\n"));
         self.right_pane.full_refresh();
+    }
+
+    fn render_camp_section(&self, camp: &Campaign, sec: CampSection) -> Vec<String> {
+        const LBL: u8 = 245;
+        let mut out = vec![String::new()];
+        match sec {
+            CampSection::Pcs => {
+                out.push(style::bold(&style::fg("Player characters", 226)));
+                out.push(String::new());
+                out.push(format!("  {} PC{} in {}.",
+                    camp.pcs.len(),
+                    if camp.pcs.len() == 1 { "" } else { "s" },
+                    camp.name));
+                out.push(String::new());
+                out.push(style::fg("  l / ENTER  expand the section", LBL).to_string());
+                out.push(style::fg("  n          add a new PC", LBL).to_string());
+                out.push(style::fg("  D          delete the PC under the cursor", LBL).to_string());
+            }
+            CampSection::Adventures => {
+                out.push(style::bold(&style::fg("Adventures", 226)));
+                out.push(String::new());
+                out.push("  0 adventures stored. Adventure authoring lands in v0.6.0".into());
+                out.push("  via the Inspire tab (Adventure mode) or a deterministic".into());
+                out.push("  table-driven skeleton when claude is not on PATH.".into());
+            }
+            CampSection::Npcs => {
+                out.push(style::bold(&style::fg("NPCs", 226)));
+                out.push(String::new());
+                out.push("  Persistent NPC roster. Land in v0.4.0 once the".into());
+                out.push("  Forge → NPC generator can save into here.".into());
+            }
+            CampSection::Locations => {
+                out.push(style::bold(&style::fg("Locations", 226)));
+                out.push(String::new());
+                out.push("  Towns + landmarks visited or known to the party.".into());
+                out.push("  Land in v0.4.0 alongside the Forge → Town generator.".into());
+            }
+            CampSection::Calendar => {
+                out.push(style::bold(&style::fg("Calendar", 226)));
+                out.push(String::new());
+                out.push(field_row(LBL, "Today", &camp.date.fmt_header()));
+                out.push(field_row(LBL, "Bortle", &camp.bortle.to_string()));
+                out.push(String::new());
+                out.push(style::fg("  Calendar advance + weather hookup land in v0.5.0.", LBL).to_string());
+            }
+            CampSection::Factions => {
+                out.push(style::bold(&style::fg("Factions", 226)));
+                out.push(String::new());
+                out.push("  Faction reputation tracks (King's court, the Calah,".into());
+                out.push("  the Cloaks, Dark Dagger, Magick Circle, the gods…)".into());
+                out.push("  land in v0.5+.".into());
+            }
+        }
+        out
     }
 
     /// Render one PC's full character sheet — Identity, Derived Stats,
@@ -993,6 +1179,110 @@ impl App {
         let _ = popup.modal(&help);
         Crust::clear_screen();
         self.render_all();
+    }
+}
+
+/// Build the Campaign tree (sections + their items) against the
+/// expanded-set. Section order: PCs · Adventures · NPCs · Locations
+/// · Calendar · Factions. The first four are expandable; the last
+/// two are leaves whose detail renders directly when selected.
+fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
+    let mut out: Vec<CampTreeItem> = Vec::new();
+    for sec in CampSection::all() {
+        let id = sec.id().to_string();
+        let is_expandable = matches!(sec,
+            CampSection::Pcs | CampSection::Adventures
+            | CampSection::Npcs | CampSection::Locations);
+        let is_expanded = is_expandable && expanded.iter().any(|e| e == &id);
+        out.push(CampTreeItem {
+            node: CampNode::Section(sec),
+            depth: 0,
+            expandable: is_expandable,
+            expanded: is_expanded,
+        });
+        if !is_expanded { continue; }
+        match sec {
+            CampSection::Pcs => {
+                if camp.pcs.is_empty() {
+                    out.push(CampTreeItem {
+                        node: CampNode::Placeholder { section: sec,
+                            msg: "(no PCs yet — press n to add)".into() },
+                        depth: 1,
+                        expandable: false, expanded: false,
+                    });
+                } else {
+                    for i in 0..camp.pcs.len() {
+                        out.push(CampTreeItem {
+                            node: CampNode::Pc(i),
+                            depth: 1,
+                            expandable: false, expanded: false,
+                        });
+                    }
+                }
+            }
+            CampSection::Adventures => {
+                out.push(CampTreeItem {
+                    node: CampNode::Placeholder { section: sec,
+                        msg: "(adventure authoring lands in v0.6.0)".into() },
+                    depth: 1,
+                    expandable: false, expanded: false,
+                });
+            }
+            CampSection::Npcs => {
+                if camp.npcs.is_empty() {
+                    out.push(CampTreeItem {
+                        node: CampNode::Placeholder { section: sec,
+                            msg: "(persistent NPC roster — v0.4.0)".into() },
+                        depth: 1,
+                        expandable: false, expanded: false,
+                    });
+                } else {
+                    for i in 0..camp.npcs.len() {
+                        out.push(CampTreeItem {
+                            node: CampNode::Npc(i),
+                            depth: 1,
+                            expandable: false, expanded: false,
+                        });
+                    }
+                }
+            }
+            CampSection::Locations => {
+                out.push(CampTreeItem {
+                    node: CampNode::Placeholder { section: sec,
+                        msg: "(locations land in v0.4.0)".into() },
+                    depth: 1,
+                    expandable: false, expanded: false,
+                });
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Title shown in the left pane for one tree node.
+fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
+    match node {
+        CampNode::Section(sec) => match sec {
+            CampSection::Pcs        => format!("PCs ({})", camp.pcs.len()),
+            CampSection::Adventures => "Adventures (0)".to_string(),
+            CampSection::Npcs       => format!("NPCs ({})", camp.npcs.len()),
+            CampSection::Locations  => "Locations (0)".to_string(),
+            CampSection::Calendar   => "Calendar".to_string(),
+            CampSection::Factions   => "Factions".to_string(),
+        },
+        CampNode::Pc(idx) => {
+            camp.pcs.get(*idx)
+                .map(|p| format!("{}  L{}", p.name, p.level))
+                .unwrap_or_else(|| "(missing PC)".to_string())
+        }
+        CampNode::Adventure(idx) => format!("Adventure #{}", idx + 1),
+        CampNode::Npc(idx) => {
+            camp.npcs.get(*idx).map(|n| n.name.clone())
+                .unwrap_or_else(|| "(missing NPC)".to_string())
+        }
+        CampNode::Location(idx) => format!("Location #{}", idx + 1),
+        CampNode::Placeholder { msg, .. } => msg.clone(),
     }
 }
 
