@@ -352,7 +352,7 @@ impl App {
             };
             let title = item.node.title();
             let row = format!("{} {}{} {}", cursor, indent, glyph, title);
-            let line = if i == self.lore_idx {
+            let body = if i == self.lore_idx {
                 if tree_active {
                     style::bold(&style::fg(&row, 226))
                 } else {
@@ -365,7 +365,7 @@ impl App {
                     Node::CanonEntry { .. } => style::fg(&row, 250),
                 }
             };
-            tree_lines.push(line);
+            tree_lines.push(format!("{}{}", focus_marker(tree_active), body));
         }
         self.lore_tree_pane.set_text(&tree_lines.join("\n"));
         self.lore_tree_pane.ix = scroll_offset(self.lore_idx, tree.len(), self.lore_tree_pane.h as usize);
@@ -402,7 +402,11 @@ impl App {
         // set_text() doesn't reset ix — the pane keeps its scroll position
         // across selection changes. Cursor moves in the tree explicitly
         // reset ix to 0 in handle_lore_key.
-        self.lore_content_pane.set_text(&content.join("\n"));
+        let content_active = self.focus == Focus::Right;
+        let prefixed: Vec<String> = content.into_iter()
+            .map(|l| format!("{}{}", focus_marker(content_active), l))
+            .collect();
+        self.lore_content_pane.set_text(&prefixed.join("\n"));
         self.lore_content_pane.full_refresh();
     }
 
@@ -616,6 +620,18 @@ impl App {
         let _ = popup.modal(&help);
         Crust::clear_screen();
         self.render_all();
+    }
+}
+
+/// Side-bar marker used as a per-line prefix on Lore panes. A bright
+/// yellow `▌` glyph identifies the pane that has focus; the inactive
+/// pane gets a dim grey one. Same width either way (1 cell), so the
+/// content alignment doesn't shift when focus toggles.
+fn focus_marker(active: bool) -> String {
+    if active {
+        crust::style::bold(&crust::style::fg("\u{258C}", 226))
+    } else {
+        crust::style::fg("\u{258C}", 238)
     }
 }
 
