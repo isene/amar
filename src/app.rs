@@ -62,7 +62,9 @@ pub struct App {
     pub rows: u16,
     pub header: Pane,
     pub body: Pane,
+    pub lore_tree_marker: Pane,
     pub lore_tree_pane: Pane,
+    pub lore_content_marker: Pane,
     pub lore_content_pane: Pane,
     pub footer: Pane,
     pub status: Option<(String, u8)>,
@@ -88,14 +90,26 @@ impl App {
         let mut body = Pane::new(1, 2, cols, body_h, 252, 0);
         body.wrap = true;
 
-        // Lore panes share the body area: tree on the left (~30 cols),
-        // content on the right (rest). Both have scroll markers; the
-        // content pane wraps long lines.
-        let tree_w: u16 = 30.min(cols.saturating_sub(20));
-        let content_w: u16 = cols.saturating_sub(tree_w);
-        let mut lore_tree_pane = Pane::new(1, 2, tree_w, body_h, 252, 0);
+        // Lore panes share the body area: tree on the left (~30 cols
+        // total, including its 1-col focus marker), content on the
+        // rest. Each content pane carries a 1-col marker pane on its
+        // left edge whose bg colour swaps bright yellow / dim grey
+        // with focus. Solid stripe — never breaks on wrapped lines.
+        let tree_total: u16 = 30.min(cols.saturating_sub(20));
+        let tree_pane_w: u16 = tree_total.saturating_sub(1);
+        let content_total: u16 = cols.saturating_sub(tree_total);
+        let content_pane_w: u16 = content_total.saturating_sub(1);
+
+        let mut lore_tree_marker = Pane::new(1, 2, 1, body_h, 0, 240);
+        lore_tree_marker.wrap = false;
+        lore_tree_marker.scroll = false;
+        let mut lore_tree_pane = Pane::new(2, 2, tree_pane_w, body_h, 252, 0);
         lore_tree_pane.wrap = false;
-        let mut lore_content_pane = Pane::new(tree_w + 1, 2, content_w, body_h, 252, 0);
+
+        let mut lore_content_marker = Pane::new(tree_total + 1, 2, 1, body_h, 0, 240);
+        lore_content_marker.wrap = false;
+        lore_content_marker.scroll = false;
+        let mut lore_content_pane = Pane::new(tree_total + 2, 2, content_pane_w, body_h, 252, 0);
         lore_content_pane.wrap = true;
 
         let mut footer = Pane::new(1, rows, cols, 1, 245, 236);
@@ -105,7 +119,8 @@ impl App {
             canon, config, campaign, tab: Tab::Campaign,
             focus: Focus::Left,
             cols, rows, header, body,
-            lore_tree_pane, lore_content_pane,
+            lore_tree_marker, lore_tree_pane,
+            lore_content_marker, lore_content_pane,
             footer, status: None,
             lore_idx: 0,
             lore_expanded: Vec::new(),
@@ -323,7 +338,9 @@ impl App {
         };
         // Wipe the Lore panes' area when switching off Lore so the
         // body content doesn't sit over the old tree contents.
+        self.lore_tree_marker.clear();
         self.lore_tree_pane.clear();
+        self.lore_content_marker.clear();
         self.lore_content_pane.clear();
         self.body.set_text(&lines.join("\n"));
         self.body.full_refresh();
@@ -336,11 +353,24 @@ impl App {
             self.lore_idx = tree.len().saturating_sub(1);
         }
 
+        let tree_active = self.focus == Focus::Left;
+        let content_active = self.focus == Focus::Right;
+
+        // Marker panes: solid 1-col stripes, bright yellow when active,
+        // dim grey when inactive. Built by changing the pane's bg —
+        // crust fills any unset cell with the pane's bg, so an empty
+        // text body produces a continuous solid bar without any
+        // dependence on word-wrap behaviour in the neighbouring pane.
+        self.lore_tree_marker.bg = if tree_active { 226 } else { 240 };
+        self.lore_tree_marker.set_text("");
+        self.lore_tree_marker.full_refresh();
+        self.lore_content_marker.bg = if content_active { 226 } else { 240 };
+        self.lore_content_marker.set_text("");
+        self.lore_content_marker.full_refresh();
+
         // Tree pane: one line per item, expandable categories get +/-.
         // Cursor row: bright yellow + bold when Tree has focus, dim
-        // when Content has focus (so the user can see which pane will
-        // receive arrow / PgUp / PgDown keys).
-        let tree_active = self.focus == Focus::Left;
+        // when Content has focus.
         let mut tree_lines: Vec<String> = Vec::with_capacity(tree.len());
         for (i, item) in tree.items.iter().enumerate() {
             let cursor = if i == self.lore_idx { "→" } else { " " };
@@ -352,7 +382,7 @@ impl App {
             };
             let title = item.node.title();
             let row = format!("{} {}{} {}", cursor, indent, glyph, title);
-            let body = if i == self.lore_idx {
+            let line = if i == self.lore_idx {
                 if tree_active {
                     style::bold(&style::fg(&row, 226))
                 } else {
@@ -365,7 +395,7 @@ impl App {
                     Node::CanonEntry { .. } => style::fg(&row, 250),
                 }
             };
-            tree_lines.push(format!("{}{}", focus_marker(tree_active), body));
+            tree_lines.push(line);
         }
         self.lore_tree_pane.set_text(&tree_lines.join("\n"));
         self.lore_tree_pane.ix = scroll_offset(self.lore_idx, tree.len(), self.lore_tree_pane.h as usize);
@@ -402,11 +432,7 @@ impl App {
         // set_text() doesn't reset ix — the pane keeps its scroll position
         // across selection changes. Cursor moves in the tree explicitly
         // reset ix to 0 in handle_lore_key.
-        let content_active = self.focus == Focus::Right;
-        let prefixed: Vec<String> = content.into_iter()
-            .map(|l| format!("{}{}", focus_marker(content_active), l))
-            .collect();
-        self.lore_content_pane.set_text(&prefixed.join("\n"));
+        self.lore_content_pane.set_text(&content.join("\n"));
         self.lore_content_pane.full_refresh();
     }
 
@@ -620,18 +646,6 @@ impl App {
         let _ = popup.modal(&help);
         Crust::clear_screen();
         self.render_all();
-    }
-}
-
-/// Side-bar marker used as a per-line prefix on Lore panes. A bright
-/// yellow `▌` glyph identifies the pane that has focus; the inactive
-/// pane gets a dim grey one. Same width either way (1 cell), so the
-/// content alignment doesn't shift when focus toggles.
-fn focus_marker(active: bool) -> String {
-    if active {
-        crust::style::bold(&crust::style::fg("\u{258C}", 226))
-    } else {
-        crust::style::fg("\u{258C}", 238)
     }
 }
 
