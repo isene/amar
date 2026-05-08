@@ -103,14 +103,24 @@ impl Tree {
 }
 
 /// Render a markdown body into a vec of styled lines for a content
-/// pane. Markdown tables are converted to Unicode-box layouts via
-/// crust::text::format_markdown_tables BEFORE the line-by-line pass,
-/// so the table renderer sees raw `| x | y |` rows with their
-/// separator and emits clean ─/│/┼ output. Headings, bold, italic,
-/// bullets, links, and inline `code` are styled per-line afterwards.
+/// pane.
+///
+/// Order of operations matters:
+///
+/// 1. Apply inline styles (`**bold**`, `*italic*`, `` `code` ``,
+///    `[link](url)`) FIRST. The result has ANSI escapes embedded.
+/// 2. Run `crust::text::format_markdown_tables` on that. The table
+///    renderer's `display_width_cell` strips ANSI when computing column
+///    widths, so cells with bold content land at the right visible
+///    width and rows align with the `─/┼` header rule.
+/// 3. Per-line pass for block-level styling (headings, list bullets).
+///    No more inline-style work — those were already applied in step 1
+///    and would only get mangled if we tried to re-process them now
+///    (the inline pass would mistake `\x1b[1m…` for a `[link]`).
 pub fn render_markdown(body: &str, max_width: usize) -> Vec<String> {
     use crust::style;
-    let cooked = crust::text::format_markdown_tables(body, max_width);
+    let styled = apply_inline_styles(body);
+    let cooked = crust::text::format_markdown_tables(&styled, max_width);
     let mut out: Vec<String> = Vec::new();
     for line in cooked.lines() {
         if let Some(rest) = line.strip_prefix("# ") {
@@ -123,67 +133,93 @@ pub fn render_markdown(body: &str, max_width: usize) -> Vec<String> {
         } else if let Some(rest) = line.strip_prefix("### ") {
             out.push(style::bold(&style::fg(rest, 250)));
         } else if let Some(rest) = line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")) {
-            out.push(format!("  • {}", inline(rest)));
+            out.push(format!("  • {}", rest));
         } else {
-            out.push(inline(line));
+            out.push(line.to_string());
         }
     }
     out
 }
 
-/// Inline markdown: **bold**, *italic*, [text](url) -> just text.
-/// Cheap state-machine pass — we don't need a full parser.
-fn inline(s: &str) -> String {
+/// Apply inline markdown styling — `**bold**`, `*italic*`,
+/// `` `code` ``, `[text](url)` — across the full body, including
+/// inside table cells. Unclosed markers (e.g. a single `*` with no
+/// pair) are emitted verbatim so list-marker lines like `* Item` and
+/// stray asterisks don't get gobbled.
+fn apply_inline_styles(s: &str) -> String {
     use crust::style;
     let mut out = String::new();
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
         if c == '*' && chars.peek() == Some(&'*') {
+            // **bold** — needs a closing **.
             chars.next();
             let mut buf = String::new();
+            let mut closed = false;
             while let Some(&c2) = chars.peek() {
                 if c2 == '*' {
-                    chars.next();
-                    if chars.peek() == Some(&'*') { chars.next(); break; }
-                    buf.push('*');
-                } else {
-                    buf.push(c2);
-                    chars.next();
+                    let mut peeker = chars.clone();
+                    peeker.next();
+                    if peeker.peek() == Some(&'*') {
+                        chars.next();
+                        chars.next();
+                        closed = true;
+                        break;
+                    }
                 }
-            }
-            out.push_str(&style::bold(&buf));
-        } else if c == '*' {
-            let mut buf = String::new();
-            while let Some(&c2) = chars.peek() {
-                if c2 == '*' { chars.next(); break; }
                 buf.push(c2);
                 chars.next();
             }
-            out.push_str(&style::italic(&buf));
+            if closed { out.push_str(&style::bold(&buf)); }
+            else { out.push_str("**"); out.push_str(&buf); }
+        } else if c == '*' {
+            // *italic* — single asterisk, needs closing *.
+            let mut buf = String::new();
+            let mut closed = false;
+            while let Some(&c2) = chars.peek() {
+                if c2 == '*' { chars.next(); closed = true; break; }
+                if c2 == '\n' { break; } // never cross a newline
+                buf.push(c2);
+                chars.next();
+            }
+            if closed { out.push_str(&style::italic(&buf)); }
+            else { out.push('*'); out.push_str(&buf); }
+        } else if c == '`' {
+            let mut buf = String::new();
+            let mut closed = false;
+            while let Some(&c2) = chars.peek() {
+                if c2 == '`' { chars.next(); closed = true; break; }
+                if c2 == '\n' { break; }
+                buf.push(c2);
+                chars.next();
+            }
+            if closed { out.push_str(&style::fg(&buf, 220)); }
+            else { out.push('`'); out.push_str(&buf); }
         } else if c == '[' {
             let mut text = String::new();
+            let mut closed = false;
             while let Some(&c2) = chars.peek() {
-                chars.next();
-                if c2 == ']' { break; }
+                if c2 == ']' { chars.next(); closed = true; break; }
+                if c2 == '\n' { break; }
                 text.push(c2);
+                chars.next();
             }
-            // Skip "(...)" if present.
-            if chars.peek() == Some(&'(') {
+            if closed && chars.peek() == Some(&'(') {
                 chars.next();
                 while let Some(&c2) = chars.peek() {
                     chars.next();
                     if c2 == ')' { break; }
+                    if c2 == '\n' { break; }
                 }
+                out.push_str(&style::fg(&text, 117));
+            } else if closed {
+                out.push('[');
+                out.push_str(&text);
+                out.push(']');
+            } else {
+                out.push('[');
+                out.push_str(&text);
             }
-            out.push_str(&style::fg(&text, 117));
-        } else if c == '`' {
-            let mut buf = String::new();
-            while let Some(&c2) = chars.peek() {
-                chars.next();
-                if c2 == '`' { break; }
-                buf.push(c2);
-            }
-            out.push_str(&style::fg(&buf, 220));
         } else {
             out.push(c);
         }
@@ -245,4 +281,60 @@ fn humanize(key: &str) -> String {
         c.make_ascii_uppercase();
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kingdom_table_columns_align_with_separator() {
+        let body = include_str!("../data/lore/kingdom.md");
+        let out = render_markdown(body, 113);
+        // Find the lines belonging to the Six Districts table and
+        // verify they all have the same visible width (rule, header,
+        // every body row). Pre-fix, rows that contained `**X**` came
+        // out 4 cols shorter than the rule because inline() stripped
+        // the markers AFTER format_table had padded around them.
+        let mut widths: Vec<usize> = Vec::new();
+        let mut in_zone = false;
+        for line in &out {
+            let stripped = crust::strip_ansi(line);
+            if stripped.contains("Six Districts") { in_zone = true; continue; }
+            if in_zone && stripped.contains("Magick in the Kingdom") { break; }
+            if in_zone && stripped.contains("│") {
+                widths.push(crust::display_width(&stripped));
+            }
+            // Catch the rule too — it has ─/┼ but not │.
+            if in_zone && stripped.contains("┼") {
+                widths.push(crust::display_width(&stripped));
+            }
+        }
+        assert!(widths.len() >= 6, "found {} table lines", widths.len());
+        let max = *widths.iter().max().unwrap();
+        let min = *widths.iter().min().unwrap();
+        assert!(max - min <= 1,
+            "table rows misaligned: widths={:?} (max-min={})", widths, max - min);
+    }
+
+    /// Visual preview the table at 113 cols. `cargo test --
+    /// --nocapture _dump_kingdom_table_at_113_preview` to print the
+    /// table alongside per-line widths during development. Underscore
+    /// prefix keeps the test out of normal output and `cargo test`
+    /// summaries.
+    #[test]
+    fn _dump_kingdom_table_at_113_preview() {
+        let body = include_str!("../data/lore/kingdom.md");
+        let out = render_markdown(body, 113);
+        let mut in_zone = false;
+        for line in &out {
+            let stripped = crust::strip_ansi(line);
+            if stripped.contains("Six Districts") { in_zone = true; }
+            if in_zone {
+                let dw = crust::display_width(&stripped);
+                eprintln!("[{:3}] {}", dw, stripped);
+            }
+            if in_zone && stripped.contains("Magick in the Kingdom") { break; }
+        }
+    }
 }
