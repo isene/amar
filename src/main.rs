@@ -1,11 +1,16 @@
 //! amar — Amar RPG companion (Fe2O3 suite).
-//!
-//! v0.1.0 in progress. This file currently holds only a placeholder so the
-//! crate builds; the TUI, tabs, and Forge / Session / Campaign / Lore /
-//! Inspire modes will land in subsequent commits once the canon (data
-//! pulled from d6gaming.org via src/bin/scrape_canon.rs) is locked in.
+
+#![allow(dead_code)]  // PC sheet edit / Forge generators / Inspire prompts populate dead code in v0.2+.
+
+mod app;
+mod calendar;
+mod canon;
+mod dice;
+mod pc;
+mod store;
 
 fn main() {
-    eprintln!("amar v{} — Amar RPG companion (TUI not yet wired up).", env!("CARGO_PKG_VERSION"));
-    eprintln!("Run `cargo run --features scraper --bin scrape_canon` to (re)generate data/canon.toml.");
+    crust::Crust::set_app_identity("Amar");
+    let mut app = app::App::new();
+    app.run();
 }
