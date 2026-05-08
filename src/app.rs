@@ -90,26 +90,26 @@ impl App {
         let mut body = Pane::new(1, 2, cols, body_h, 252, 0);
         body.wrap = true;
 
-        // Lore panes share the body area: tree on the left (~30 cols
-        // total, including its 1-col focus marker), content on the
-        // rest. Each content pane carries a 1-col marker pane on its
-        // left edge whose bg colour swaps bright yellow / dim grey
-        // with focus. Solid stripe — never breaks on wrapped lines.
+        // Lore panes: a 2-col marker pane sits flush against the left
+        // edge of each content pane. Col 1 of the marker holds a thin
+        // `▏` glyph (one-eighth block) in bright yellow when active,
+        // dim grey when inactive; col 2 is blank to give the bar a
+        // little breathing room from the text on its right.
         let tree_total: u16 = 30.min(cols.saturating_sub(20));
-        let tree_pane_w: u16 = tree_total.saturating_sub(1);
+        let tree_pane_w: u16 = tree_total.saturating_sub(2);
         let content_total: u16 = cols.saturating_sub(tree_total);
-        let content_pane_w: u16 = content_total.saturating_sub(1);
+        let content_pane_w: u16 = content_total.saturating_sub(2);
 
-        let mut lore_tree_marker = Pane::new(1, 2, 1, body_h, 0, 240);
+        let mut lore_tree_marker = Pane::new(1, 2, 2, body_h, 240, 0);
         lore_tree_marker.wrap = false;
         lore_tree_marker.scroll = false;
-        let mut lore_tree_pane = Pane::new(2, 2, tree_pane_w, body_h, 252, 0);
+        let mut lore_tree_pane = Pane::new(3, 2, tree_pane_w, body_h, 252, 0);
         lore_tree_pane.wrap = false;
 
-        let mut lore_content_marker = Pane::new(tree_total + 1, 2, 1, body_h, 0, 240);
+        let mut lore_content_marker = Pane::new(tree_total + 1, 2, 2, body_h, 240, 0);
         lore_content_marker.wrap = false;
         lore_content_marker.scroll = false;
-        let mut lore_content_pane = Pane::new(tree_total + 2, 2, content_pane_w, body_h, 252, 0);
+        let mut lore_content_pane = Pane::new(tree_total + 3, 2, content_pane_w, body_h, 252, 0);
         lore_content_pane.wrap = true;
 
         let mut footer = Pane::new(1, rows, cols, 1, 245, 236);
@@ -356,16 +356,18 @@ impl App {
         let tree_active = self.focus == Focus::Left;
         let content_active = self.focus == Focus::Right;
 
-        // Marker panes: solid 1-col stripes, bright yellow when active,
-        // dim grey when inactive. Built by changing the pane's bg —
-        // crust fills any unset cell with the pane's bg, so an empty
-        // text body produces a continuous solid bar without any
-        // dependence on word-wrap behaviour in the neighbouring pane.
-        self.lore_tree_marker.bg = if tree_active { 226 } else { 240 };
-        self.lore_tree_marker.set_text("");
+        // Marker panes: a thin `▏` glyph in column 1, column 2 left
+        // blank. Bright yellow when the parent pane has focus, dim
+        // grey when it doesn't. The glyph is repeated once per row so
+        // the stripe is continuous, independent of any word-wrap in
+        // neighbouring panes.
+        let h = self.lore_tree_marker.h as usize;
+        let stripe = vec!["\u{258F}"; h].join("\n");
+        self.lore_tree_marker.fg = if tree_active { 226 } else { 240 };
+        self.lore_tree_marker.set_text(&stripe);
         self.lore_tree_marker.full_refresh();
-        self.lore_content_marker.bg = if content_active { 226 } else { 240 };
-        self.lore_content_marker.set_text("");
+        self.lore_content_marker.fg = if content_active { 226 } else { 240 };
+        self.lore_content_marker.set_text(&stripe);
         self.lore_content_marker.full_refresh();
 
         // Tree pane: one line per item, expandable categories get +/-.
