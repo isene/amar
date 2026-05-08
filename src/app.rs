@@ -45,11 +45,19 @@ impl Tab {
     }
 }
 
+/// Which pane within a multi-pane tab currently owns the cursor.
+/// Tabs with a single pane ignore this; tabs with two panes (Lore for
+/// now, Campaign / Forge / Inspire later) consult it to route arrow
+/// and PgUp/PgDown keys to the correct pane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Focus { Left, Right }
+
 pub struct App {
     pub canon: Canon,
     pub config: GlobalConfig,
     pub campaign: Option<Campaign>,
     pub tab: Tab,
+    pub focus: Focus,
     pub cols: u16,
     pub rows: u16,
     pub header: Pane,
@@ -95,6 +103,7 @@ impl App {
         footer.scroll = false;
         Self {
             canon, config, campaign, tab: Tab::Campaign,
+            focus: Focus::Left,
             cols, rows, header, body,
             lore_tree_pane, lore_content_pane,
             footer, status: None,
@@ -114,18 +123,39 @@ impl App {
                     let _ = self.config.save();
                     break;
                 }
-                "1" => { self.tab = Tab::Session;  self.render_all(); }
-                "2" => { self.tab = Tab::Forge;    self.render_all(); }
-                "3" => { self.tab = Tab::Campaign; self.render_all(); }
-                "4" => { self.tab = Tab::Lore;     self.render_all(); }
-                "5" => { self.tab = Tab::Inspire;  self.render_all(); }
-                "TAB" => { self.tab = self.tab.next(); self.render_all(); }
-                "S-TAB" | "BTAB" => { self.tab = self.tab.prev(); self.render_all(); }
+                "1" => { self.set_tab(Tab::Session); }
+                "2" => { self.set_tab(Tab::Forge); }
+                "3" => { self.set_tab(Tab::Campaign); }
+                "4" => { self.set_tab(Tab::Lore); }
+                "5" => { self.set_tab(Tab::Inspire); }
+                "C-RIGHT" => { self.set_tab(self.tab.next()); }
+                "C-LEFT"  => { self.set_tab(self.tab.prev()); }
+                "TAB" => {
+                    // Toggle pane focus on tabs that have two panes.
+                    // Single-pane tabs ignore TAB.
+                    if self.tab_has_two_panes() {
+                        self.focus = match self.focus {
+                            Focus::Left  => Focus::Right,
+                            Focus::Right => Focus::Left,
+                        };
+                        self.render_all();
+                    }
+                }
                 "?" => self.show_help(),
                 "C" => { self.campaign_create(); self.render_all(); }
                 "L" => { self.campaign_load(); self.render_all(); }
                 "r" => self.render_all(),
-                "ESC" => { self.status = None; self.render_footer(); }
+                "ESC" => {
+                    // ESC has two cumulative effects: drop focus back to
+                    // the left pane (if currently on the right), then
+                    // clear any status message.
+                    if self.focus == Focus::Right {
+                        self.focus = Focus::Left;
+                        self.render_all();
+                    }
+                    self.status = None;
+                    self.render_footer();
+                }
                 other => {
                     self.handle_tab_key(other);
                     self.render_all();
@@ -135,6 +165,21 @@ impl App {
         Crust::clear_screen();
     }
 
+    fn set_tab(&mut self, t: Tab) {
+        self.tab = t;
+        // Tabs that have only one pane don't make sense with Right focus.
+        if !self.tab_has_two_panes() {
+            self.focus = Focus::Left;
+        }
+        self.render_all();
+    }
+
+    fn tab_has_two_panes(&self) -> bool {
+        // Lore is the only multi-pane tab today. Future: Campaign sub-tabs
+        // and Forge will return true here too.
+        matches!(self.tab, Tab::Lore)
+    }
+
     fn handle_tab_key(&mut self, key: &str) {
         if self.tab == Tab::Lore {
             self.handle_lore_key(key);
@@ -142,9 +187,24 @@ impl App {
     }
 
     fn handle_lore_key(&mut self, key: &str) {
+        // Right-pane scroll keys work regardless of focus. They mirror
+        // kastrup's right-pane bindings, so the muscle memory carries.
+        match key {
+            "S-DOWN"  => { self.lore_content_pane.linedown(); return; }
+            "S-UP"    => { self.lore_content_pane.lineup();   return; }
+            "S-RIGHT" => { self.lore_content_pane.pagedown(); return; }
+            "S-LEFT"  => { self.lore_content_pane.pageup();   return; }
+            _ => {}
+        }
+        match self.focus {
+            Focus::Left  => self.handle_lore_tree_key(key),
+            Focus::Right => self.handle_lore_content_key(key),
+        }
+    }
+
+    fn handle_lore_tree_key(&mut self, key: &str) {
         let tree = Tree::build(&self.canon, &self.lore_expanded);
         match key {
-            // Tree cursor (left pane).
             "j" | "DOWN" => {
                 if self.lore_idx + 1 < tree.len() {
                     self.lore_idx += 1;
@@ -195,11 +255,22 @@ impl App {
                     }
                 }
             }
-            // Right pane scroll - same bindings as kastrup's right pane.
-            "S-DOWN"  => self.lore_content_pane.linedown(),
-            "S-UP"    => self.lore_content_pane.lineup(),
-            "S-RIGHT" => self.lore_content_pane.pagedown(),
-            "S-LEFT"  => self.lore_content_pane.pageup(),
+            _ => {}
+        }
+    }
+
+    fn handle_lore_content_key(&mut self, key: &str) {
+        match key {
+            "j" | "DOWN" => self.lore_content_pane.linedown(),
+            "k" | "UP"   => self.lore_content_pane.lineup(),
+            "PgDOWN" | " " | "SPACE" => self.lore_content_pane.pagedown(),
+            "PgUP"   | "b" => self.lore_content_pane.pageup(),
+            "g" | "HOME" => self.lore_content_pane.ix = 0,
+            "G" | "END"  => {
+                // Page down repeatedly until we've hit the bottom; cheap
+                // because each call is a couple of pointer ops.
+                for _ in 0..200 { self.lore_content_pane.pagedown(); }
+            }
             _ => {}
         }
     }
@@ -266,6 +337,10 @@ impl App {
         }
 
         // Tree pane: one line per item, expandable categories get +/-.
+        // Cursor row: bright yellow + bold when Tree has focus, dim
+        // when Content has focus (so the user can see which pane will
+        // receive arrow / PgUp / PgDown keys).
+        let tree_active = self.focus == Focus::Left;
         let mut tree_lines: Vec<String> = Vec::with_capacity(tree.len());
         for (i, item) in tree.items.iter().enumerate() {
             let cursor = if i == self.lore_idx { "→" } else { " " };
@@ -278,7 +353,11 @@ impl App {
             let title = item.node.title();
             let row = format!("{} {}{} {}", cursor, indent, glyph, title);
             let line = if i == self.lore_idx {
-                style::bold(&style::fg(&row, 226))
+                if tree_active {
+                    style::bold(&style::fg(&row, 226))
+                } else {
+                    style::fg(&row, 244)
+                }
             } else {
                 match &item.node {
                     Node::Doc { .. } => row,
@@ -336,11 +415,14 @@ impl App {
             return;
         }
         let hint = match self.tab {
-            Tab::Session  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
-            Tab::Forge    => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
-            Tab::Campaign => " 1-5:tabs  TAB:next  C:new-campaign  L:load-campaign  ?:help  q:quit",
-            Tab::Lore     => " 1-5:tabs  j/k:tree  l/h:expand/collapse  S-DOWN/UP:line  S-RIGHT/LEFT:page  g/G:top/end",
-            Tab::Inspire  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
+            Tab::Session  => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
+            Tab::Forge    => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
+            Tab::Campaign => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load-campaign  ?:help  q:quit",
+            Tab::Lore     => match self.focus {
+                Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
+                Focus::Right => " TAB:focus-tree  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs  ?:help",
+            },
+            Tab::Inspire  => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
         };
         // Right-align the version. Pad with spaces between hint and version.
         let right = format!("amar v{} ", VERSION);
@@ -499,10 +581,24 @@ impl App {
               4   Lore       Browsable canon (wiki + setting + author additions)\n  \
               5   Inspire    AI-assisted brainstorming (claude -p)\n\n  \
             NAVIGATION\n  \
-              1-5     Jump to tab\n  \
-              TAB     Next tab\n  \
-              S-TAB   Previous tab\n  \
-              ?       This help\n\n  \
+              1-5            Jump to tab\n  \
+              C-RIGHT/LEFT   Next / previous tab\n  \
+              TAB            Toggle focus between left + right pane (Lore)\n  \
+              ESC            Drop focus back to left pane\n  \
+              ?              This help\n\n  \
+            LORE — TREE FOCUS (left pane)\n  \
+              j / k          Tree cursor down / up\n  \
+              ENTER / l      Expand a canon category\n  \
+              h              Collapse / jump to parent\n  \
+              g / G          First / last item\n\n  \
+            LORE — CONTENT FOCUS (right pane)\n  \
+              UP / DOWN      Line scroll\n  \
+              PgUp / PgDn    Page scroll (also SPACE / b)\n  \
+              g / HOME       Top of content\n  \
+              G / END        End of content\n\n  \
+            LORE — ALWAYS\n  \
+              S-DOWN / S-UP        Right pane line scroll\n  \
+              S-RIGHT / S-LEFT     Right pane page scroll\n\n  \
             CAMPAIGN\n  \
               C       Create a new campaign\n  \
               L       Load an existing campaign\n\n  \
