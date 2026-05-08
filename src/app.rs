@@ -451,8 +451,60 @@ impl App {
                     self.edit_focused_field();
                 }
             }
+            "+" => {
+                if editable {
+                    self.add_custom_skill();
+                }
+            }
             _ => {}
         }
+    }
+
+    /// Add a non-canonical skill (e.g. Drawing, Singing, Cooking) under
+    /// the attribute the cursor is currently on. Works whether the
+    /// cursor is on the attribute row itself or on any of its skill
+    /// rows — the parent attribute is parsed out of the field id.
+    fn add_custom_skill(&mut self) {
+        let Some(field) = self.edits.get(self.sheet_idx).cloned() else { return; };
+        // Parent attribute: from "attr/X" or "skill/X/Y" → "X".
+        let attr_name: Option<String> = if let Some(a) = field.field_id.strip_prefix("attr/") {
+            Some(a.to_string())
+        } else if let Some(rest) = field.field_id.strip_prefix("skill/") {
+            rest.split('/').next().map(|s| s.to_string())
+        } else {
+            None
+        };
+        let Some(attr) = attr_name else {
+            self.status_msg("Move the cursor onto an attribute or skill row first.", 208);
+            return;
+        };
+        let name = self.footer.ask(&format!(" New skill under {} (name): ", attr), "");
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            self.status_msg("Cancelled.", 208);
+            return;
+        }
+        let rank_str = self.footer.ask(" Initial rank [0]: ", "0");
+        let rank: i32 = rank_str.trim().parse().unwrap_or(0);
+
+        // Find the active PC and add the skill.
+        let tree = match self.campaign.as_ref() {
+            Some(camp) => build_camp_tree(camp, &self.camp_expanded),
+            None => return,
+        };
+        let pc_idx = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
+            Some(CampNode::Pc(i)) => i,
+            _ => return,
+        };
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(pc) = c.pcs.get_mut(pc_idx) {
+                pc.skills.entry(attr.clone())
+                    .or_default()
+                    .insert(name.clone(), rank);
+            }
+            let _ = c.save();
+        }
+        self.status_msg(&format!("Added skill '{}' under {}.", name, attr), 46);
     }
 
     /// Scroll the right pane so the line of `edits[sheet_idx]` sits
@@ -825,8 +877,8 @@ impl App {
             Tab::Session  => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Forge    => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Campaign => match self.focus {
-                Focus::Left  => " TAB:focus-detail  j/k:tree  l/h:expand/collapse  n:add-PC  D:delete  C:new-camp  L:load",
-                Focus::Right => " TAB:focus-tree   ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
+                Focus::Left  => " TAB:focus-sheet  j/k:tree  l/h:expand/collapse  n:add-PC  D:delete  C:new-camp  L:load",
+                Focus::Right => " TAB:focus-tree   j/k:fields  ENTER:edit  +:add-skill  PgUp/PgDn:page  g/G:top/end",
             },
             Tab::Lore     => match self.focus {
                 Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
@@ -1055,116 +1107,186 @@ impl App {
         let mut edits: Vec<EditableField> = Vec::new();
         let pane_w = self.right_pane.w as usize;
 
-        // Title
-        out.push(String::new());
+        // Active edit id from the previous render's edit map. Used by
+        // each emit helper to bg-highlight only the value cell of the
+        // active field (the label / key stays normal).
+        let active_id: Option<String> = self.edits.get(self.sheet_idx)
+            .map(|e| e.field_id.clone());
+
+        // --- Title (with status appended in parens) ---
         let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
         let race_disp = if pc.race.is_empty() { "—".to_string() } else { pc.race.clone() };
-        out.push(style::bold(&style::fg(
-            &format!("{}  ({}, Level {})", name_disp, race_disp, pc.level), 226)));
+        let bp_max = pc.bp_max().max(1);
+        let (state_text, state_color) = if pc.bp_current <= 0          { ("Helpless", 196) }
+            else if pc.bp_current <= bp_max / 4    { ("Heavily Wounded", 208) }
+            else if pc.bp_current <= bp_max / 2    { ("Wounded", 220) }
+            else                                   { ("Healthy", 46) };
+        out.push(String::new());
+        out.push(format!("{}  {}",
+            style::bold(&style::fg(
+                &format!("{}  ({}, Level {})", name_disp, race_disp, pc.level), 226)),
+            style::fg(state_text, state_color)));
         out.push(String::new());
 
-        // Identity
+        // --- Identity (multi-column table) ---
         out.push(style::bold(&style::fg("Identity", 117)));
-        let id_specs: &[(&str, &str, String)] = &[
+        let id_cells: Vec<(&str, &str, String)> = vec![
             ("name",        "Name",        pc.name.clone()),
-            ("player",      "Player",      pc.player.clone()),
             ("race",        "Race",        pc.race.clone()),
             ("sex",         "Sex",         pc.gender.clone()),
+            ("player",      "Player",      pc.player.clone()),
             ("age",         "Age",         if pc.age == 0 { String::new() } else { pc.age.to_string() }),
+            ("birthplace",  "Birthplace",  pc.birthplace.clone()),
             ("height",      "Height (cm)", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
             ("weight",      "Weight (kg)", pc.weight_kg.to_string()),
-            ("birthplace",  "Birthplace",  pc.birthplace.clone()),
-            ("description", "Description", pc.description.clone()),
         ];
-        for (id, label, value) in id_specs {
+        // Two columns — leaves the rightmost ~third of the pane free
+        // for the future portrait area. Description gets its own
+        // full-width row at the end.
+        let id_cols = if pane_w >= 90 { 2 } else { 1 };
+        let id_cell_w = (pane_w / 3).max(28);
+        let mut row_cells: Vec<String> = Vec::new();
+        for (id, label, value) in &id_cells {
+            let active = active_id.as_deref() == Some(*id);
             edits.push(EditableField {
-                line: out.len(),
+                line: out.len() + (row_cells.len() / id_cols),
                 field_id: (*id).to_string(),
                 label: format!(" {}", label),
                 current: value.clone(),
             });
-            out.push(field_row(LBL, label, value));
+            row_cells.push(emit_cell(LBL, label, value, active));
+            if row_cells.len() == id_cols {
+                out.push(row_cells.iter()
+                    .map(|c| pad_visible(c, id_cell_w))
+                    .collect::<String>());
+                row_cells.clear();
+            }
+        }
+        if !row_cells.is_empty() {
+            out.push(row_cells.iter()
+                .map(|c| pad_visible(c, id_cell_w))
+                .collect::<String>());
+        }
+        // Fix up edit line indices for cells we just wrote (the
+        // running-line approximation above can be off by 1 for trailing
+        // odd cells). Walk the inserted edits and clamp to the actual
+        // last line we pushed.
+        let last_line = out.len().saturating_sub(1);
+        for e in edits.iter_mut().rev() {
+            if id_cells.iter().any(|(id, _, _)| *id == e.field_id) && e.line > last_line {
+                e.line = last_line;
+            } else { break; }
+        }
+        // Description on its own full-width row.
+        let desc_active = active_id.as_deref() == Some("description");
+        edits.push(EditableField { line: out.len(),
+            field_id: "description".into(),
+            label: " Description".into(),
+            current: pc.description.clone() });
+        out.push(emit_cell(LBL, "Description", &pc.description, desc_active));
+        out.push(String::new());
+
+        // --- Derived stats (multi-column) ---
+        out.push(style::bold(&style::fg("Derived stats", 117)));
+        let der_cells: Vec<(&str, String, bool)> = vec![
+            ("",           format!("SIZE: {}", fmt_size(pc.size)), false),
+            ("",           format!("Damage Bonus: {}", pc.db()),    false),
+            ("",           format!("Magick Def.: {}", pc.md()),     false),
+            ("",           format!("Reaction: {}", pc.reaction()),  false),
+        ];
+        // 2-col layout — all derived stats are read-only (computed).
+        let mut row: Vec<String> = Vec::new();
+        for (_, value, _) in &der_cells {
+            row.push(format!("  {}", style::fg(value, LBL)));
+            if row.len() == id_cols {
+                out.push(row.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
+                row.clear();
+            }
+        }
+        if !row.is_empty() {
+            out.push(row.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
         }
         out.push(String::new());
 
-        // Derived stats
-        out.push(style::bold(&style::fg("Derived stats", 117)));
-        out.push(field_row(LBL, "SIZE", &fmt_size(pc.size)));
-        edits.push(EditableField {
-            line: out.len(),
+        // --- Body Points block (current/max + wound state, editable) ---
+        out.push(style::bold(&style::fg("Body Points", 117)));
+        // Current BP — editable.
+        let bp_active = active_id.as_deref() == Some("bp_current");
+        let bp_text = format!("{} / {}", pc.bp_current.max(0), pc.bp_max());
+        edits.push(EditableField { line: out.len(),
             field_id: "bp_current".into(),
             label: " Body Points (current)".into(),
-            current: pc.bp_current.to_string(),
-        });
-        out.push(field_row(LBL, "Body Points",
-            &format!("{} / {}", pc.bp_current.max(0), pc.bp_max())));
-        out.push(field_row(LBL, "Damage Bonus", &pc.db().to_string()));
-        out.push(field_row(LBL, "Magick Def.",  &pc.md().to_string()));
-        out.push(field_row(LBL, "Reaction",     &pc.reaction().to_string()));
-        edits.push(EditableField {
-            line: out.len(),
+            current: pc.bp_current.to_string() });
+        out.push(emit_cell(LBL, "Body Points", &bp_text, bp_active));
+        // Mental Fortitude current — editable.
+        let mf_active = active_id.as_deref() == Some("mf_current");
+        let mf_text = format!("{} / {}", pc.mf_current.max(0), pc.mf_max());
+        edits.push(EditableField { line: out.len(),
             field_id: "mf_current".into(),
             label: " Mental Fortitude (current)".into(),
-            current: pc.mf_current.to_string(),
-        });
-        out.push(field_row(LBL, "Mental Fort.",
-            &format!("{} / {}", pc.mf_current.max(0), pc.mf_max())));
-        out.push(String::new());
-
-        // Status
-        let bp_max = pc.bp_max().max(1);
+            current: pc.mf_current.to_string() });
+        out.push(emit_cell(LBL, "Mental Fort.", &mf_text, mf_active));
+        // Wound state derived from BP%.
         let bp_pct = (pc.bp_current as f32 / bp_max as f32) * 100.0;
-        let state = if pc.bp_current <= 0          { ("Helpless / down", 196) }
-            else if pc.bp_current <= bp_max / 4    { ("Heavily Wounded (-4 to all)", 208) }
-            else if pc.bp_current <= bp_max / 2    { ("Wounded (-2 to all)", 220) }
-            else                                   { ("Healthy", 46) };
-        out.push(style::bold(&style::fg("Status", 117)));
         out.push(format!("  {} ({:.0}% BP)",
-            style::fg(state.0, state.1), bp_pct));
+            style::fg(state_text, state_color), bp_pct));
         out.push(String::new());
 
-        // Hit locations (always shown)
+        // --- Hit locations (always shown) ---
         out.push(style::bold(&style::fg("Hit locations", 117)));
         let dice = ["⚅", "⚄", "⚃", "⚂", "⚁", "⚀"];
         for (loc, die) in HIT_LOCATIONS.iter().zip(dice.iter()) {
             let hl = pc.hit_locations.get(*loc).cloned().unwrap_or_default();
-            let armor = if hl.armor.is_empty() { "—".to_string() } else { hl.armor.clone() };
+            let armor_id = format!("hit/{}/armor", loc);
+            let ap_id    = format!("hit/{}/ap", loc);
+            let bp_id    = format!("hit/{}/bp", loc);
+            let armor_active = active_id.as_deref() == Some(&armor_id);
+            let ap_active    = active_id.as_deref() == Some(&ap_id);
+            let bp_active    = active_id.as_deref() == Some(&bp_id);
             edits.push(EditableField { line: out.len(),
-                field_id: format!("hit/{}/armor", loc),
+                field_id: armor_id.clone(),
                 label: format!(" {} armor", loc), current: hl.armor.clone() });
             edits.push(EditableField { line: out.len(),
-                field_id: format!("hit/{}/ap", loc),
+                field_id: ap_id.clone(),
                 label: format!(" {} AP", loc), current: hl.ap.to_string() });
             edits.push(EditableField { line: out.len(),
-                field_id: format!("hit/{}/bp", loc),
+                field_id: bp_id.clone(),
                 label: format!(" {} BP", loc), current: hl.bp.to_string() });
-            out.push(format!("  {} {:<8}  {:<14}  AP {:>2}  BP {:>2}",
-                die, loc, armor, hl.ap, hl.bp));
+            out.push(format!("  {} {:<8}  {}  AP {}  BP {}",
+                die, loc,
+                pad_visible(&value_cell(&hl.armor, 14, armor_active), 14),
+                value_cell(&hl.ap.to_string(), 2, ap_active),
+                value_cell(&hl.bp.to_string(), 2, bp_active)));
         }
         out.push(String::new());
 
-        // Characteristics row
+        // --- Characteristics row (editable per-char) ---
         out.push(style::bold(&style::fg("Characteristics", 117)));
+        let body_active = active_id.as_deref() == Some("char/BODY");
+        let mind_active = active_id.as_deref() == Some("char/MIND");
+        let spirit_active = active_id.as_deref() == Some("char/SPIRIT");
         edits.push(EditableField { line: out.len(), field_id: "char/BODY".into(),
             label: " BODY rank".into(), current: pc.ch(Char::Body).to_string() });
         edits.push(EditableField { line: out.len(), field_id: "char/MIND".into(),
             label: " MIND rank".into(), current: pc.ch(Char::Mind).to_string() });
         edits.push(EditableField { line: out.len(), field_id: "char/SPIRIT".into(),
             label: " SPIRIT rank".into(), current: pc.ch(Char::Spirit).to_string() });
-        out.push(format!("  {}: {:<2}    {}: {:<2}    {}: {:<2}",
-            style::fg("BODY", LBL), pc.ch(Char::Body),
-            style::fg("MIND", LBL), pc.ch(Char::Mind),
-            style::fg("SPIRIT", LBL), pc.ch(Char::Spirit)));
+        out.push(format!("  {}: {}    {}: {}    {}: {}",
+            style::fg("BODY", LBL),
+            value_cell(&pc.ch(Char::Body).to_string(), 2, body_active),
+            style::fg("MIND", LBL),
+            value_cell(&pc.ch(Char::Mind).to_string(), 2, mind_active),
+            style::fg("SPIRIT", LBL),
+            value_cell(&pc.ch(Char::Spirit).to_string(), 2, spirit_active)));
         out.push(String::new());
 
-        // Attributes & skills (3 columns when wide enough, else stacked)
+        // --- Attributes & skills (3 columns when pane is wide enough) ---
         out.push(style::bold(&style::fg("Attributes & skills", 117)));
-        out.push(style::fg("  (Total = Char + Attr + Skill — used for every roll)", LBL).to_string());
         let three_col = pane_w >= 96;
         if three_col {
-            let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS);
-            let mind_col   = render_char_column(pc, Char::Mind,   ATTRIBUTES, SKILLS);
-            let spirit_col = render_char_column(pc, Char::Spirit, ATTRIBUTES, SKILLS);
+            let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS, active_id.as_deref());
+            let mind_col   = render_char_column(pc, Char::Mind,   ATTRIBUTES, SKILLS, active_id.as_deref());
+            let spirit_col = render_char_column(pc, Char::Spirit, ATTRIBUTES, SKILLS, active_id.as_deref());
             let col_w = (pane_w / 3).max(30);
             let max_rows = body_col.lines.len()
                 .max(mind_col.lines.len())
@@ -1191,7 +1313,7 @@ impl App {
             }
         } else {
             for ch in [Char::Body, Char::Mind, Char::Spirit] {
-                let col = render_char_column(pc, ch, ATTRIBUTES, SKILLS);
+                let col = render_char_column(pc, ch, ATTRIBUTES, SKILLS, active_id.as_deref());
                 let base = out.len();
                 for line in &col.lines { out.push(line.clone()); }
                 for e in &col.edits {
@@ -1256,37 +1378,48 @@ impl App {
 
         // Equipment + money
         out.push(style::bold(&style::fg("Equipment", 117)));
+        let cloth_active = active_id.as_deref() == Some("clothing");
         edits.push(EditableField { line: out.len(), field_id: "clothing".into(),
             label: " Clothing".into(), current: pc.clothing.clone() });
-        out.push(field_row(LBL, "Clothing", &pc.clothing));
+        out.push(emit_cell(LBL, "Clothing", &pc.clothing, cloth_active));
         for item in &pc.equipment {
             out.push(format!("  • {}", item));
         }
+        let money_active = active_id.as_deref() == Some("money");
         edits.push(EditableField { line: out.len(), field_id: "money".into(),
             label: " Money (sp)".into(), current: pc.money_sp.to_string() });
-        out.push(field_row(LBL, "Money", &format!("{} sp", pc.money_sp)));
+        out.push(emit_cell(LBL, "Money",
+            &format!("{} sp", pc.money_sp), money_active));
         out.push(String::new());
 
         // Notes
         out.push(style::bold(&style::fg("Notes", 117)));
+        let notes_active = active_id.as_deref() == Some("notes");
         edits.push(EditableField { line: out.len(), field_id: "notes".into(),
             label: " Notes".into(), current: pc.notes.clone() });
         if pc.notes.is_empty() {
-            out.push(style::fg("  (none — press ENTER to add)", LBL).to_string());
+            // Show the empty-value placeholder, bg-highlighted when active.
+            out.push(format!("  {}", value_cell("(none — press ENTER to add)", 32, notes_active)));
         } else {
+            // Bg-highlight the first line when active; further lines stay
+            // plain so multi-line notes still wrap nicely.
+            let mut first = true;
             for line in pc.notes.lines() {
-                out.push(format!("  {}", line));
+                if first && notes_active {
+                    out.push(format!("  {}", value_cell(line,
+                        crust::display_width(line).max(1), true)));
+                } else {
+                    out.push(format!("  {}", line));
+                }
+                first = false;
             }
         }
 
-        // Highlight the active edit field by reverse-styling its row.
-        if self.tab == Tab::Campaign && self.focus == Focus::Right {
-            if let Some(active) = edits.get(self.sheet_idx) {
-                if let Some(text) = out.get_mut(active.line) {
-                    *text = style::bold(&style::bg(text, 24));
-                }
-            }
-        }
+        // Sort edits by line so j/k advances row-major across the
+        // 3-column 3-tier section (BODY-row1, MIND-row1, SPIRIT-row1,
+        // BODY-row2, …). Stable sort preserves the within-row order
+        // we appended in (BODY → MIND → SPIRIT, armor → AP → BP, etc).
+        edits.sort_by_key(|e| e.line);
 
         (out, edits)
     }
@@ -1419,6 +1552,7 @@ fn render_char_column(
     ch: crate::pc::Char,
     attributes: &[(crate::pc::Char, &'static str)],
     skills:     &[(&'static str, &'static [&'static str])],
+    active_id: Option<&str>,
 ) -> CharColumn {
     use crust::style;
     const LBL: u8 = 245;
@@ -1432,14 +1566,17 @@ fn render_char_column(
     for (_, attr) in attributes.iter().filter(|(c, _)| *c == ch) {
         let attr: &str = attr;
         let av = pc.attr(attr);
+        let attr_id = format!("attr/{}", attr);
+        let attr_active = active_id == Some(attr_id.as_str());
         col.edits.push(EditableField {
             line: col.lines.len(),
-            field_id: format!("attr/{}", attr),
+            field_id: attr_id,
             label: format!(" {} rank", attr),
             current: av.to_string(),
         });
-        col.lines.push(format!("    {:<22}{:>3}",
-            style::fg(attr, 250), av));
+        col.lines.push(format!("    {:<22}{}",
+            style::fg(attr, 250),
+            value_cell(&format!("{:>3}", av), 3, attr_active)));
 
         // Skills under this attribute. Canonical list (always rendered)
         // plus any extra skills the user has tracked beyond canon.
@@ -1451,32 +1588,83 @@ fn render_char_column(
         for skill in canonical {
             let rank = pc.skill(attr, skill);
             let total = pc.skill_total(ch, attr, skill);
+            let skill_id = format!("skill/{}/{}", attr, skill);
+            let skill_active = active_id == Some(skill_id.as_str());
             col.edits.push(EditableField {
                 line: col.lines.len(),
-                field_id: format!("skill/{}/{}", attr, skill),
+                field_id: skill_id,
                 label: format!(" {} (rank)", skill),
                 current: rank.to_string(),
             });
-            col.lines.push(format!("      {:<20}{:>3}  {:>3}",
-                skill, rank, total));
+            col.lines.push(format!("      {:<20}{}  {:>3}",
+                skill,
+                value_cell(&format!("{:>3}", rank), 3, skill_active),
+                total));
             shown.insert((*skill).to_string());
         }
         if let Some(extras) = pc.skills.get(attr) {
             for (skill, rank) in extras {
                 if shown.contains(skill) { continue; }
                 let total = pc.skill_total(ch, attr, skill);
+                let skill_id = format!("skill/{}/{}", attr, skill);
+                let skill_active = active_id == Some(skill_id.as_str());
                 col.edits.push(EditableField {
                     line: col.lines.len(),
-                    field_id: format!("skill/{}/{}", attr, skill),
+                    field_id: skill_id,
                     label: format!(" {} (rank)", skill),
                     current: rank.to_string(),
                 });
-                col.lines.push(format!("      {:<20}{:>3}  {:>3}",
-                    skill, rank, total));
+                col.lines.push(format!("      {:<20}{}  {:>3}",
+                    skill,
+                    value_cell(&format!("{:>3}", rank), 3, skill_active),
+                    total));
             }
         }
     }
     col
+}
+
+/// Render one "Label: value" cell with optional bg-highlight on the
+/// value (not the label). Used by Identity / Equipment / Body Points
+/// rows where a single field sits per logical cell.
+fn emit_cell(label_color: u8, label: &str, value: &str, active: bool) -> String {
+    let v_disp = if value.is_empty() && !active {
+        crust::style::fg("—", label_color).to_string()
+    } else {
+        value.to_string()
+    };
+    let v_part = if active {
+        // Always highlight at least one cell — use a single space when
+        // the value is empty so the cursor is visible.
+        let inner = if value.is_empty() { " ".to_string() } else { v_disp };
+        crust::style::bold(&crust::style::bg(&inner, 24))
+    } else {
+        v_disp
+    };
+    format!("  {} {}",
+        crust::style::fg(&format!("{}:", label), label_color),
+        v_part)
+}
+
+/// Bg-highlight a value when active, otherwise return the value as-is
+/// padded to at least `min_w` chars. Used by inline cells (Hit
+/// locations row, Characteristics row, attribute / skill rank cell
+/// in the 3-tier section) where the label is rendered separately.
+fn value_cell(value: &str, min_w: usize, active: bool) -> String {
+    let padded = if value.is_empty() && active {
+        " ".repeat(min_w)
+    } else {
+        let w = crust::display_width(value);
+        if w >= min_w { value.to_string() }
+        else { format!("{}{}", value, " ".repeat(min_w - w)) }
+    };
+    if active {
+        crust::style::bold(&crust::style::bg(&padded, 24))
+    } else if value.is_empty() {
+        format!("{:<width$}", "—", width = min_w)
+    } else {
+        padded
+    }
 }
 
 /// Pad a string with trailing spaces to reach the given visible width.
