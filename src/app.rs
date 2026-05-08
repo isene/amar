@@ -1109,164 +1109,194 @@ impl App {
     /// Vec<EditableField> mapping line indices to the field id the
     /// inline editor should target on ENTER.
     fn render_pc_sheet(&self, pc: &crate::pc::Character, active_id: Option<&str>) -> (Vec<String>, Vec<EditableField>) {
-        use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS};
-        const LBL: u8 = 245;
+        use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS, bp_for_location};
+        // Color palette inspired by a printed character sheet:
+        //   LBL_ID    — identity field labels (cool grey)
+        //   LBL_PHYS  — physical / combat block labels (warm rose)
+        //   LBL_HIT   — hit-location names (cyan)
+        //   DICE      — hit-location dice glyphs (gold)
+        //   ID_VAL    — identity values (light)
+        //   TITLE     — PC name (yellow bold)
+        //   PLAYER    — player name in title parens (dim)
+        const LBL_ID:    u8 = 245;
+        const LBL_PHYS:  u8 = 174;
+        const LBL_HIT:   u8 = 117;
+        const DICE:      u8 = 220;
+        const TITLE:     u8 = 226;
+        const PLAYER:    u8 = 244;
+        const STATUS_OK: u8 = 46;
+        const STATUS_W:  u8 = 220;
+        const STATUS_HW: u8 = 208;
+        const STATUS_X:  u8 = 196;
+        const _LBL_DEF:   u8 = 245;
+        const LBL: u8 = LBL_ID;
         let mut out: Vec<String> = Vec::new();
         let mut edits: Vec<EditableField> = Vec::new();
         let pane_w = self.right_pane.w as usize;
 
-        // --- Title (with status appended in parens) ---
+        // --- Title: "Name  (Player)" ---
         let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
-        let race_disp = if pc.race.is_empty() { "—".to_string() } else { pc.race.clone() };
         let bp_max = pc.bp_max().max(1);
-        let (state_text, state_color) = if pc.bp_current <= 0          { ("Helpless", 196) }
-            else if pc.bp_current <= bp_max / 4    { ("Heavily Wounded", 208) }
-            else if pc.bp_current <= bp_max / 2    { ("Wounded", 220) }
-            else                                   { ("Healthy", 46) };
+        let (state_text, state_color, status_penalty) =
+            if pc.bp_current <= 0          { ("Helpless", STATUS_X,  None) }
+            else if pc.bp_current <= bp_max / 4 { ("Heavily Wounded", STATUS_HW, Some(-4)) }
+            else if pc.bp_current <= bp_max / 2 { ("Wounded",         STATUS_W,  Some(-2)) }
+            else                                { ("Healthy",         STATUS_OK, Some(0))  };
         out.push(String::new());
-        out.push(format!("{}  {}",
-            style::bold(&style::fg(
-                &format!("{}  ({}, Level {})", name_disp, race_disp, pc.level), 226)),
-            style::fg(state_text, state_color)));
+        let title = if pc.player.is_empty() {
+            style::bold(&style::fg(&name_disp, TITLE))
+        } else {
+            format!("{}  {}",
+                style::bold(&style::fg(&name_disp, TITLE)),
+                style::fg(&format!("({})", pc.player), PLAYER))
+        };
+        out.push(format!(" {}", title));
         out.push(String::new());
 
-        // --- Identity (multi-column table) ---
-        out.push(style::bold(&style::fg("Identity", 117)));
-        let id_cells: Vec<(&str, &str, String)> = vec![
-            ("name",        "Name",        pc.name.clone()),
-            ("race",        "Race",        pc.race.clone()),
-            ("sex",         "Sex",         pc.gender.clone()),
-            ("player",      "Player",      pc.player.clone()),
-            ("age",         "Age",         if pc.age == 0 { String::new() } else { pc.age.to_string() }),
-            ("birthplace",  "Birthplace",  pc.birthplace.clone()),
-            ("height",      "Height (cm)", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
-            ("weight",      "Weight (kg)", pc.weight_kg.to_string()),
+        // --- Identity row 1: Race / Sex / Age ---
+        // --- Identity row 2: Height / Weight / SIZE ---
+        // Three slots per row, fixed labels, value cells bg-highlighted
+        // when active. Width adapts to pane width.
+        let row_w = (pane_w / 3).max(20);
+        let id_row1: &[(&str, &str, String)] = &[
+            ("race",   "Race",   pc.race.clone()),
+            ("sex",    "Sex",    pc.gender.clone()),
+            ("age",    "Age",    if pc.age == 0 { String::new() } else { pc.age.to_string() }),
         ];
-        // 3-column when the pane is wide; 2-column on medium; 1-column
-        // on narrow. Cell width tracks `pane_w / id_cols`; the
-        // rightmost slice is left for the future portrait area when
-        // id_cols ≤ 2.
-        let id_cols = if pane_w >= 130 { 3 }
-                      else if pane_w >= 90 { 2 }
-                      else { 1 };
-        let id_cell_w = (pane_w / id_cols.max(1)).saturating_sub(1).max(24);
-        let mut row_cells: Vec<String> = Vec::new();
-        for (id, label, value) in &id_cells {
-            let active = active_id == Some(*id);
-            edits.push(EditableField {
-                line: out.len() + (row_cells.len() / id_cols),
-                field_id: (*id).to_string(),
-                label: format!(" {}", label),
-                current: value.clone(),
-            });
-            row_cells.push(emit_cell(LBL, label, value, active));
-            if row_cells.len() == id_cols {
-                out.push(row_cells.iter()
-                    .map(|c| pad_visible(c, id_cell_w))
-                    .collect::<String>());
-                row_cells.clear();
+        let id_row2: &[(&str, &str, String)] = &[
+            ("height", "Height", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
+            ("weight", "Weight", pc.weight_kg.to_string()),
+            // SIZE is read-only — derives from weight via the half-size
+            // table. Shown alongside Height/Weight so the trio reads as
+            // "physical envelope".
+            ("",       "SIZE",   fmt_size(pc.size)),
+        ];
+        for row in [id_row1, id_row2] {
+            let mut cells: Vec<String> = Vec::with_capacity(3);
+            for (id, label, value) in row {
+                let active = !id.is_empty() && active_id == Some(*id);
+                if !id.is_empty() {
+                    edits.push(EditableField {
+                        line: out.len(),
+                        field_id: (*id).to_string(),
+                        label: format!(" {}", label),
+                        current: value.clone(),
+                    });
+                }
+                cells.push(format!(" {:<8} {}",
+                    style::fg(&format!("{}:", label), LBL_ID),
+                    value_cell(value, 6, active)));
             }
+            out.push(cells.iter().map(|c| pad_visible(c, row_w)).collect::<String>());
         }
-        if !row_cells.is_empty() {
-            out.push(row_cells.iter()
-                .map(|c| pad_visible(c, id_cell_w))
-                .collect::<String>());
-        }
-        // Fix up edit line indices for cells we just wrote (the
-        // running-line approximation above can be off by 1 for trailing
-        // odd cells). Walk the inserted edits and clamp to the actual
-        // last line we pushed.
-        let last_line = out.len().saturating_sub(1);
-        for e in edits.iter_mut().rev() {
-            if id_cells.iter().any(|(id, _, _)| *id == e.field_id) && e.line > last_line {
-                e.line = last_line;
-            } else { break; }
-        }
-        // Description on its own full-width row.
+        out.push(String::new());
+
+        // --- Birthplace (full width) ---
+        let bp_active = active_id == Some("birthplace");
+        edits.push(EditableField { line: out.len(),
+            field_id: "birthplace".into(),
+            label: " Birthplace".into(),
+            current: pc.birthplace.clone() });
+        out.push(format!(" {} {}",
+            style::fg("Birthplace:", LBL_ID),
+            value_cell(&pc.birthplace, 12, bp_active)));
+
+        // --- Description (full width, multiline) ---
         let desc_active = active_id == Some("description");
         edits.push(EditableField { line: out.len(),
             field_id: "description".into(),
             label: " Description".into(),
             current: pc.description.clone() });
-        out.push(emit_cell(LBL, "Description", &pc.description, desc_active));
-        out.push(String::new());
-
-        // --- Derived stats (multi-column) ---
-        out.push(style::bold(&style::fg("Derived stats", 117)));
-        let der_cells: Vec<(&str, String, bool)> = vec![
-            ("",           format!("SIZE: {}", fmt_size(pc.size)), false),
-            ("",           format!("Damage Bonus: {}", pc.db()),    false),
-            ("",           format!("Magick Def.: {}", pc.md()),     false),
-            ("",           format!("Reaction: {}", pc.reaction()),  false),
-        ];
-        // 2-col layout — all derived stats are read-only (computed).
-        let mut row: Vec<String> = Vec::new();
-        for (_, value, _) in &der_cells {
-            row.push(format!("  {}", style::fg(value, LBL)));
-            if row.len() == id_cols {
-                out.push(row.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
-                row.clear();
+        if pc.description.is_empty() {
+            out.push(format!(" {} {}",
+                style::fg("Description:", LBL_ID),
+                value_cell("", 8, desc_active)));
+        } else {
+            // First line shows label + first text line. Continuation
+            // lines indent two spaces with no label.
+            let mut lines = pc.description.lines();
+            let first = lines.next().unwrap_or("");
+            out.push(format!(" {} {}",
+                style::fg("Description:", LBL_ID),
+                if desc_active { value_cell(first, first.chars().count().max(1), true) }
+                else { first.to_string() }));
+            for cont in lines {
+                out.push(format!("  {}", cont));
             }
         }
-        if !row.is_empty() {
-            out.push(row.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
-        }
         out.push(String::new());
 
-        // --- Body Points block (current/max + wound state, editable) ---
-        out.push(style::bold(&style::fg("Body Points", 117)));
-        // Current BP — editable.
-        let bp_active = active_id == Some("bp_current");
-        let bp_text = format!("{} / {}", pc.bp_current.max(0), pc.bp_max());
-        edits.push(EditableField { line: out.len(),
-            field_id: "bp_current".into(),
-            label: " Body Points (current)".into(),
-            current: pc.bp_current.to_string() });
-        out.push(emit_cell(LBL, "Body Points", &bp_text, bp_active));
-        // Mental Fortitude current — editable.
-        let mf_active = active_id == Some("mf_current");
-        let mf_text = format!("{} / {}", pc.mf_current.max(0), pc.mf_max());
-        edits.push(EditableField { line: out.len(),
-            field_id: "mf_current".into(),
-            label: " Mental Fortitude (current)".into(),
-            current: pc.mf_current.to_string() });
-        out.push(emit_cell(LBL, "Mental Fort.", &mf_text, mf_active));
-        // Wound state derived from BP%.
-        let bp_pct = (pc.bp_current as f32 / bp_max as f32) * 100.0;
-        out.push(format!("  {} ({:.0}% BP)",
-            style::fg(state_text, state_color), bp_pct));
-        out.push(String::new());
-
-        // --- Hit locations (always shown) ---
-        out.push(style::bold(&style::fg("Hit locations", 117)));
+        // --- Stats + Hit Locations side by side ---
+        // Six rows, each with a left "stat:value" cell and a right
+        // hit-location cell. Per-location BP comes from the wiki rule
+        // ("50% in head+arms, 80% in body+legs").
+        let bp_curr_active = active_id == Some("bp_current");
+        let mf_curr_active = active_id == Some("mf_current");
+        let bp_max_total = pc.bp_max();
+        let stat_cells: Vec<(Option<&str>, &str, String, bool)> = vec![
+            (None,             "Status",  status_penalty.map(|p| format!("{:+}", p)).unwrap_or_else(|| state_text.to_string()), false),
+            (Some("bp_current"), "BP",     format!("{}/{}", pc.bp_current.max(0), bp_max_total), bp_curr_active),
+            (None,             "DB",      pc.db().to_string(),       false),
+            (None,             "MD",      pc.md().to_string(),       false),
+            (Some("mf_current"), "M.Fort", format!("{}/{}", pc.mf_current.max(0), pc.mf_max()), mf_curr_active),
+            (None,             "React.",  pc.reaction().to_string(), false),
+        ];
         let dice = ["⚅", "⚄", "⚃", "⚂", "⚁", "⚀"];
-        for (loc, die) in HIT_LOCATIONS.iter().zip(dice.iter()) {
+        let stat_w = (pane_w / 2).max(20);
+        for (stat, (loc, die)) in stat_cells.iter().zip(HIT_LOCATIONS.iter().zip(dice.iter())) {
+            let (id_opt, label, value, active) = stat;
+            let value: &str = value;
+            // Left: stat
+            if let Some(id) = id_opt {
+                edits.push(EditableField {
+                    line: out.len(),
+                    field_id: (*id).to_string(),
+                    label: format!(" {}", label),
+                    current: value.to_string(),
+                });
+            }
+            let stat_text = format!(" {:<7} {}",
+                style::fg(&format!("{}:", label), LBL_PHYS),
+                if *active {
+                    value_cell(value, value.chars().count().max(3), true)
+                } else if id_opt.is_none() && *label == "Status" {
+                    // Color the wound-state cell.
+                    style::fg(value, state_color)
+                } else {
+                    value.to_string()
+                });
+
+            // Right: hit location
             let hl = pc.hit_locations.get(*loc).cloned().unwrap_or_default();
             let armor_id = format!("hit/{}/armor", loc);
             let ap_id    = format!("hit/{}/ap", loc);
-            let bp_id    = format!("hit/{}/bp", loc);
             let armor_active = active_id == Some(&armor_id);
             let ap_active    = active_id == Some(&ap_id);
-            let bp_active    = active_id == Some(&bp_id);
             edits.push(EditableField { line: out.len(),
                 field_id: armor_id.clone(),
                 label: format!(" {} armor", loc), current: hl.armor.clone() });
             edits.push(EditableField { line: out.len(),
                 field_id: ap_id.clone(),
                 label: format!(" {} AP", loc), current: hl.ap.to_string() });
-            edits.push(EditableField { line: out.len(),
-                field_id: bp_id.clone(),
-                label: format!(" {} BP", loc), current: hl.bp.to_string() });
-            out.push(format!("  {} {:<8}  {}  AP {}  BP {}",
-                die, loc,
-                pad_visible(&value_cell(&hl.armor, 14, armor_active), 14),
-                value_cell(&hl.ap.to_string(), 2, ap_active),
-                value_cell(&hl.bp.to_string(), 2, bp_active)));
+            let loc_bp = bp_for_location(bp_max_total, loc);
+            let hit_text = format!(" {} {} {} {} {}",
+                style::fg(die, DICE),
+                pad_visible(&style::fg(loc, LBL_HIT), 8),
+                pad_visible(&value_cell(&hl.armor, 10, armor_active), 10),
+                style::fg("AP", LBL_ID),
+                value_cell(&hl.ap.to_string(), 2, ap_active));
+            // Append BP at the right edge.
+            let combined = format!("{}{}  {}  {}",
+                pad_visible(&stat_text, stat_w),
+                hit_text,
+                style::fg("BP", LBL_ID),
+                style::fg(&loc_bp.to_string(), 252));
+            out.push(combined);
         }
         out.push(String::new());
 
-        // --- Attributes & skills (3 columns when pane is wide enough) ---
-        out.push(style::bold(&style::fg("Attributes & skills", 117)));
+        // --- 3-tier Attributes & Skills (no header — obvious from
+        // the BODY/MIND/SPIRIT column titles) ---
         let three_col = pane_w >= 96;
         if three_col {
             let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS, active_id);
@@ -1315,7 +1345,7 @@ impl App {
         out.push(String::new());
 
         // Melee weapons (always shown)
-        out.push(style::bold(&style::fg("Melee weapons", 117)));
+        out.push(style::bold(&style::fg("Melee weapons", 209)));
         out.push(format!("  {:<22} {:<3} {:>4} {:>4} {:>4} {:>4} {:>3}",
             style::fg("Name", LBL), style::fg("H", LBL), style::fg("Init", LBL),
             style::fg("±O", LBL), style::fg("±D", LBL), style::fg("Dam", LBL), style::fg("HP", LBL)));
@@ -1330,7 +1360,7 @@ impl App {
         out.push(String::new());
 
         // Missile weapons (always shown)
-        out.push(style::bold(&style::fg("Missile weapons", 117)));
+        out.push(style::bold(&style::fg("Missile weapons", 130)));
         out.push(format!("  {:<22} {:>4} {:>4} {:>4} {:>4} {:>4} {:>3}",
             style::fg("Name", LBL), style::fg("Init", LBL), style::fg("±O", LBL),
             style::fg("s/r", LBL), style::fg("Dam", LBL), style::fg("Rng", LBL), style::fg("HP", LBL)));
@@ -1345,7 +1375,7 @@ impl App {
 
         // Spells
         if !pc.spells.is_empty() {
-            out.push(style::bold(&style::fg("Spells", 117)));
+            out.push(style::bold(&style::fg("Spells", 141)));
             for spell_name in &pc.spells {
                 if let Some(entry) = self.canon.lookup(spell_name) {
                     let dr   = entry.fields.get("dr").map(|s| s.as_str()).unwrap_or("?");
@@ -1362,7 +1392,7 @@ impl App {
         }
 
         // Equipment + money
-        out.push(style::bold(&style::fg("Equipment", 117)));
+        out.push(style::bold(&style::fg("Equipment", 180)));
         let cloth_active = active_id == Some("clothing");
         edits.push(EditableField { line: out.len(), field_id: "clothing".into(),
             label: " Clothing".into(), current: pc.clothing.clone() });
@@ -1378,7 +1408,7 @@ impl App {
         out.push(String::new());
 
         // Notes
-        out.push(style::bold(&style::fg("Notes", 117)));
+        out.push(style::bold(&style::fg("Notes", 248)));
         let notes_active = active_id == Some("notes");
         edits.push(EditableField { line: out.len(), field_id: "notes".into(),
             label: " Notes".into(), current: pc.notes.clone() });
@@ -1543,9 +1573,16 @@ fn render_char_column(
     const LBL: u8 = 245;
     let mut col = CharColumn { lines: Vec::new(), edits: Vec::new() };
 
-    // Column header — also the characteristic-rank edit point. We
-    // dropped the separate "Characteristics" row above the 3-tier
-    // section because it duplicated this exact information.
+    // Column header in a per-characteristic accent colour. The
+    // characteristic rank lives next to the header so each column's
+    // header IS the rank's edit cell — no separate "Characteristics"
+    // row needed above the section.
+    use crate::pc::Char as Ch;
+    let head_color: u8 = match ch {
+        Ch::Body   => 209,  // warm red — physical
+        Ch::Mind   => 75,   // cool blue — mental
+        Ch::Spirit => 141,  // soft purple — mystical
+    };
     let char_id = format!("char/{}", ch.name());
     let char_active = active_id == Some(char_id.as_str());
     col.edits.push(EditableField {
@@ -1555,7 +1592,7 @@ fn render_char_column(
         current: pc.ch(ch).to_string(),
     });
     col.lines.push(format!("  {} {}",
-        style::bold(ch.name()),
+        style::bold(&style::fg(ch.name(), head_color)),
         value_cell(&format!("({})", pc.ch(ch)), 4, char_active)));
 
     for (_, attr) in attributes.iter().filter(|(c, _)| *c == ch) {

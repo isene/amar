@@ -111,14 +111,26 @@ pub struct Weapon {
     pub xp: i32,
 }
 
-/// Per-location armor + AP + BP, per the hit-location table on the
+/// Per-location armor + AP, per the hit-location table on the
 /// character sheet. d6 hit-location roll: 6 head, 5 R-arm, 4 L-arm,
 /// 3 body, 2 R-leg, 1 L-leg.
+///
+/// Per-location BP is NOT stored — it derives from the character's
+/// total BP via the wiki rule "50% of BP in head + arms, 80% in body
+/// + legs", computed at render time by `bp_for_location`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HitLocation {
     pub armor: String,
     pub ap: i32,
-    pub bp: i32,
+}
+
+/// Per-hit-location BP from the character's total BP. Wiki rule
+/// (Combat → Hit Locations): "A human has 50 % of his body points
+/// in the head and arms and 80 % in the body and legs." Rounds up
+/// so a 7 BP human gets Head/Arms = 4, Body/Legs = 6.
+pub fn bp_for_location(total_bp: i32, loc: &str) -> i32 {
+    let factor = if loc == "Head" || loc.contains("Arm") { 0.5 } else { 0.8 };
+    ((total_bp as f32 * factor).ceil()) as i32
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -308,7 +320,6 @@ impl Character {
                     match kind {
                         "armor" => entry.armor = trim.to_string(),
                         "ap"    => entry.ap = parse_i(trim, "AP")?,
-                        "bp"    => entry.bp = parse_i(trim, "BP")?,
                         _ => return Err(format!("unknown hit field: {}", kind)),
                     }
                 } else {
