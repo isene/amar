@@ -83,6 +83,24 @@ pub struct App {
     /// Left-pane width on a 1-6 scale (kastrup convention). Persisted
     /// in GlobalConfig.
     pub pane_width: u8,
+    /// PC sheet editable-field cursor. Indexes into `self.edits`;
+    /// ENTER on the right pane edits the field at this index.
+    pub sheet_idx: usize,
+    /// Cached list of editable fields for the currently-rendered PC
+    /// sheet. Refreshed on every render_campaign_panes() call.
+    pub edits: Vec<EditableField>,
+}
+
+/// One editable position on a rendered PC sheet. The cursor moves
+/// between these (j/k on the right pane); ENTER opens an edit prompt
+/// pre-filled with `current` and dispatches the result via
+/// Character::set_field.
+#[derive(Debug, Clone)]
+pub struct EditableField {
+    pub line: usize,
+    pub field_id: String,
+    pub label: String,
+    pub current: String,
 }
 
 /// Sections in the Campaign tree, in display order.
@@ -191,6 +209,8 @@ impl App {
             camp_idx: 0,
             camp_expanded: vec!["PCs".to_string()],  // PCs auto-expanded on first run
             pane_width,
+            sheet_idx: 0,
+            edits: Vec::new(),
         }
     }
 
@@ -386,22 +406,98 @@ impl App {
     }
 
     fn handle_camp_content_key(&mut self, key: &str) {
+        // If this is a PC node and we have an edit map, j/k moves
+        // between editable fields and ENTER opens the edit prompt.
+        // Otherwise (Section / Adventure / NPC nodes) j/k is a plain
+        // line scroll.
+        let editable = !self.edits.is_empty();
         match key {
-            "j" | "DOWN" => self.right_pane.linedown(),
-            "k" | "UP"   => self.right_pane.lineup(),
+            "j" | "DOWN" => {
+                if editable {
+                    if self.sheet_idx + 1 < self.edits.len() {
+                        self.sheet_idx += 1;
+                        self.scroll_active_field_into_view();
+                    }
+                } else {
+                    self.right_pane.linedown();
+                }
+            }
+            "k" | "UP" => {
+                if editable {
+                    if self.sheet_idx > 0 {
+                        self.sheet_idx -= 1;
+                        self.scroll_active_field_into_view();
+                    }
+                } else {
+                    self.right_pane.lineup();
+                }
+            }
             "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
             "PgUP"   | "b" => self.right_pane.pageup(),
-            "g" | "HOME" => self.right_pane.ix = 0,
-            "G" | "END"  => {
-                for _ in 0..200 { self.right_pane.pagedown(); }
+            "g" | "HOME" => {
+                if editable { self.sheet_idx = 0; self.right_pane.ix = 0; }
+                else { self.right_pane.ix = 0; }
+            }
+            "G" | "END" => {
+                if editable {
+                    self.sheet_idx = self.edits.len().saturating_sub(1);
+                    for _ in 0..200 { self.right_pane.pagedown(); }
+                } else {
+                    for _ in 0..200 { self.right_pane.pagedown(); }
+                }
+            }
+            "ENTER" => {
+                if editable {
+                    self.edit_focused_field();
+                }
             }
             _ => {}
         }
     }
 
-    /// New PC — prompts for name + weight, picks SIZE from the
-    /// half-size table, blanks all 3-tier abilities. Auto-expands the
-    /// PCs section so the new entry is visible.
+    /// Scroll the right pane so the line of `edits[sheet_idx]` sits
+    /// roughly in the middle of the visible area.
+    fn scroll_active_field_into_view(&mut self) {
+        let Some(field) = self.edits.get(self.sheet_idx) else { return; };
+        let h = self.right_pane.h as usize;
+        let half = h / 2;
+        let new_ix = field.line.saturating_sub(half);
+        self.right_pane.ix = new_ix;
+    }
+
+    /// Open a footer prompt for the currently-focused editable field
+    /// and dispatch the result via Character::set_field. Auto-saves
+    /// the campaign on success.
+    fn edit_focused_field(&mut self) {
+        let Some(field) = self.edits.get(self.sheet_idx).cloned() else { return; };
+        let prompt = format!("{}: ", field.label);
+        let value = self.footer.ask(&prompt, &field.current);
+        // Look up the PC currently selected in the tree.
+        let tree = match self.campaign.as_ref() {
+            Some(camp) => build_camp_tree(camp, &self.camp_expanded),
+            None => return,
+        };
+        let pc_idx = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
+            Some(CampNode::Pc(i)) => i,
+            _ => return,
+        };
+        let result = if let Some(camp) = self.campaign.as_mut() {
+            if let Some(pc) = camp.pcs.get_mut(pc_idx) {
+                pc.set_field(&field.field_id, &value)
+            } else { Err("PC not found".into()) }
+        } else { Err("No campaign loaded".into()) };
+        match result {
+            Ok(_) => {
+                if let Some(c) = self.campaign.as_ref() { let _ = c.save(); }
+                self.status_msg(&format!("Updated {}.", field.label.trim()), 46);
+            }
+            Err(e) => self.status_msg(&format!("Edit failed: {}", e), 196),
+        }
+    }
+
+    /// New PC — prompts only for the name; everything else gets a
+    /// sensible default (Human, 70 kg → SIZE 3) and the user edits
+    /// the rest inline by pressing ENTER on individual fields.
     fn pc_new(&mut self) {
         if self.campaign.is_none() {
             self.status_msg("No campaign loaded — press C to create one first.", 208);
@@ -413,15 +509,9 @@ impl App {
             self.status_msg("Cancelled.", 208);
             return;
         }
-        let weight_str = self.footer.ask(" Weight (kg) [70]: ", "70");
-        let weight: u32 = weight_str.trim().parse().unwrap_or(70);
 
         let mut pc = crate::pc::Character::new_blank(&name);
         pc.is_pc = true;
-        pc.weight_kg = weight;
-        pc.size = crate::pc::size_from_weight_kg(weight);
-        pc.bp_current = pc.bp_max();
-        pc.mf_current = pc.mf_max();
 
         if let Some(c) = self.campaign.as_mut() {
             c.pcs.push(pc);
@@ -860,12 +950,22 @@ impl App {
             tree.len() + 3, self.left_pane.h as usize);
         self.left_pane.full_refresh();
 
-        // Right pane: content for the selected node.
+        // Right pane: content for the selected node. PC nodes return
+        // both the displayed lines AND the editable-field map (used by
+        // ENTER on the right pane to dispatch inline edits); other
+        // nodes return display lines only and we leave self.edits
+        // unchanged.
+        self.edits.clear();
         let content = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
             Some(CampNode::Section(sec)) => self.render_camp_section(camp, sec),
             Some(CampNode::Pc(idx)) => {
                 if let Some(pc) = camp.pcs.get(idx) {
-                    self.render_pc_sheet(pc)
+                    let (lines, edits) = self.render_pc_sheet(pc);
+                    self.edits = edits;
+                    if self.sheet_idx >= self.edits.len().max(1) {
+                        self.sheet_idx = self.edits.len().saturating_sub(1);
+                    }
+                    lines
                 } else {
                     vec!["(PC not found)".into()]
                 }
@@ -940,156 +1040,215 @@ impl App {
         out
     }
 
-    /// Render one PC's full character sheet — Identity, Derived Stats,
-    /// Status, Hit Locations, Characteristics & Skills (3-tier),
-    /// Weapons, Spells, Equipment, Notes. Mirrors the layout of
-    /// CharacterSheet-new.xml but adapted for a vertical TUI scroll
-    /// pane (sections stacked top-to-bottom). Read-only for now;
-    /// editing lands in the next iteration.
-    fn render_pc_sheet(&self, pc: &crate::pc::Character) -> Vec<String> {
-        use crate::pc::{ATTRIBUTES, SKILLS, Char};
+    /// Render one PC's full character sheet. Mirrors
+    /// CharacterSheet-new.xml: Identity, Derived stats, Status, Hit
+    /// locations, 3-tier Characteristics + attributes + skills (in
+    /// three side-by-side columns when the pane is ≥ 96 cols wide,
+    /// stacked vertically otherwise), Melee + Missile weapons,
+    /// Spells, Equipment, Notes. Returns the displayed lines plus a
+    /// Vec<EditableField> mapping line indices to the field id the
+    /// inline editor should target on ENTER.
+    fn render_pc_sheet(&self, pc: &crate::pc::Character) -> (Vec<String>, Vec<EditableField>) {
+        use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS};
         const LBL: u8 = 245;
         let mut out: Vec<String> = Vec::new();
+        let mut edits: Vec<EditableField> = Vec::new();
+        let pane_w = self.right_pane.w as usize;
 
-        // Title strip
+        // Title
         out.push(String::new());
-        out.push(style::bold(&style::fg(&pc.name, 226)));
-        let mut subtitle = String::new();
-        if !pc.race.is_empty()  { subtitle.push_str(&pc.race); }
-        if !pc.gender.is_empty() { subtitle.push_str(&format!(", {}", pc.gender)); }
-        if pc.age > 0 { subtitle.push_str(&format!(", age {}", pc.age)); }
-        subtitle.push_str(&format!(" — Level {}", pc.level));
-        out.push(style::fg(&subtitle, LBL));
+        let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
+        let race_disp = if pc.race.is_empty() { "—".to_string() } else { pc.race.clone() };
+        out.push(style::bold(&style::fg(
+            &format!("{}  ({}, Level {})", name_disp, race_disp, pc.level), 226)));
         out.push(String::new());
 
         // Identity
         out.push(style::bold(&style::fg("Identity", 117)));
-        out.push(field_row(LBL, "Player",     &pc.player));
-        out.push(field_row(LBL, "Birthplace", &pc.birthplace));
-        out.push(field_row(LBL, "Height",     &fmt_opt_num(pc.height_cm, "cm")));
-        out.push(field_row(LBL, "Weight",     &fmt_opt_num(pc.weight_kg, "kg")));
-        if !pc.description.is_empty() {
-            out.push(field_row(LBL, "Description", &pc.description));
+        let id_specs: &[(&str, &str, String)] = &[
+            ("name",        "Name",        pc.name.clone()),
+            ("player",      "Player",      pc.player.clone()),
+            ("race",        "Race",        pc.race.clone()),
+            ("sex",         "Sex",         pc.gender.clone()),
+            ("age",         "Age",         if pc.age == 0 { String::new() } else { pc.age.to_string() }),
+            ("height",      "Height (cm)", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
+            ("weight",      "Weight (kg)", pc.weight_kg.to_string()),
+            ("birthplace",  "Birthplace",  pc.birthplace.clone()),
+            ("description", "Description", pc.description.clone()),
+        ];
+        for (id, label, value) in id_specs {
+            edits.push(EditableField {
+                line: out.len(),
+                field_id: (*id).to_string(),
+                label: format!(" {}", label),
+                current: value.clone(),
+            });
+            out.push(field_row(LBL, label, value));
         }
         out.push(String::new());
 
-        // Derived
+        // Derived stats
         out.push(style::bold(&style::fg("Derived stats", 117)));
-        out.push(field_row(LBL, "SIZE",         &fmt_size(pc.size)));
-        out.push(field_row(LBL, "Body Points",  &format!("{} / {}", pc.bp_current.max(0), pc.bp_max())));
+        out.push(field_row(LBL, "SIZE", &fmt_size(pc.size)));
+        edits.push(EditableField {
+            line: out.len(),
+            field_id: "bp_current".into(),
+            label: " Body Points (current)".into(),
+            current: pc.bp_current.to_string(),
+        });
+        out.push(field_row(LBL, "Body Points",
+            &format!("{} / {}", pc.bp_current.max(0), pc.bp_max())));
         out.push(field_row(LBL, "Damage Bonus", &pc.db().to_string()));
         out.push(field_row(LBL, "Magick Def.",  &pc.md().to_string()));
         out.push(field_row(LBL, "Reaction",     &pc.reaction().to_string()));
-        out.push(field_row(LBL, "Mental Fort.", &format!("{} / {}", pc.mf_current.max(0), pc.mf_max())));
+        edits.push(EditableField {
+            line: out.len(),
+            field_id: "mf_current".into(),
+            label: " Mental Fortitude (current)".into(),
+            current: pc.mf_current.to_string(),
+        });
+        out.push(field_row(LBL, "Mental Fort.",
+            &format!("{} / {}", pc.mf_current.max(0), pc.mf_max())));
         out.push(String::new());
 
-        // Wound state derived from current vs max BP
+        // Status
         let bp_max = pc.bp_max().max(1);
         let bp_pct = (pc.bp_current as f32 / bp_max as f32) * 100.0;
         let state = if pc.bp_current <= 0          { ("Helpless / down", 196) }
             else if pc.bp_current <= bp_max / 4    { ("Heavily Wounded (-4 to all)", 208) }
             else if pc.bp_current <= bp_max / 2    { ("Wounded (-2 to all)", 220) }
-            else                                    { ("Healthy", 46) };
+            else                                   { ("Healthy", 46) };
         out.push(style::bold(&style::fg("Status", 117)));
         out.push(format!("  {} ({:.0}% BP)",
             style::fg(state.0, state.1), bp_pct));
-        if !pc.conditions.is_empty() {
-            out.push(format!("  {}: {}",
-                style::fg("conditions", LBL),
-                pc.conditions.join(", ")));
-        }
-        if !pc.modifiers.is_empty() {
-            out.push(style::fg("  Other modifiers", LBL).to_string());
-            for (label, val) in &pc.modifiers {
-                let sign = if *val >= 0 { "+" } else { "" };
-                out.push(format!("    {}{}: {}", sign, val, label));
-            }
+        out.push(String::new());
+
+        // Hit locations (always shown)
+        out.push(style::bold(&style::fg("Hit locations", 117)));
+        let dice = ["⚅", "⚄", "⚃", "⚂", "⚁", "⚀"];
+        for (loc, die) in HIT_LOCATIONS.iter().zip(dice.iter()) {
+            let hl = pc.hit_locations.get(*loc).cloned().unwrap_or_default();
+            let armor = if hl.armor.is_empty() { "—".to_string() } else { hl.armor.clone() };
+            edits.push(EditableField { line: out.len(),
+                field_id: format!("hit/{}/armor", loc),
+                label: format!(" {} armor", loc), current: hl.armor.clone() });
+            edits.push(EditableField { line: out.len(),
+                field_id: format!("hit/{}/ap", loc),
+                label: format!(" {} AP", loc), current: hl.ap.to_string() });
+            edits.push(EditableField { line: out.len(),
+                field_id: format!("hit/{}/bp", loc),
+                label: format!(" {} BP", loc), current: hl.bp.to_string() });
+            out.push(format!("  {} {:<8}  {:<14}  AP {:>2}  BP {:>2}",
+                die, loc, armor, hl.ap, hl.bp));
         }
         out.push(String::new());
 
-        // Hit locations table
-        if !pc.hit_locations.is_empty() {
-            out.push(style::bold(&style::fg("Hit locations", 117)));
-            let order = ["Head", "R. Arm", "L. Arm", "Body", "R. Leg", "L. Leg"];
-            let dice  = ["⚅",    "⚄",      "⚃",      "⚂",    "⚁",      "⚀"];
-            for (loc, die) in order.iter().zip(dice.iter()) {
-                if let Some(hl) = pc.hit_locations.get(*loc) {
-                    let armor = if hl.armor.is_empty() { "—".to_string() } else { hl.armor.clone() };
-                    out.push(format!("  {} {:<8}  {:<14}  AP {:<2}  BP {}",
-                        die, loc, armor, hl.ap, hl.bp));
-                }
-            }
-            out.push(String::new());
-        }
-
-        // Characteristics
+        // Characteristics row
         out.push(style::bold(&style::fg("Characteristics", 117)));
-        out.push(format!("  BODY {:>2}    MIND {:>2}    SPIRIT {:>2}",
-            pc.ch(Char::Body), pc.ch(Char::Mind), pc.ch(Char::Spirit)));
+        edits.push(EditableField { line: out.len(), field_id: "char/BODY".into(),
+            label: " BODY rank".into(), current: pc.ch(Char::Body).to_string() });
+        edits.push(EditableField { line: out.len(), field_id: "char/MIND".into(),
+            label: " MIND rank".into(), current: pc.ch(Char::Mind).to_string() });
+        edits.push(EditableField { line: out.len(), field_id: "char/SPIRIT".into(),
+            label: " SPIRIT rank".into(), current: pc.ch(Char::Spirit).to_string() });
+        out.push(format!("  {}: {:<2}    {}: {:<2}    {}: {:<2}",
+            style::fg("BODY", LBL), pc.ch(Char::Body),
+            style::fg("MIND", LBL), pc.ch(Char::Mind),
+            style::fg("SPIRIT", LBL), pc.ch(Char::Spirit)));
         out.push(String::new());
 
-        // Attributes & skills (3-tier tree)
+        // Attributes & skills (3 columns when wide enough, else stacked)
         out.push(style::bold(&style::fg("Attributes & skills", 117)));
         out.push(style::fg("  (Total = Char + Attr + Skill — used for every roll)", LBL).to_string());
-        for ch in [Char::Body, Char::Mind, Char::Spirit] {
-            out.push(format!("  {} {}",
-                style::bold(ch.name()),
-                style::fg(&format!("({})", pc.ch(ch)), LBL)));
-            for (parent, attr) in ATTRIBUTES.iter().filter(|(c, _)| *c == ch) {
-                let _ = parent;
-                let av = pc.attr(attr);
-                out.push(format!("    {:<22} {:>3}",
-                    style::fg(attr, 250), av));
-                // Skills under this attribute. We list any with non-zero
-                // rank, plus any explicitly tracked skill in pc.skills.
-                let canonical: &[&str] = SKILLS.iter().find(|(a, _)| a == attr).map(|(_, s)| *s).unwrap_or(&[]);
-                let mut shown = std::collections::BTreeSet::new();
-                for skill in canonical {
-                    let rank = pc.skill(attr, skill);
-                    let total = pc.skill_total(ch, attr, skill);
-                    out.push(format!("      {:<26} {:>2}    total {:>3}",
-                        skill, rank, total));
-                    shown.insert((*skill).to_string());
-                }
-                if let Some(extras) = pc.skills.get(*attr) {
-                    for (skill, rank) in extras {
-                        if shown.contains(skill) { continue; }
-                        let total = pc.skill_total(ch, attr, skill);
-                        out.push(format!("      {:<26} {:>2}    total {:>3}",
-                            skill, rank, total));
-                    }
+        let three_col = pane_w >= 96;
+        if three_col {
+            let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS);
+            let mind_col   = render_char_column(pc, Char::Mind,   ATTRIBUTES, SKILLS);
+            let spirit_col = render_char_column(pc, Char::Spirit, ATTRIBUTES, SKILLS);
+            let col_w = (pane_w / 3).max(30);
+            let max_rows = body_col.lines.len()
+                .max(mind_col.lines.len())
+                .max(spirit_col.lines.len());
+            let merge_start = out.len();
+            for i in 0..max_rows {
+                let b = body_col.lines.get(i).cloned().unwrap_or_default();
+                let m = mind_col.lines.get(i).cloned().unwrap_or_default();
+                let s = spirit_col.lines.get(i).cloned().unwrap_or_default();
+                out.push(format!("{}{}{}",
+                    pad_visible(&b, col_w),
+                    pad_visible(&m, col_w),
+                    s));
+            }
+            for col in [&body_col, &mind_col, &spirit_col] {
+                for e in &col.edits {
+                    edits.push(EditableField {
+                        line: merge_start + e.line,
+                        field_id: e.field_id.clone(),
+                        label: e.label.clone(),
+                        current: e.current.clone(),
+                    });
                 }
             }
-            out.push(String::new());
+        } else {
+            for ch in [Char::Body, Char::Mind, Char::Spirit] {
+                let col = render_char_column(pc, ch, ATTRIBUTES, SKILLS);
+                let base = out.len();
+                for line in &col.lines { out.push(line.clone()); }
+                for e in &col.edits {
+                    edits.push(EditableField {
+                        line: base + e.line,
+                        field_id: e.field_id.clone(),
+                        label: e.label.clone(),
+                        current: e.current.clone(),
+                    });
+                }
+                out.push(String::new());
+            }
         }
+        out.push(String::new());
 
-        // Weapons
-        if !pc.weapons.is_empty() {
-            out.push(style::bold(&style::fg("Weapons", 117)));
-            for w in &pc.weapons {
-                let kind = match w.kind {
-                    crate::pc::WeaponKind::Melee   => "melee",
-                    crate::pc::WeaponKind::Missile => "missile",
-                };
-                let h = if w.two_handed { "2H" } else { "1H" };
-                out.push(format!("  {} ({}, {})  Init {:+}  ±O {:+}  ±D {:+}  Dam {:+}  HP {}",
-                    style::bold(&w.name), kind, h, w.init, w.off_mod, w.def_mod, w.damage, w.hp));
-            }
-            out.push(String::new());
+        // Melee weapons (always shown)
+        out.push(style::bold(&style::fg("Melee weapons", 117)));
+        out.push(format!("  {:<22} {:<3} {:>4} {:>4} {:>4} {:>4} {:>3}",
+            style::fg("Name", LBL), style::fg("H", LBL), style::fg("Init", LBL),
+            style::fg("±O", LBL), style::fg("±D", LBL), style::fg("Dam", LBL), style::fg("HP", LBL)));
+        let mut any_melee = false;
+        for w in pc.weapons.iter().filter(|w| matches!(w.kind, crate::pc::WeaponKind::Melee)) {
+            any_melee = true;
+            let h = if w.two_handed { "2H" } else { "1H" };
+            out.push(format!("  {:<22} {:<3} {:>+4} {:>+4} {:>+4} {:>+4} {:>3}",
+                w.name, h, w.init, w.off_mod, w.def_mod, w.damage, w.hp));
         }
+        if !any_melee { out.push(style::fg("  (none)", LBL).to_string()); }
+        out.push(String::new());
+
+        // Missile weapons (always shown)
+        out.push(style::bold(&style::fg("Missile weapons", 117)));
+        out.push(format!("  {:<22} {:>4} {:>4} {:>4} {:>4} {:>4} {:>3}",
+            style::fg("Name", LBL), style::fg("Init", LBL), style::fg("±O", LBL),
+            style::fg("s/r", LBL), style::fg("Dam", LBL), style::fg("Rng", LBL), style::fg("HP", LBL)));
+        let mut any_missile = false;
+        for w in pc.weapons.iter().filter(|w| matches!(w.kind, crate::pc::WeaponKind::Missile)) {
+            any_missile = true;
+            out.push(format!("  {:<22} {:>+4} {:>+4} {:>4} {:>+4} {:>4} {:>3}",
+                w.name, w.init, w.off_mod, w.shots_per_round, w.damage, w.range_m, w.hp));
+        }
+        if !any_missile { out.push(style::fg("  (none)", LBL).to_string()); }
+        out.push(String::new());
 
         // Spells
         if !pc.spells.is_empty() {
             out.push(style::bold(&style::fg("Spells", 117)));
             for spell_name in &pc.spells {
                 if let Some(entry) = self.canon.lookup(spell_name) {
-                    let dr = entry.fields.get("dr").map(|s| s.as_str()).unwrap_or("?");
+                    let dr   = entry.fields.get("dr").map(|s| s.as_str()).unwrap_or("?");
                     let cost = entry.fields.get("cost").map(|s| s.as_str()).unwrap_or("?");
                     let dist = entry.fields.get("distance").map(|s| s.as_str()).unwrap_or("?");
                     out.push(format!("  {}  DR {}  cost {}  dist {}",
                         style::bold(spell_name), dr, cost, dist));
                 } else {
-                    out.push(format!("  {} {}", spell_name, style::fg("(not in canon)", 208)));
+                    out.push(format!("  {} {}", spell_name,
+                        style::fg("(not in canon)", 208)));
                 }
             }
             out.push(String::new());
@@ -1097,30 +1256,39 @@ impl App {
 
         // Equipment + money
         out.push(style::bold(&style::fg("Equipment", 117)));
-        if pc.equipment.is_empty() && !pc.clothing.is_empty() {
-            out.push(format!("  Clothing: {}", pc.clothing));
-        }
-        if !pc.clothing.is_empty() && !pc.equipment.is_empty() {
-            out.push(format!("  Clothing: {}", pc.clothing));
-        }
+        edits.push(EditableField { line: out.len(), field_id: "clothing".into(),
+            label: " Clothing".into(), current: pc.clothing.clone() });
+        out.push(field_row(LBL, "Clothing", &pc.clothing));
         for item in &pc.equipment {
             out.push(format!("  • {}", item));
         }
-        if pc.equipment.is_empty() && pc.clothing.is_empty() {
-            out.push(style::fg("  (no items)", LBL).to_string());
-        }
+        edits.push(EditableField { line: out.len(), field_id: "money".into(),
+            label: " Money (sp)".into(), current: pc.money_sp.to_string() });
         out.push(field_row(LBL, "Money", &format!("{} sp", pc.money_sp)));
         out.push(String::new());
 
         // Notes
-        if !pc.notes.is_empty() {
-            out.push(style::bold(&style::fg("Notes", 117)));
+        out.push(style::bold(&style::fg("Notes", 117)));
+        edits.push(EditableField { line: out.len(), field_id: "notes".into(),
+            label: " Notes".into(), current: pc.notes.clone() });
+        if pc.notes.is_empty() {
+            out.push(style::fg("  (none — press ENTER to add)", LBL).to_string());
+        } else {
             for line in pc.notes.lines() {
                 out.push(format!("  {}", line));
             }
         }
 
-        out
+        // Highlight the active edit field by reverse-styling its row.
+        if self.tab == Tab::Campaign && self.focus == Focus::Right {
+            if let Some(active) = edits.get(self.sheet_idx) {
+                if let Some(text) = out.get_mut(active.line) {
+                    *text = style::bold(&style::bg(text, 24));
+                }
+            }
+        }
+
+        (out, edits)
     }
 
     fn render_inspire(&self) -> Vec<String> {
@@ -1235,6 +1403,89 @@ impl App {
         Crust::clear_screen();
         self.render_all();
     }
+}
+
+/// One characteristic's vertical column for the 3-tier section. Holds
+/// the rendered lines (attribute headers + skills under each) and the
+/// editable-field map for those lines, all relative to line 0 of the
+/// column. The caller offsets these into the merged-row index.
+struct CharColumn {
+    lines: Vec<String>,
+    edits: Vec<EditableField>,
+}
+
+fn render_char_column(
+    pc: &crate::pc::Character,
+    ch: crate::pc::Char,
+    attributes: &[(crate::pc::Char, &'static str)],
+    skills:     &[(&'static str, &'static [&'static str])],
+) -> CharColumn {
+    use crust::style;
+    const LBL: u8 = 245;
+    let mut col = CharColumn { lines: Vec::new(), edits: Vec::new() };
+
+    // Column header.
+    col.lines.push(format!("  {} {}",
+        style::bold(ch.name()),
+        style::fg(&format!("({})", pc.ch(ch)), LBL)));
+
+    for (_, attr) in attributes.iter().filter(|(c, _)| *c == ch) {
+        let attr: &str = attr;
+        let av = pc.attr(attr);
+        col.edits.push(EditableField {
+            line: col.lines.len(),
+            field_id: format!("attr/{}", attr),
+            label: format!(" {} rank", attr),
+            current: av.to_string(),
+        });
+        col.lines.push(format!("    {:<22}{:>3}",
+            style::fg(attr, 250), av));
+
+        // Skills under this attribute. Canonical list (always rendered)
+        // plus any extra skills the user has tracked beyond canon.
+        let canonical: &[&str] = skills.iter()
+            .find(|(a, _)| *a == attr)
+            .map(|(_, s)| *s)
+            .unwrap_or(&[]);
+        let mut shown = std::collections::BTreeSet::new();
+        for skill in canonical {
+            let rank = pc.skill(attr, skill);
+            let total = pc.skill_total(ch, attr, skill);
+            col.edits.push(EditableField {
+                line: col.lines.len(),
+                field_id: format!("skill/{}/{}", attr, skill),
+                label: format!(" {} (rank)", skill),
+                current: rank.to_string(),
+            });
+            col.lines.push(format!("      {:<20}{:>3}  {:>3}",
+                skill, rank, total));
+            shown.insert((*skill).to_string());
+        }
+        if let Some(extras) = pc.skills.get(attr) {
+            for (skill, rank) in extras {
+                if shown.contains(skill) { continue; }
+                let total = pc.skill_total(ch, attr, skill);
+                col.edits.push(EditableField {
+                    line: col.lines.len(),
+                    field_id: format!("skill/{}/{}", attr, skill),
+                    label: format!(" {} (rank)", skill),
+                    current: rank.to_string(),
+                });
+                col.lines.push(format!("      {:<20}{:>3}  {:>3}",
+                    skill, rank, total));
+            }
+        }
+    }
+    col
+}
+
+/// Pad a string with trailing spaces to reach the given visible width.
+/// `crust::display_width` is ANSI-aware so embedded escape sequences
+/// don't throw off the alignment.
+fn pad_visible(s: &str, width: usize) -> String {
+    let w = crust::display_width(s);
+    if w >= width { s.to_string() }
+    else { format!("{}{}", s, " ".repeat(width - w)) }
 }
 
 /// Translate the kastrup-style 1-6 width slider into actual left /

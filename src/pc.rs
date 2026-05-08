@@ -164,6 +164,20 @@ pub struct Character {
     pub notes: String,
 }
 
+/// Hit-location names in d6-roll order: 6 Head, 5 R. Arm, 4 L. Arm,
+/// 3 Body, 2 R. Leg, 1 L. Leg.
+pub const HIT_LOCATIONS: &[&str] = &[
+    "Head", "R. Arm", "L. Arm", "Body", "R. Leg", "L. Leg",
+];
+
+fn parse_u(s: &str, label: &str) -> Result<u32, String> {
+    s.parse::<u32>().map_err(|e| format!("bad {}: {}", label, e))
+}
+
+fn parse_i(s: &str, label: &str) -> Result<i32, String> {
+    s.parse::<i32>().map_err(|e| format!("bad {}: {}", label, e))
+}
+
 /// SIZE from weight — wiki **Half-Size Points** table, used throughout
 /// amar (NPCs and PCs alike). The half-size table is the wiki's
 /// canonical granular weight table; SIZE 3.5 covers 75-99 kg, SIZE
@@ -221,9 +235,95 @@ impl Character {
             m.insert("Native".into(), 2);
             m
         });
+        // Default hit locations: every body location starts unarmored.
+        // Per-location BP shown on the sheet is informative — it
+        // mirrors the wiki rule "50% of BP in head + arms, 80% in body
+        // + legs" — but the canonical BP pool is `bp_max()`.
+        for loc in HIT_LOCATIONS {
+            c.hit_locations.insert((*loc).to_string(), HitLocation::default());
+        }
         c.bp_current = c.bp_max();
         c.mf_current = c.mf_max();
         c
+    }
+
+    /// Edit a field by string id. Used by the Campaign tab's inline
+    /// editor to dispatch ENTER → set the value the user typed. Returns
+    /// Ok(()) on success, Err(msg) on parse failure.
+    ///
+    /// Supported ids:
+    ///   "name" "player" "race" "sex" "birthplace" "description"
+    ///   "clothing" "notes"        — string fields
+    ///   "age" "height" "money"     — integer fields
+    ///   "weight"                   — integer kg, also re-derives SIZE
+    ///   "level"                    — integer level
+    ///   "char/<NAME>"              — characteristic rank (e.g. "char/BODY")
+    ///   "attr/<Attr>"              — attribute rank (e.g. "attr/Strength")
+    ///   "skill/<Attr>/<Skill>"     — skill rank (e.g. "skill/Strength/Carrying")
+    ///   "bp_current" "mf_current"  — running pool values
+    ///   "hit/<Loc>/armor"          — armor name for a hit location
+    ///   "hit/<Loc>/ap" "hit/<Loc>/bp" — AP / BP per location
+    pub fn set_field(&mut self, id: &str, value: &str) -> Result<(), String> {
+        let trim = value.trim();
+        match id {
+            "name"        => self.name = trim.to_string(),
+            "player"      => self.player = trim.to_string(),
+            "race"        => self.race = trim.to_string(),
+            "sex"         => self.gender = trim.to_string(),
+            "birthplace"  => self.birthplace = trim.to_string(),
+            "description" => self.description = trim.to_string(),
+            "clothing"    => self.clothing = trim.to_string(),
+            "notes"       => self.notes = trim.to_string(),
+            "age"     => self.age = parse_u(trim, "age")?,
+            "height"  => self.height_cm = parse_u(trim, "height")?,
+            "money"   => self.money_sp = parse_i(trim, "money")?,
+            "level"   => self.level = parse_u(trim, "level")? as u8,
+            "weight" => {
+                let kg = parse_u(trim, "weight")?;
+                self.weight_kg = kg;
+                self.size = size_from_weight_kg(kg);
+            }
+            "bp_current" => self.bp_current = parse_i(trim, "bp_current")?,
+            "mf_current" => self.mf_current = parse_i(trim, "mf_current")?,
+            other => {
+                if let Some(name) = other.strip_prefix("char/") {
+                    let v = parse_i(trim, "characteristic")?;
+                    self.characteristics.insert(name.to_string(), v);
+                } else if let Some(name) = other.strip_prefix("attr/") {
+                    let v = parse_i(trim, "attribute")?;
+                    self.attributes.insert(name.to_string(), v);
+                } else if let Some(rest) = other.strip_prefix("skill/") {
+                    let mut parts = rest.splitn(2, '/');
+                    let attr = parts.next().ok_or("skill id missing attribute")?;
+                    let skill = parts.next().ok_or("skill id missing skill name")?;
+                    let v = parse_i(trim, "skill")?;
+                    self.skills.entry(attr.to_string())
+                        .or_default()
+                        .insert(skill.to_string(), v);
+                } else if let Some(rest) = other.strip_prefix("hit/") {
+                    let mut parts = rest.splitn(2, '/');
+                    let loc = parts.next().ok_or("hit id missing location")?.to_string();
+                    let kind = parts.next().ok_or("hit id missing field")?;
+                    let entry = self.hit_locations.entry(loc).or_default();
+                    match kind {
+                        "armor" => entry.armor = trim.to_string(),
+                        "ap"    => entry.ap = parse_i(trim, "AP")?,
+                        "bp"    => entry.bp = parse_i(trim, "BP")?,
+                        _ => return Err(format!("unknown hit field: {}", kind)),
+                    }
+                } else {
+                    return Err(format!("unknown field id: {}", id));
+                }
+            }
+        }
+        // BP/MF current can never exceed their respective maxes after
+        // a field change — keep them in range so the wound-state
+        // computation stays sane.
+        let bp_cap = self.bp_max();
+        if self.bp_current > bp_cap { self.bp_current = bp_cap; }
+        let mf_cap = self.mf_max();
+        if self.mf_current > mf_cap { self.mf_current = mf_cap; }
+        Ok(())
     }
 
     pub fn ch(&self, c: Char) -> i32 {
