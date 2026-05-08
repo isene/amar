@@ -85,25 +85,123 @@ pub const SKILLS: &[(&str, &[&str])] = &[
     ("Worship",    &[]),  // god names added per-PC
 ];
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub enum WeaponKind {
+    #[default]
+    Melee,
+    Missile,
+}
+
+/// One weapon slot on a PC sheet. Mirrors the Mellee/Missile blocks on
+/// CharacterSheet-new.xml: H (one/two-handed), Init, ±O, ±D (melee
+/// only) or shots-per-round (missile only), OFF, DEF, Dam, HP, plus
+/// xp marks.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Weapon {
+    pub name: String,
+    pub kind: WeaponKind,
+    pub two_handed: bool,
+    pub init: i32,
+    pub off_mod: i32,
+    pub def_mod: i32,
+    pub shots_per_round: u8,
+    pub damage: i32,
+    pub hp: i32,
+    pub range_m: u32,
+    pub xp: i32,
+}
+
+/// Per-location armor + AP + BP, per the hit-location table on the
+/// character sheet. d6 hit-location roll: 6 head, 5 R-arm, 4 L-arm,
+/// 3 body, 2 R-leg, 1 L-leg.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct HitLocation {
+    pub armor: String,
+    pub ap: i32,
+    pub bp: i32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Character {
+    // Identity
     pub name: String,
     pub player: String,
     pub is_pc: bool,
     pub race: String,
     pub gender: String,
     pub age: u32,
-    pub size: u8,
+    pub height_cm: u32,
+    pub weight_kg: u32,
+    pub birthplace: String,
+    pub description: String,
+    pub clothing: String,
+
+    // Derived foundation
+    pub size: f32,
     pub level: u8,
+
+    // 3-tier abilities
     pub characteristics: BTreeMap<String, i32>,
     pub attributes: BTreeMap<String, i32>,
     pub skills: BTreeMap<String, BTreeMap<String, i32>>,
+
+    // Live state
     pub bp_current: i32,
     pub mf_current: i32,
     pub conditions: Vec<String>,
+    /// Situational adjustments (label, value) — the "Other Modifiers"
+    /// block on the character sheet. Eight slots are normal but we
+    /// store any number.
+    pub modifiers: Vec<(String, i32)>,
+
+    // Equipment
+    pub hit_locations: BTreeMap<String, HitLocation>,
+    pub weapons: Vec<Weapon>,
+    pub spells: Vec<String>,
     pub equipment: Vec<String>,
     pub money_sp: i32,
+
     pub notes: String,
+}
+
+/// SIZE from weight — wiki **Half-Size Points** table, used throughout
+/// amar (NPCs and PCs alike). The half-size table is the wiki's
+/// canonical granular weight table; SIZE 3.5 covers 75-99 kg, SIZE
+/// 4.5 covers 125-149 kg, and so on. Above 499 kg the half-size table
+/// ends and the whole-size table picks up: 500-599 → 9, 600-724 → 10,
+/// up to 16 < 1600. Beyond 1600 kg, +1 per +200 kg.
+pub fn size_from_weight_kg(kg: u32) -> f32 {
+    match kg {
+        // Half-Size Points table (wiki, optional rule used by amar):
+        0..=9     => 0.5,
+        10..=14   => 1.0,
+        15..=19   => 1.5,
+        20..=34   => 2.0,
+        35..=49   => 2.5,
+        50..=74   => 3.0,
+        75..=99   => 3.5,
+        100..=124 => 4.0,
+        125..=149 => 4.5,
+        150..=187 => 5.0,
+        188..=224 => 5.5,
+        225..=262 => 6.0,
+        263..=299 => 6.5,
+        300..=349 => 7.0,
+        350..=399 => 7.5,
+        400..=449 => 8.0,
+        450..=499 => 8.5,
+        // Above the half-size table — whole-size canonical table:
+        500..=599   => 9.0,
+        600..=724   => 10.0,
+        725..=849   => 11.0,
+        850..=999   => 12.0,
+        1000..=1149 => 13.0,
+        1150..=1299 => 14.0,
+        1300..=1449 => 15.0,
+        1450..=1599 => 16.0,
+        // Beyond 1600 kg — linear "+1 per +200 kg" extension.
+        _ => 16.0 + ((kg - 1600) / 200) as f32 + 1.0,
+    }
 }
 
 impl Character {
@@ -111,7 +209,10 @@ impl Character {
         let mut c = Character::default();
         c.name = name.to_string();
         c.race = "Human".into();
-        c.size = 3;
+        // 70 kg → SIZE 3.0 in the half-size table — lean adult human,
+        // matches the SIZE used by the example adventure NPCs.
+        c.weight_kg = 70;
+        c.size = size_from_weight_kg(70);
         c.level = 1;
         for ch in Char::all() { c.characteristics.insert(ch.name().to_string(), 0); }
         for (_, attr) in ATTRIBUTES { c.attributes.insert((*attr).to_string(), 0); }
@@ -135,38 +236,50 @@ impl Character {
         self.skills.get(attr).and_then(|m| m.get(skill)).copied().unwrap_or(0)
     }
 
-    /// Total Skill Value = characteristic + attribute + skill rank.
+    /// Total Skill Value = Characteristic + Attribute + Skill rank.
+    /// Every roll in the system uses this total — never just the
+    /// Characteristic, never Char+Attr — even when the skill rank is
+    /// 0. Skills not yet tracked on the character resolve to 0 here,
+    /// so the caller still gets the Char+Attr+0 baseline.
     pub fn skill_total(&self, parent_char: Char, attr: &str, skill: &str) -> i32 {
         self.ch(parent_char) + self.attr(attr) + self.skill(attr, skill)
     }
 
-    /// BP = SIZE × 2 + Fortitude / 3.
+    /// BP = SIZE × 2 + (Fortitude_total / 3).
+    /// Fortitude_total = BODY + Endurance + Fortitude (skill rank).
+    /// Half-size SIZE values (e.g. 3.5) flow through the formula as
+    /// floats; the final result is floored to i32 the same way the
+    /// wiki's "/3" implies integer division.
     pub fn bp_max(&self) -> i32 {
-        let fort = self.skill("Endurance", "Fortitude");
-        (self.size as i32) * 2 + fort / 3
+        let fort_total = self.skill_total(Char::Body, "Endurance", "Fortitude");
+        (self.size * 2.0).floor() as i32 + fort_total / 3
     }
 
-    /// DB = (SIZE + Wield Weapon) / 3.
+    /// DB = (SIZE + Wield Weapon_total) / 3.
+    /// Wield Weapon_total = BODY + Strength + Wield Weapon (skill rank).
     pub fn db(&self) -> i32 {
-        let ww = self.skill("Strength", "Wield Weapon");
-        ((self.size as i32) + ww) / 3
+        let ww_total = self.skill_total(Char::Body, "Strength", "Wield Weapon");
+        ((self.size + ww_total as f32) / 3.0).floor() as i32
     }
 
-    /// MD = (Mental Fortitude + Attunement Self) / 3.
+    /// MD = (Mental Fortitude_total + Attunement Self_total) / 3.
+    /// Each side is a full Char+Attr+Skill total per the system rule.
     pub fn md(&self) -> i32 {
-        let mf = self.skill("Willpower", "Mental Fortitude");
-        let aself = self.skill("Attunement", "Self");
-        (mf + aself) / 3
+        let mf_total = self.skill_total(Char::Mind, "Willpower", "Mental Fortitude");
+        let aself_total = self.skill_total(Char::Spirit, "Attunement", "Self");
+        (mf_total + aself_total) / 3
     }
 
-    /// Reaction = Awareness + Reaction Speed (rolled with O6 in play).
+    /// Reaction Speed total = MIND + Awareness + Reaction Speed.
+    /// (Rolled with an O6 added at table.)
     pub fn reaction(&self) -> i32 {
         self.skill_total(Char::Mind, "Awareness", "Reaction Speed")
     }
 
-    /// Mental Fortitude pool (the "active spell capacity" budget).
-    /// 1 point per hour rest; full recovery on 8h sleep — caller manages
-    /// recovery, this just gives the cap.
+    /// Mental Fortitude total = MIND + Willpower + Mental Fortitude.
+    /// This is the "active spell capacity" cap. Recovery is 1 point
+    /// per hour rest; full recovery on 8 h sleep. The caller manages
+    /// the running pool against this cap.
     pub fn mf_max(&self) -> i32 {
         self.skill_total(Char::Mind, "Willpower", "Mental Fortitude")
     }
@@ -184,8 +297,8 @@ mod tests {
     #[test]
     fn blank_pc_has_canonical_structure() {
         let c = Character::new_blank("Test");
-        assert_eq!(c.size, 3);
-        assert_eq!(c.bp_max(), 6); // 3*2 + 0/3
+        assert_eq!(c.size, 3.0);   // default 75 kg → SIZE 3
+        assert_eq!(c.bp_max(), 6); // SIZE 3 * 2 + 0/3
         assert_eq!(c.skill("Spoken Language", "Native"), 2);
     }
 
@@ -200,15 +313,86 @@ mod tests {
     }
 
     #[test]
-    fn derived_stats_match_wiki_formulas() {
+    fn skill_total_uses_char_attr_baseline_when_skill_untracked() {
         let mut c = Character::new_blank("Test");
-        c.size = 3;
-        c.skills.entry("Endurance".into()).or_default().insert("Fortitude".into(), 6);
-        c.skills.entry("Strength".into()).or_default().insert("Wield Weapon".into(), 3);
-        c.skills.entry("Willpower".into()).or_default().insert("Mental Fortitude".into(), 6);
-        c.skills.entry("Attunement".into()).or_default().insert("Self".into(), 3);
-        assert_eq!(c.bp_max(), 8);  // 3*2 + 6/3 = 6 + 2
-        assert_eq!(c.db(), 2);      // (3 + 3) / 3
-        assert_eq!(c.md(), 3);      // (6 + 3) / 3
+        c.characteristics.insert("BODY".into(), 1);
+        c.attributes.insert("Athletics".into(), 2);
+        // No "Climb" rank set on the character.
+        // Wiki rule: every roll uses Char+Attr+Skill, even with skill = 0.
+        assert_eq!(c.skill_total(Char::Body, "Athletics", "Climb"), 3);
+    }
+
+    #[test]
+    fn derived_stats_use_full_skill_totals() {
+        // Each derived stat must consult the Char+Attr+Skill total,
+        // not the bare skill rank. We populate all three tiers and
+        // check the result reflects the sum.
+        let mut c = Character::new_blank("Test");
+        c.size = 3.0;
+        c.characteristics.insert("BODY".into(), 1);
+        c.characteristics.insert("MIND".into(), 1);
+        c.characteristics.insert("SPIRIT".into(), 1);
+        c.attributes.insert("Endurance".into(), 2);
+        c.attributes.insert("Strength".into(), 2);
+        c.attributes.insert("Willpower".into(), 2);
+        c.attributes.insert("Attunement".into(), 2);
+        c.skills.entry("Endurance".into()).or_default().insert("Fortitude".into(), 3);
+        c.skills.entry("Strength".into()).or_default().insert("Wield Weapon".into(), 1);
+        c.skills.entry("Willpower".into()).or_default().insert("Mental Fortitude".into(), 3);
+        c.skills.entry("Attunement".into()).or_default().insert("Self".into(), 2);
+
+        // Fortitude total = 1+2+3 = 6 → BP = 3*2 + 6/3 = 8
+        assert_eq!(c.bp_max(), 8);
+        // Wield Weapon total = 1+2+1 = 4 → DB = (3 + 4) / 3 = 2
+        assert_eq!(c.db(), 2);
+        // MF total = 1+2+3 = 6, Attunement Self total = 1+2+2 = 5
+        // → MD = (6 + 5) / 3 = 11/3 = 3
+        assert_eq!(c.md(), 3);
+    }
+
+    #[test]
+    fn half_size_flows_through_formulas() {
+        let mut c = Character::new_blank("Halfling");
+        c.size = 1.5;     // Optional Half-Size Points rule, NPC use
+        c.characteristics.insert("BODY".into(), 1);
+        c.attributes.insert("Endurance".into(), 1);
+        c.skills.entry("Endurance".into()).or_default().insert("Fortitude".into(), 1);
+        // Fortitude total = 1+1+1 = 3 → BP = floor(1.5 * 2) + 3/3 = 3 + 1 = 4
+        assert_eq!(c.bp_max(), 4);
+
+        c.attributes.insert("Strength".into(), 2);
+        c.skills.entry("Strength".into()).or_default().insert("Wield Weapon".into(), 1);
+        // Wield Weapon total = 1+2+1 = 4 → DB = floor((1.5 + 4) / 3) = floor(1.83) = 1
+        assert_eq!(c.db(), 1);
+    }
+
+    #[test]
+    fn size_from_weight_uses_half_size_table() {
+        // Half-size table — granular up to 499 kg.
+        assert_eq!(size_from_weight_kg(5),    0.5);
+        assert_eq!(size_from_weight_kg(12),   1.0);
+        assert_eq!(size_from_weight_kg(17),   1.5);
+        assert_eq!(size_from_weight_kg(25),   2.0);
+        assert_eq!(size_from_weight_kg(40),   2.5);
+        assert_eq!(size_from_weight_kg(60),   3.0);   // lean adult human
+        assert_eq!(size_from_weight_kg(75),   3.5);   // average adult human
+        assert_eq!(size_from_weight_kg(99),   3.5);   // top of 3.5 bucket
+        assert_eq!(size_from_weight_kg(110),  4.0);
+        assert_eq!(size_from_weight_kg(140),  4.5);
+        assert_eq!(size_from_weight_kg(170),  5.0);
+        assert_eq!(size_from_weight_kg(200),  5.5);
+        assert_eq!(size_from_weight_kg(250),  6.0);
+        assert_eq!(size_from_weight_kg(280),  6.5);
+        assert_eq!(size_from_weight_kg(320),  7.0);
+        assert_eq!(size_from_weight_kg(380),  7.5);
+        assert_eq!(size_from_weight_kg(420),  8.0);
+        assert_eq!(size_from_weight_kg(480),  8.5);
+        // Above 499 kg — whole-size table continues.
+        assert_eq!(size_from_weight_kg(550),  9.0);
+        assert_eq!(size_from_weight_kg(700),  10.0);
+        assert_eq!(size_from_weight_kg(1599), 16.0);
+        assert_eq!(size_from_weight_kg(1600), 17.0);  // first +1/200 step
+        assert_eq!(size_from_weight_kg(1799), 17.0);
+        assert_eq!(size_from_weight_kg(1800), 18.0);
     }
 }

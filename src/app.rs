@@ -62,17 +62,21 @@ pub struct App {
     pub rows: u16,
     pub header: Pane,
     pub body: Pane,
-    pub lore_tree_marker: Pane,
-    pub lore_tree_pane: Pane,
-    pub lore_content_marker: Pane,
-    pub lore_content_pane: Pane,
+    /// Generic two-pane layout shared by tabs that need a list-on-left,
+    /// detail-on-right view (Lore, Campaign PCs, Forge later). Each
+    /// tab fills these panes with its own content; the marker panes
+    /// track which side has focus.
+    pub left_marker: Pane,
+    pub left_pane: Pane,
+    pub right_marker: Pane,
+    pub right_pane: Pane,
     pub footer: Pane,
     pub status: Option<(String, u8)>,
-    /// Lore tab navigation state. `lore_idx` is the cursor in the
-    /// flattened tree; the content pane's scroll position lives on the
-    /// pane itself (ix), driven by linedown/lineup/pagedown/pageup.
+    /// Lore tab navigation state.
     pub lore_idx: usize,
     pub lore_expanded: Vec<String>,
+    /// Campaign / PCs cursor in the PC list.
+    pub pcs_idx: usize,
 }
 
 impl App {
@@ -90,27 +94,28 @@ impl App {
         let mut body = Pane::new(1, 2, cols, body_h, 252, 0);
         body.wrap = true;
 
-        // Lore panes: a 2-col marker pane sits flush against the left
-        // edge of each content pane. Col 1 of the marker holds a thin
-        // `▏` glyph (one-eighth block) in bright yellow when active,
-        // dim grey when inactive; col 2 is blank to give the bar a
-        // little breathing room from the text on its right.
-        let tree_total: u16 = 30.min(cols.saturating_sub(20));
-        let tree_pane_w: u16 = tree_total.saturating_sub(2);
-        let content_total: u16 = cols.saturating_sub(tree_total);
-        let content_pane_w: u16 = content_total.saturating_sub(2);
+        // Two-pane layout (used by Lore and Campaign): a 2-col marker
+        // pane sits flush against the left edge of each content pane.
+        // Col 1 of the marker holds a thin `▏` glyph (one-eighth block)
+        // in bright yellow when active, dim grey when inactive; col 2
+        // is blank to give the bar a little breathing room from the
+        // text on its right.
+        let left_total: u16 = 30.min(cols.saturating_sub(20));
+        let left_pane_w: u16 = left_total.saturating_sub(2);
+        let right_total: u16 = cols.saturating_sub(left_total);
+        let right_pane_w: u16 = right_total.saturating_sub(2);
 
-        let mut lore_tree_marker = Pane::new(1, 2, 2, body_h, 240, 0);
-        lore_tree_marker.wrap = false;
-        lore_tree_marker.scroll = false;
-        let mut lore_tree_pane = Pane::new(3, 2, tree_pane_w, body_h, 252, 0);
-        lore_tree_pane.wrap = false;
+        let mut left_marker = Pane::new(1, 2, 2, body_h, 240, 0);
+        left_marker.wrap = false;
+        left_marker.scroll = false;
+        let mut left_pane = Pane::new(3, 2, left_pane_w, body_h, 252, 0);
+        left_pane.wrap = false;
 
-        let mut lore_content_marker = Pane::new(tree_total + 1, 2, 2, body_h, 240, 0);
-        lore_content_marker.wrap = false;
-        lore_content_marker.scroll = false;
-        let mut lore_content_pane = Pane::new(tree_total + 3, 2, content_pane_w, body_h, 252, 0);
-        lore_content_pane.wrap = true;
+        let mut right_marker = Pane::new(left_total + 1, 2, 2, body_h, 240, 0);
+        right_marker.wrap = false;
+        right_marker.scroll = false;
+        let mut right_pane = Pane::new(left_total + 3, 2, right_pane_w, body_h, 252, 0);
+        right_pane.wrap = true;
 
         let mut footer = Pane::new(1, rows, cols, 1, 245, 236);
         footer.wrap = false;
@@ -119,11 +124,12 @@ impl App {
             canon, config, campaign, tab: Tab::Campaign,
             focus: Focus::Left,
             cols, rows, header, body,
-            lore_tree_marker, lore_tree_pane,
-            lore_content_marker, lore_content_pane,
+            left_marker, left_pane,
+            right_marker, right_pane,
             footer, status: None,
             lore_idx: 0,
             lore_expanded: Vec::new(),
+            pcs_idx: 0,
         }
     }
 
@@ -190,25 +196,123 @@ impl App {
     }
 
     fn tab_has_two_panes(&self) -> bool {
-        // Lore is the only multi-pane tab today. Future: Campaign sub-tabs
-        // and Forge will return true here too.
-        matches!(self.tab, Tab::Lore)
+        matches!(self.tab, Tab::Lore | Tab::Campaign)
     }
 
     fn handle_tab_key(&mut self, key: &str) {
-        if self.tab == Tab::Lore {
-            self.handle_lore_key(key);
+        match self.tab {
+            Tab::Lore     => self.handle_lore_key(key),
+            Tab::Campaign => self.handle_campaign_key(key),
+            _ => {}
         }
+    }
+
+    fn handle_campaign_key(&mut self, key: &str) {
+        // Right-pane scroll keys work regardless of focus (kastrup-style).
+        match key {
+            "S-DOWN"  => { self.right_pane.linedown(); return; }
+            "S-UP"    => { self.right_pane.lineup();   return; }
+            "S-RIGHT" => { self.right_pane.pagedown(); return; }
+            "S-LEFT"  => { self.right_pane.pageup();   return; }
+            _ => {}
+        }
+        match self.focus {
+            Focus::Left  => self.handle_pcs_list_key(key),
+            Focus::Right => self.handle_pc_sheet_key(key),
+        }
+    }
+
+    fn handle_pcs_list_key(&mut self, key: &str) {
+        let Some(camp) = self.campaign.as_ref() else { return; };
+        let n = camp.pcs.len();
+        match key {
+            "j" | "DOWN" => {
+                if self.pcs_idx + 1 < n { self.pcs_idx += 1; self.right_pane.ix = 0; }
+            }
+            "k" | "UP" => {
+                if self.pcs_idx > 0 { self.pcs_idx -= 1; self.right_pane.ix = 0; }
+            }
+            "g" | "HOME" => { self.pcs_idx = 0; self.right_pane.ix = 0; }
+            "G" | "END"  => {
+                self.pcs_idx = n.saturating_sub(1); self.right_pane.ix = 0;
+            }
+            "n" => self.pc_new(),
+            "D" => self.pc_delete(),
+            _ => {}
+        }
+    }
+
+    fn handle_pc_sheet_key(&mut self, key: &str) {
+        match key {
+            "j" | "DOWN" => self.right_pane.linedown(),
+            "k" | "UP"   => self.right_pane.lineup(),
+            "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
+            "PgUP"   | "b" => self.right_pane.pageup(),
+            "g" | "HOME" => self.right_pane.ix = 0,
+            "G" | "END"  => {
+                for _ in 0..200 { self.right_pane.pagedown(); }
+            }
+            _ => {}
+        }
+    }
+
+    /// New PC — prompts for name + weight, picks SIZE from the
+    /// half-size table, blanks all 3-tier abilities. The user fills
+    /// in the rest by editing fields (next iteration).
+    fn pc_new(&mut self) {
+        let Some(_camp) = self.campaign.as_ref() else {
+            self.status = Some(("No campaign loaded — press C to create one.".into(), 208));
+            return;
+        };
+        let name = self.footer.ask(" PC name: ", "");
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            self.status = Some(("Cancelled.".into(), 208));
+            return;
+        }
+        let weight_str = self.footer.ask(" Weight (kg) [70]: ", "70");
+        let weight: u32 = weight_str.trim().parse().unwrap_or(70);
+
+        let mut pc = crate::pc::Character::new_blank(&name);
+        pc.is_pc = true;
+        pc.weight_kg = weight;
+        pc.size = crate::pc::size_from_weight_kg(weight);
+        pc.bp_current = pc.bp_max();
+        pc.mf_current = pc.mf_max();
+
+        if let Some(c) = self.campaign.as_mut() {
+            c.pcs.push(pc);
+            self.pcs_idx = c.pcs.len() - 1;
+            let _ = c.save();
+        }
+        self.status = Some((format!("Added '{}'.", name), 46));
+    }
+
+    /// Delete the currently-selected PC (with confirmation).
+    fn pc_delete(&mut self) {
+        let Some(camp) = self.campaign.as_ref() else { return; };
+        let Some(pc) = camp.pcs.get(self.pcs_idx) else { return; };
+        let pc_name = pc.name.clone();
+        let answer = self.footer.ask(&format!(" Delete '{}'? (y/N): ", pc_name), "");
+        if answer.trim() != "y" && answer.trim() != "Y" { return; }
+        if let Some(c) = self.campaign.as_mut() {
+            c.pcs.remove(self.pcs_idx);
+            if self.pcs_idx >= c.pcs.len() {
+                self.pcs_idx = c.pcs.len().saturating_sub(1);
+            }
+            let _ = c.save();
+        }
+        self.status = Some((format!("Deleted '{}'.", pc_name), 46));
     }
 
     fn handle_lore_key(&mut self, key: &str) {
         // Right-pane scroll keys work regardless of focus. They mirror
         // kastrup's right-pane bindings, so the muscle memory carries.
         match key {
-            "S-DOWN"  => { self.lore_content_pane.linedown(); return; }
-            "S-UP"    => { self.lore_content_pane.lineup();   return; }
-            "S-RIGHT" => { self.lore_content_pane.pagedown(); return; }
-            "S-LEFT"  => { self.lore_content_pane.pageup();   return; }
+            "S-DOWN"  => { self.right_pane.linedown(); return; }
+            "S-UP"    => { self.right_pane.lineup();   return; }
+            "S-RIGHT" => { self.right_pane.pagedown(); return; }
+            "S-LEFT"  => { self.right_pane.pageup();   return; }
             _ => {}
         }
         match self.focus {
@@ -223,19 +327,19 @@ impl App {
             "j" | "DOWN" => {
                 if self.lore_idx + 1 < tree.len() {
                     self.lore_idx += 1;
-                    self.lore_content_pane.ix = 0;
+                    self.right_pane.ix = 0;
                 }
             }
             "k" | "UP" => {
                 if self.lore_idx > 0 {
                     self.lore_idx -= 1;
-                    self.lore_content_pane.ix = 0;
+                    self.right_pane.ix = 0;
                 }
             }
-            "g" => { self.lore_idx = 0; self.lore_content_pane.ix = 0; }
+            "g" => { self.lore_idx = 0; self.right_pane.ix = 0; }
             "G" => {
                 self.lore_idx = tree.len().saturating_sub(1);
-                self.lore_content_pane.ix = 0;
+                self.right_pane.ix = 0;
             }
             "ENTER" | "l" | "RIGHT" => {
                 if let Some(item) = tree.get(self.lore_idx) {
@@ -260,7 +364,7 @@ impl App {
                                     if let Node::CanonCategory { category, .. } = &it.node {
                                         self.lore_expanded.retain(|e| e != category);
                                         self.lore_idx = i;
-                                        self.lore_content_pane.ix = 0;
+                                        self.right_pane.ix = 0;
                                         break;
                                     }
                                 }
@@ -276,15 +380,15 @@ impl App {
 
     fn handle_lore_content_key(&mut self, key: &str) {
         match key {
-            "j" | "DOWN" => self.lore_content_pane.linedown(),
-            "k" | "UP"   => self.lore_content_pane.lineup(),
-            "PgDOWN" | " " | "SPACE" => self.lore_content_pane.pagedown(),
-            "PgUP"   | "b" => self.lore_content_pane.pageup(),
-            "g" | "HOME" => self.lore_content_pane.ix = 0,
+            "j" | "DOWN" => self.right_pane.linedown(),
+            "k" | "UP"   => self.right_pane.lineup(),
+            "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
+            "PgUP"   | "b" => self.right_pane.pageup(),
+            "g" | "HOME" => self.right_pane.ix = 0,
             "G" | "END"  => {
                 // Page down repeatedly until we've hit the bottom; cheap
                 // because each call is a couple of pointer ops.
-                for _ in 0..200 { self.lore_content_pane.pagedown(); }
+                for _ in 0..200 { self.right_pane.pagedown(); }
             }
             _ => {}
         }
@@ -325,25 +429,47 @@ impl App {
     }
 
     fn render_body(&mut self) {
-        if self.tab == Tab::Lore {
-            self.render_lore_panes();
+        if self.tab_has_two_panes() {
+            // Paint focus markers once for both two-pane tabs, then
+            // delegate left+right content to the per-tab renderer.
+            self.paint_focus_markers();
+            match self.tab {
+                Tab::Lore     => self.render_lore_panes(),
+                Tab::Campaign => self.render_campaign_panes(),
+                _ => {}
+            }
             return;
         }
         let lines = match self.tab {
             Tab::Session  => self.render_session(),
             Tab::Forge    => self.render_forge(),
-            Tab::Campaign => self.render_campaign(),
-            Tab::Lore     => unreachable!(),
             Tab::Inspire  => self.render_inspire(),
+            _ => unreachable!(),
         };
-        // Wipe the Lore panes' area when switching off Lore so the
-        // body content doesn't sit over the old tree contents.
-        self.lore_tree_marker.clear();
-        self.lore_tree_pane.clear();
-        self.lore_content_marker.clear();
-        self.lore_content_pane.clear();
+        // Wipe the two-pane layout when switching to a single-pane tab.
+        self.left_marker.clear();
+        self.left_pane.clear();
+        self.right_marker.clear();
+        self.right_pane.clear();
         self.body.set_text(&lines.join("\n"));
         self.body.full_refresh();
+    }
+
+    /// Paint the bright-yellow / dim-grey ▏ stripe for the active and
+    /// inactive panes. Centralised so Lore and Campaign render the same
+    /// way; the per-tab content renderers just fill left_pane and
+    /// right_pane afterwards.
+    fn paint_focus_markers(&mut self) {
+        let left_active = self.focus == Focus::Left;
+        let right_active = self.focus == Focus::Right;
+        let h = self.left_marker.h as usize;
+        let stripe = vec!["\u{258F}"; h].join("\n");
+        self.left_marker.fg = if left_active { 226 } else { 240 };
+        self.left_marker.set_text(&stripe);
+        self.left_marker.full_refresh();
+        self.right_marker.fg = if right_active { 226 } else { 240 };
+        self.right_marker.set_text(&stripe);
+        self.right_marker.full_refresh();
     }
 
     fn render_lore_panes(&mut self) {
@@ -354,22 +480,6 @@ impl App {
         }
 
         let tree_active = self.focus == Focus::Left;
-        let content_active = self.focus == Focus::Right;
-
-        // Marker panes: a thin `▏` glyph in column 1, column 2 left
-        // blank. Bright yellow when the parent pane has focus, dim
-        // grey when it doesn't. The glyph is repeated once per row so
-        // the stripe is continuous, independent of any word-wrap in
-        // neighbouring panes.
-        let h = self.lore_tree_marker.h as usize;
-        let stripe = vec!["\u{258F}"; h].join("\n");
-        self.lore_tree_marker.fg = if tree_active { 226 } else { 240 };
-        self.lore_tree_marker.set_text(&stripe);
-        self.lore_tree_marker.full_refresh();
-        self.lore_content_marker.fg = if content_active { 226 } else { 240 };
-        self.lore_content_marker.set_text(&stripe);
-        self.lore_content_marker.full_refresh();
-
         // Tree pane: one line per item, expandable categories get +/-.
         // Cursor row: bright yellow + bold when Tree has focus, dim
         // when Content has focus.
@@ -399,14 +509,14 @@ impl App {
             };
             tree_lines.push(line);
         }
-        self.lore_tree_pane.set_text(&tree_lines.join("\n"));
-        self.lore_tree_pane.ix = scroll_offset(self.lore_idx, tree.len(), self.lore_tree_pane.h as usize);
-        self.lore_tree_pane.full_refresh();
+        self.left_pane.set_text(&tree_lines.join("\n"));
+        self.left_pane.ix = scroll_offset(self.lore_idx, tree.len(), self.left_pane.h as usize);
+        self.left_pane.full_refresh();
 
         // Body pane: render the selected item's content.
         let content = match tree.get(self.lore_idx) {
             Some(item) => match &item.node {
-                Node::Doc { body, .. } => lore::render_markdown(body, self.lore_content_pane.w as usize),
+                Node::Doc { body, .. } => lore::render_markdown(body, self.right_pane.w as usize),
                 Node::CanonCategory { title, category, .. } => {
                     let mut out = vec![
                         String::new(),
@@ -434,8 +544,8 @@ impl App {
         // set_text() doesn't reset ix — the pane keeps its scroll position
         // across selection changes. Cursor moves in the tree explicitly
         // reset ix to 0 in handle_lore_key.
-        self.lore_content_pane.set_text(&content.join("\n"));
-        self.lore_content_pane.full_refresh();
+        self.right_pane.set_text(&content.join("\n"));
+        self.right_pane.full_refresh();
     }
 
     fn render_footer(&mut self) {
@@ -449,7 +559,10 @@ impl App {
         let hint = match self.tab {
             Tab::Session  => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Forge    => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
-            Tab::Campaign => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load-campaign  ?:help  q:quit",
+            Tab::Campaign => match self.focus {
+                Focus::Left  => " TAB:focus-sheet  j/k:PC list  n:new  D:delete  C:new-camp  L:load-camp",
+                Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
+            },
             Tab::Lore     => match self.focus {
                 Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
                 Focus::Right => " TAB:focus-tree  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs  ?:help",
@@ -504,37 +617,269 @@ impl App {
         out
     }
 
-    fn render_campaign(&self) -> Vec<String> {
-        let mut out = Vec::new();
-        out.push(String::new());
-        out.push(style::bold("  Campaign").to_string());
-        out.push(String::new());
-        match &self.campaign {
-            Some(c) => {
-                out.push(format!("  Name: {}", c.name));
-                out.push(format!("  Date: {}", c.date.fmt_header()));
-                out.push(format!("  Bortle: {}", c.bortle));
-                out.push(format!("  PCs: {}", c.pcs.len()));
-                out.push(format!("  NPCs: {}", c.npcs.len()));
-                out.push(String::new());
-                out.push(style::fg("  PC entry, NPC roster, locations, adventures, factions land in v0.4.0.", 245).to_string());
-                out.push(style::fg("  Calendar advance + weather hookup land in v0.5.0.", 245).to_string());
+    fn render_campaign_panes(&mut self) {
+        // No campaign loaded → spell out the load/create flow on the
+        // right pane, leave the left blank. Both markers stay dim.
+        let Some(camp) = self.campaign.as_ref() else {
+            self.left_pane.set_text("");
+            self.left_pane.full_refresh();
+            let mut hint = vec![
+                String::new(),
+                style::bold(&style::fg("  No campaign loaded", 226)).to_string(),
+                String::new(),
+                "  C — create a new campaign".into(),
+                "  L — load an existing campaign".into(),
+            ];
+            let existing = list_campaigns();
+            if !existing.is_empty() {
+                hint.push(String::new());
+                hint.push(style::fg("  Existing campaigns:", 245).to_string());
+                for n in existing.iter().take(20) {
+                    hint.push(format!("    - {}", n));
+                }
             }
-            None => {
-                out.push("  No campaign loaded.".into());
-                out.push(String::new());
-                out.push("  C — create a new campaign".into());
-                out.push("  L — load an existing campaign".into());
-                let existing = list_campaigns();
-                if !existing.is_empty() {
-                    out.push(String::new());
-                    out.push(style::fg("  Existing campaigns:", 245).to_string());
-                    for n in existing.iter().take(20) {
-                        out.push(format!("    - {}", n));
+            self.right_pane.set_text(&hint.join("\n"));
+            self.right_pane.full_refresh();
+            return;
+        };
+
+        // Left pane: PC list. One line per PC; the cursor line gets
+        // the bright-yellow + bold highlight when the left pane has
+        // focus, dim grey otherwise.
+        let left_active = self.focus == Focus::Left;
+        let pcs_total = camp.pcs.len();
+        if self.pcs_idx >= pcs_total.max(1) {
+            self.pcs_idx = pcs_total.saturating_sub(1);
+        }
+
+        let mut left_lines: Vec<String> = Vec::new();
+        left_lines.push(style::bold(&format!(" {}", camp.name)));
+        left_lines.push(style::fg(&format!(" {}", camp.date.fmt_header()), 245));
+        left_lines.push(String::new());
+        left_lines.push(style::bold(" PCs"));
+        if pcs_total == 0 {
+            left_lines.push(style::fg("  (none yet — press n to add)", 245).to_string());
+        } else {
+            for (i, pc) in camp.pcs.iter().enumerate() {
+                let cursor = if i == self.pcs_idx { "→" } else { " " };
+                let race = if pc.race.is_empty() { "—".to_string() } else { pc.race.clone() };
+                let row = format!("{} {:<14}  L{}  {}",
+                    cursor,
+                    truncate_or_pad(&pc.name, 14),
+                    pc.level,
+                    race);
+                let line = if i == self.pcs_idx {
+                    if left_active {
+                        style::bold(&style::fg(&row, 226))
+                    } else {
+                        style::fg(&row, 244)
+                    }
+                } else {
+                    row
+                };
+                left_lines.push(line);
+            }
+        }
+        self.left_pane.set_text(&left_lines.join("\n"));
+        self.left_pane.full_refresh();
+
+        // Right pane: full character sheet for the selected PC, or a
+        // welcome blurb if there are no PCs yet.
+        let sheet = if let Some(pc) = camp.pcs.get(self.pcs_idx) {
+            self.render_pc_sheet(pc)
+        } else {
+            vec![
+                String::new(),
+                style::bold("  Welcome").to_string(),
+                String::new(),
+                "  Press n on the left pane to add your first PC.".into(),
+                "  TAB toggles focus; ESC drops focus back to the list.".into(),
+            ]
+        };
+        self.right_pane.set_text(&sheet.join("\n"));
+        self.right_pane.full_refresh();
+    }
+
+    /// Render one PC's full character sheet — Identity, Derived Stats,
+    /// Status, Hit Locations, Characteristics & Skills (3-tier),
+    /// Weapons, Spells, Equipment, Notes. Mirrors the layout of
+    /// CharacterSheet-new.xml but adapted for a vertical TUI scroll
+    /// pane (sections stacked top-to-bottom). Read-only for now;
+    /// editing lands in the next iteration.
+    fn render_pc_sheet(&self, pc: &crate::pc::Character) -> Vec<String> {
+        use crate::pc::{ATTRIBUTES, SKILLS, Char};
+        const LBL: u8 = 245;
+        let mut out: Vec<String> = Vec::new();
+
+        // Title strip
+        out.push(String::new());
+        out.push(style::bold(&style::fg(&pc.name, 226)));
+        let mut subtitle = String::new();
+        if !pc.race.is_empty()  { subtitle.push_str(&pc.race); }
+        if !pc.gender.is_empty() { subtitle.push_str(&format!(", {}", pc.gender)); }
+        if pc.age > 0 { subtitle.push_str(&format!(", age {}", pc.age)); }
+        subtitle.push_str(&format!(" — Level {}", pc.level));
+        out.push(style::fg(&subtitle, LBL));
+        out.push(String::new());
+
+        // Identity
+        out.push(style::bold(&style::fg("Identity", 117)));
+        out.push(field_row(LBL, "Player",     &pc.player));
+        out.push(field_row(LBL, "Birthplace", &pc.birthplace));
+        out.push(field_row(LBL, "Height",     &fmt_opt_num(pc.height_cm, "cm")));
+        out.push(field_row(LBL, "Weight",     &fmt_opt_num(pc.weight_kg, "kg")));
+        if !pc.description.is_empty() {
+            out.push(field_row(LBL, "Description", &pc.description));
+        }
+        out.push(String::new());
+
+        // Derived
+        out.push(style::bold(&style::fg("Derived stats", 117)));
+        out.push(field_row(LBL, "SIZE",         &fmt_size(pc.size)));
+        out.push(field_row(LBL, "Body Points",  &format!("{} / {}", pc.bp_current.max(0), pc.bp_max())));
+        out.push(field_row(LBL, "Damage Bonus", &pc.db().to_string()));
+        out.push(field_row(LBL, "Magick Def.",  &pc.md().to_string()));
+        out.push(field_row(LBL, "Reaction",     &pc.reaction().to_string()));
+        out.push(field_row(LBL, "Mental Fort.", &format!("{} / {}", pc.mf_current.max(0), pc.mf_max())));
+        out.push(String::new());
+
+        // Wound state derived from current vs max BP
+        let bp_max = pc.bp_max().max(1);
+        let bp_pct = (pc.bp_current as f32 / bp_max as f32) * 100.0;
+        let state = if pc.bp_current <= 0          { ("Helpless / down", 196) }
+            else if pc.bp_current <= bp_max / 4    { ("Heavily Wounded (-4 to all)", 208) }
+            else if pc.bp_current <= bp_max / 2    { ("Wounded (-2 to all)", 220) }
+            else                                    { ("Healthy", 46) };
+        out.push(style::bold(&style::fg("Status", 117)));
+        out.push(format!("  {} ({:.0}% BP)",
+            style::fg(state.0, state.1), bp_pct));
+        if !pc.conditions.is_empty() {
+            out.push(format!("  {}: {}",
+                style::fg("conditions", LBL),
+                pc.conditions.join(", ")));
+        }
+        if !pc.modifiers.is_empty() {
+            out.push(style::fg("  Other modifiers", LBL).to_string());
+            for (label, val) in &pc.modifiers {
+                let sign = if *val >= 0 { "+" } else { "" };
+                out.push(format!("    {}{}: {}", sign, val, label));
+            }
+        }
+        out.push(String::new());
+
+        // Hit locations table
+        if !pc.hit_locations.is_empty() {
+            out.push(style::bold(&style::fg("Hit locations", 117)));
+            let order = ["Head", "R. Arm", "L. Arm", "Body", "R. Leg", "L. Leg"];
+            let dice  = ["⚅",    "⚄",      "⚃",      "⚂",    "⚁",      "⚀"];
+            for (loc, die) in order.iter().zip(dice.iter()) {
+                if let Some(hl) = pc.hit_locations.get(*loc) {
+                    let armor = if hl.armor.is_empty() { "—".to_string() } else { hl.armor.clone() };
+                    out.push(format!("  {} {:<8}  {:<14}  AP {:<2}  BP {}",
+                        die, loc, armor, hl.ap, hl.bp));
+                }
+            }
+            out.push(String::new());
+        }
+
+        // Characteristics
+        out.push(style::bold(&style::fg("Characteristics", 117)));
+        out.push(format!("  BODY {:>2}    MIND {:>2}    SPIRIT {:>2}",
+            pc.ch(Char::Body), pc.ch(Char::Mind), pc.ch(Char::Spirit)));
+        out.push(String::new());
+
+        // Attributes & skills (3-tier tree)
+        out.push(style::bold(&style::fg("Attributes & skills", 117)));
+        out.push(style::fg("  (Total = Char + Attr + Skill — used for every roll)", LBL).to_string());
+        for ch in [Char::Body, Char::Mind, Char::Spirit] {
+            out.push(format!("  {} {}",
+                style::bold(ch.name()),
+                style::fg(&format!("({})", pc.ch(ch)), LBL)));
+            for (parent, attr) in ATTRIBUTES.iter().filter(|(c, _)| *c == ch) {
+                let _ = parent;
+                let av = pc.attr(attr);
+                out.push(format!("    {:<22} {:>3}",
+                    style::fg(attr, 250), av));
+                // Skills under this attribute. We list any with non-zero
+                // rank, plus any explicitly tracked skill in pc.skills.
+                let canonical: &[&str] = SKILLS.iter().find(|(a, _)| a == attr).map(|(_, s)| *s).unwrap_or(&[]);
+                let mut shown = std::collections::BTreeSet::new();
+                for skill in canonical {
+                    let rank = pc.skill(attr, skill);
+                    let total = pc.skill_total(ch, attr, skill);
+                    out.push(format!("      {:<26} {:>2}    total {:>3}",
+                        skill, rank, total));
+                    shown.insert((*skill).to_string());
+                }
+                if let Some(extras) = pc.skills.get(*attr) {
+                    for (skill, rank) in extras {
+                        if shown.contains(skill) { continue; }
+                        let total = pc.skill_total(ch, attr, skill);
+                        out.push(format!("      {:<26} {:>2}    total {:>3}",
+                            skill, rank, total));
                     }
                 }
             }
+            out.push(String::new());
         }
+
+        // Weapons
+        if !pc.weapons.is_empty() {
+            out.push(style::bold(&style::fg("Weapons", 117)));
+            for w in &pc.weapons {
+                let kind = match w.kind {
+                    crate::pc::WeaponKind::Melee   => "melee",
+                    crate::pc::WeaponKind::Missile => "missile",
+                };
+                let h = if w.two_handed { "2H" } else { "1H" };
+                out.push(format!("  {} ({}, {})  Init {:+}  ±O {:+}  ±D {:+}  Dam {:+}  HP {}",
+                    style::bold(&w.name), kind, h, w.init, w.off_mod, w.def_mod, w.damage, w.hp));
+            }
+            out.push(String::new());
+        }
+
+        // Spells
+        if !pc.spells.is_empty() {
+            out.push(style::bold(&style::fg("Spells", 117)));
+            for spell_name in &pc.spells {
+                if let Some(entry) = self.canon.lookup(spell_name) {
+                    let dr = entry.fields.get("dr").map(|s| s.as_str()).unwrap_or("?");
+                    let cost = entry.fields.get("cost").map(|s| s.as_str()).unwrap_or("?");
+                    let dist = entry.fields.get("distance").map(|s| s.as_str()).unwrap_or("?");
+                    out.push(format!("  {}  DR {}  cost {}  dist {}",
+                        style::bold(spell_name), dr, cost, dist));
+                } else {
+                    out.push(format!("  {} {}", spell_name, style::fg("(not in canon)", 208)));
+                }
+            }
+            out.push(String::new());
+        }
+
+        // Equipment + money
+        out.push(style::bold(&style::fg("Equipment", 117)));
+        if pc.equipment.is_empty() && !pc.clothing.is_empty() {
+            out.push(format!("  Clothing: {}", pc.clothing));
+        }
+        if !pc.clothing.is_empty() && !pc.equipment.is_empty() {
+            out.push(format!("  Clothing: {}", pc.clothing));
+        }
+        for item in &pc.equipment {
+            out.push(format!("  • {}", item));
+        }
+        if pc.equipment.is_empty() && pc.clothing.is_empty() {
+            out.push(style::fg("  (no items)", LBL).to_string());
+        }
+        out.push(field_row(LBL, "Money", &format!("{} sp", pc.money_sp)));
+        out.push(String::new());
+
+        // Notes
+        if !pc.notes.is_empty() {
+            out.push(style::bold(&style::fg("Notes", 117)));
+            for line in pc.notes.lines() {
+                out.push(format!("  {}", line));
+            }
+        }
+
         out
     }
 
@@ -649,6 +994,40 @@ impl App {
         Crust::clear_screen();
         self.render_all();
     }
+}
+
+/// Render one "Label: value" line for the PC sheet, with the label
+/// dim-grey-coloured (style fg 245) and the value in default fg.
+fn field_row(lbl_color: u8, label: &str, value: &str) -> String {
+    let v = if value.is_empty() { "—" } else { value };
+    format!("  {:<14} {}",
+        crust::style::fg(&format!("{}:", label), lbl_color),
+        v)
+}
+
+/// Format SIZE as `3` for whole, `3.5` for half-step.
+fn fmt_size(size: f32) -> String {
+    if (size - size.floor()).abs() < 0.05 {
+        format!("{}", size as i32)
+    } else {
+        format!("{:.1}", size)
+    }
+}
+
+/// Format an optional numeric value with a unit suffix, blank for 0.
+fn fmt_opt_num(n: u32, unit: &str) -> String {
+    if n == 0 { String::new() } else { format!("{} {}", n, unit) }
+}
+
+/// Truncate to char-count `n` (with an ellipsis when shortened) or
+/// return the original. format!'s `{:<N}` uses byte width, so a
+/// 14-char telescope name with no multibyte chars is fine — but the
+/// ellipsis-on-truncate is still nice when a future entry is wider
+/// than the column.
+fn truncate_or_pad(s: &str, n: usize) -> String {
+    let cc = s.chars().count();
+    if cc <= n { s.to_string() }
+    else { format!("{}…", s.chars().take(n.saturating_sub(1)).collect::<String>()) }
 }
 
 /// Compute the top-of-pane scroll offset that keeps `idx` near the

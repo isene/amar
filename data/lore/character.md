@@ -70,18 +70,37 @@ Magick Defense (MD) = (Mental Fortitude + Attunement Self) / 3
 
 ## Size Table
 
-SIZE is determined from weight, not chosen.
+SIZE is determined from weight, not chosen. amar uses the wiki's
+**Half-Size Points** table (the granular optional rule) for both PCs
+and NPCs, so a 75 kg adult is SIZE 3.5, a 90 kg adult is SIZE 3.5
+still, and a 110 kg adult is SIZE 4.0.
 
-| Size | Weight (kg) | Size | Weight (kg) | Size | Weight (kg) |
+### Half-Size Table (granular, up to 499 kg)
+
+| SIZE | Weight (kg) | SIZE | Weight (kg) | SIZE | Weight (kg) |
 |---|---|---|---|---|---|
-| ½ | < 10 | 6 | < 300 | 12 | < 1000 |
-| 1 | < 20 | 7 | < 400 | 13 | < 1150 |
-| 2 | < 50 | 8 | < 500 | 14 | < 1300 |
-| 3 | < 100 | 9 | < 600 | 15 | < 1450 |
-| 4 | < 150 | 10 | < 725 | 16 | < 1600 |
-| 5 | < 225 | 11 | < 850 | +1 | per +200 kg |
+| 0.5 | < 10 | 3.5 | 75-99 | 6.5 | 263-299 |
+| 1 | 10-14 | 4 | 100-124 | 7 | 300-349 |
+| 1.5 | 15-19 | 4.5 | 125-149 | 7.5 | 350-399 |
+| 2 | 20-34 | 5 | 150-187 | 8 | 400-449 |
+| 2.5 | 35-49 | 5.5 | 188-224 | 8.5 | 450-499 |
+| 3 | 50-74 | 6 | 225-262 | | |
 
-A typical adult human is SIZE 3.
+### Whole-Size Table (above 499 kg)
+
+| SIZE | Weight (kg) |
+|---|---|
+| 9 | 500-599 |
+| 10 | 600-724 |
+| 11 | 725-849 |
+| 12 | 850-999 |
+| 13 | 1000-1149 |
+| 14 | 1150-1299 |
+| 15 | 1300-1449 |
+| 16 | 1450-1599 |
+| +1 | per +200 kg above 1600 |
+
+A lean adult human is SIZE 3 (50-74 kg); an average adult is SIZE 3.5 (75-99 kg).
 
 ## Skill Rating Scale
 
