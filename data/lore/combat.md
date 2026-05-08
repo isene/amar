@@ -194,6 +194,122 @@ Shield AP vs missiles: round shield +1 AP, kite shield +2 AP.
 - Disarm 2H: damage > 2 × opponent's Strength.
 - Break weapon: damage > weapon HP.
 
+## Critical and Fumble Tables
+
+The same tables apply to combat attack rolls and to general skill rolls — any open-ended roll that lands two consecutive 6s (Critical) or two consecutive 1s (Fumble). For combat the most common categories are Side effect (2), Increased effect (3), and Added effect (4).
+
+Procedure: roll once for the **category** (1-6), then once for the **specific result** (1-6). If a result is inapplicable to the situation, pick the row above on the Critical table or the row below on the Fumble table.
+
+### Criticals
+
+**1 — Impression**
+| d6 | Result |
+|---|---|
+| 1 | Looks really cool |
+| 2 | Impressive — adjacent friends get +1 next round |
+| 3 | Very impressive — adjacent friends get +1 next D rounds |
+| 4 | Fearsome — foe rolls on Fear Table with +9 adjustment |
+| 5 | Awesome — foe rolls on Fear Table with +6 adjustment |
+| 6 | Wild — foe rolls on Fear Table with +3 adjustment |
+
+**2 — Side effect**
+| d6 | Result |
+|---|---|
+| 1 | Opponent off balance — Status -1 next round |
+| 2 | Opponent confused — Status -3 next round |
+| 3 | Opponent stunned — Status -3 for 3 rounds |
+| 4 | Opponent staggered — Status -D for D rounds |
+| 5 | Opponent reeling — Status -O for O rounds |
+| 6 | Opponent shocked — Status -(O+3) for the rest of the fight |
+
+**3 — Increased effect**
+| d6 | Result |
+|---|---|
+| 1 | Good hit — +1 damage |
+| 2 | Tough hit — +3 damage |
+| 3 | Great hit — +(D+1) damage |
+| 4 | Greater hit — +(O+2) damage |
+| 5 | Power hit — double damage (after AP) |
+| 6 | Opportunity found — immediate free attack |
+
+**4 — Added effect**
+| d6 | Result |
+|---|---|
+| 1 | Foe knocked down on failed Tumble DR 8 |
+| 2 | Foe knocked down on failed Tumble DR 12 |
+| 3 | Roll for disarming the opponent |
+| 4 | Damage also done to opponent's weapon |
+| 5 | Damage also done to opponent's weapon (double damage to weapon) |
+| 6 | Opponent loses equipment (GM's discretion) |
+
+**5 — Special**
+| d6 | Result |
+|---|---|
+| 1 | Bleeding — -1 BP per minute |
+| 2 | Bleeding — -1 BP per round |
+| 3 | Muscle strained — opponent Status -3 until Medical Lore DR 8 |
+| 4 | Disable special location (eye, finger, …) — Medical Lore DR 8 to fix |
+| 5 | Disable special location — Medical Lore DR 12 to fix |
+| 6 | Opponent faints — Medical Lore DR 8 to awaken |
+
+**6 — Roll twice on this table, ignoring any subsequent 6s, add one experience mark.**
+
+### Fumbles
+
+**1 — Roll twice on this table, ignoring any subsequent 1s, subtract one experience mark.**
+
+**2 — Special**
+| d6 | Result |
+|---|---|
+| 1 | Lose next attack; opponent gets +10 to next attack |
+| 2 | Hit self |
+| 3 | Hit nearest friend |
+| 4 | Hit nearest friend, half damage |
+| 5 | Obstruct nearest friend — friend Status -3 next round |
+| 6 | Muscle strained — Status -3 until Medical Lore DR 8 |
+
+**3 — Unwanted effect**
+| d6 | Result |
+|---|---|
+| 1 | Lose equipment (GM's discretion) |
+| 2 | Damage to own weapon |
+| 3 | Weapon stuck — Strength DR 10 to free |
+| 4 | Lose weapon — no attack until retrieved, -5 defense |
+| 5 | Fall on failed Tumble DR 12 |
+| 6 | Fall on failed Tumble DR 8 |
+
+**4 — Stun effect**
+| d6 | Result |
+|---|---|
+| 1 | Shocked — Status -(O+3) for rest of fight |
+| 2 | Reeling — Status -O for O rounds |
+| 3 | Staggered — Status -D for D rounds |
+| 4 | Stunned — Status -3 for 3 rounds |
+| 5 | Confused — Status -3 next round |
+| 6 | Off balance — Status -1 next round |
+
+**5 — Added effect**
+| d6 | Result |
+|---|---|
+| 1 | Very fatigued — Endurance -3 for rest of fight (min 1) |
+| 2 | Very tired — Strength -3 for rest of fight (min 1) |
+| 3 | Very dazed — Reaction Speed and Awareness -3 for rest of fight |
+| 4 | Fatigued — Endurance -1 for rest of fight (min 1) |
+| 5 | Tired — Strength -1 for rest of fight (min 1) |
+| 6 | Dazed — Reaction Speed and Awareness -1 for rest of fight |
+
+**6 — Impression**
+| d6 | Result |
+|---|---|
+| 1 | Terrible for morale — friends -1 to all rolls for next D rounds |
+| 2 | Very bad for morale — friends -1 to all rolls for rest of round |
+| 3 | Bad for morale — friends -1 to attack for rest of round |
+| 4 | You make a fool of yourself — laughter is heard |
+| 5 | Botched it — giggles are heard |
+| 6 | Awkward looking |
+
+In Psychic Combat: a Critical attack forces the defender to roll on the Fear Table; a Fumble forces the attacker.
+
 ## Fear & Courage
 
 ```

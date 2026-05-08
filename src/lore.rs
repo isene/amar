@@ -13,6 +13,7 @@ pub const SETTING_DOCS: &[(&str, &str)] = &[
     ("Kingdom of Amar",  include_str!("../data/lore/kingdom.md")),
     ("World",            include_str!("../data/lore/world.md")),
     ("Calendar",         include_str!("../data/lore/calendar.md")),
+    ("The Character",    include_str!("../data/lore/character.md")),
     ("Combat (quickref)", include_str!("../data/lore/combat.md")),
     ("Magic (quickref)",  include_str!("../data/lore/magic.md")),
 ];
