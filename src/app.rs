@@ -1134,7 +1134,16 @@ impl App {
         let mut edits: Vec<EditableField> = Vec::new();
         let pane_w = self.right_pane.w as usize;
 
-        // --- Title: "Name  (Player)" ---
+        // --- Top section: title + identity + stats + hit locations.
+        // Built into `out` first, then post-processed to overlay a
+        // portrait placeholder box in the top-right corner. Per-row
+        // content stays inside `top_left_w` so it never overlaps the
+        // portrait area.
+        let port_w: usize = if pane_w >= 90 { 28 } else { 0 };
+        let top_left_w = pane_w.saturating_sub(port_w + 2);
+        let top_start = out.len();
+
+        // Title
         let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
         let bp_max = pc.bp_max().max(1);
         let (state_text, state_color, status_penalty) =
@@ -1142,7 +1151,6 @@ impl App {
             else if pc.bp_current <= bp_max / 4 { ("Heavily Wounded", STATUS_HW, Some(-4)) }
             else if pc.bp_current <= bp_max / 2 { ("Wounded",         STATUS_W,  Some(-2)) }
             else                                { ("Healthy",         STATUS_OK, Some(0))  };
-        out.push(String::new());
         let title = if pc.player.is_empty() {
             style::bold(&style::fg(&name_disp, TITLE))
         } else {
@@ -1151,13 +1159,10 @@ impl App {
                 style::fg(&format!("({})", pc.player), PLAYER))
         };
         out.push(format!(" {}", title));
-        out.push(String::new());
 
-        // --- Identity row 1: Race / Sex / Age ---
-        // --- Identity row 2: Height / Weight / SIZE ---
-        // Three slots per row, fixed labels, value cells bg-highlighted
-        // when active. Width adapts to pane width.
-        let row_w = (pane_w / 3).max(20);
+        // Identity rows — 3 cells × ~16 cols each. Tight enough that
+        // the right portion stays free for the portrait area.
+        let id_cell_w = (top_left_w / 3).max(14);
         let id_row1: &[(&str, &str, String)] = &[
             ("race",   "Race",   pc.race.clone()),
             ("sex",    "Sex",    pc.gender.clone()),
@@ -1166,9 +1171,6 @@ impl App {
         let id_row2: &[(&str, &str, String)] = &[
             ("height", "Height", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
             ("weight", "Weight", pc.weight_kg.to_string()),
-            // SIZE is read-only — derives from weight via the half-size
-            // table. Shown alongside Height/Weight so the trio reads as
-            // "physical envelope".
             ("",       "SIZE",   fmt_size(pc.size)),
         ];
         for row in [id_row1, id_row2] {
@@ -1183,15 +1185,14 @@ impl App {
                         current: value.clone(),
                     });
                 }
-                cells.push(format!(" {:<8} {}",
+                cells.push(format!(" {:<7}{}",
                     style::fg(&format!("{}:", label), LBL_ID),
-                    value_cell(value, 6, active)));
+                    value_cell(value, 5, active)));
             }
-            out.push(cells.iter().map(|c| pad_visible(c, row_w)).collect::<String>());
+            out.push(cells.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
         }
-        out.push(String::new());
 
-        // --- Birthplace (full width) ---
+        // Birthplace
         let bp_active = active_id == Some("birthplace");
         edits.push(EditableField { line: out.len(),
             field_id: "birthplace".into(),
@@ -1201,7 +1202,7 @@ impl App {
             style::fg("Birthplace:", LBL_ID),
             value_cell(&pc.birthplace, 12, bp_active)));
 
-        // --- Description (full width, multiline) ---
+        // Description (multiline)
         let desc_active = active_id == Some("description");
         edits.push(EditableField { line: out.len(),
             field_id: "description".into(),
@@ -1212,8 +1213,6 @@ impl App {
                 style::fg("Description:", LBL_ID),
                 value_cell("", 8, desc_active)));
         } else {
-            // First line shows label + first text line. Continuation
-            // lines indent two spaces with no label.
             let mut lines = pc.description.lines();
             let first = lines.next().unwrap_or("");
             out.push(format!(" {} {}",
@@ -1242,7 +1241,12 @@ impl App {
             (None,             "React.",  pc.reaction().to_string(), false),
         ];
         let dice = ["⚅", "⚄", "⚃", "⚂", "⚁", "⚀"];
-        let stat_w = (pane_w / 2).max(20);
+        // Stats column on the left, hit-locations on the right.
+        // Sized to fit inside the top-left area so the portrait
+        // placeholder box on the right has room.
+        let stat_w = 14;
+        let _stats_total = stat_w;
+        let _ = top_left_w;
         for (stat, (loc, die)) in stat_cells.iter().zip(HIT_LOCATIONS.iter().zip(dice.iter())) {
             let (id_opt, label, value, active) = stat;
             let value: &str = value;
@@ -1292,6 +1296,29 @@ impl App {
                 style::fg("BP", LBL_ID),
                 style::fg(&loc_bp.to_string(), 252));
             out.push(combined);
+        }
+
+        // Post-process the top section: overlay a portrait placeholder
+        // box in the top-right corner. The frame sits inside its own
+        // `port_w` columns and is `port_h` rows tall — the image
+        // renderer (image-display work) will fill the inside on
+        // demand. For now, only the dim frame + "(no portrait)"
+        // label show up.
+        let top_end = out.len();
+        if port_w >= 16 && top_end - top_start >= 4 {
+            let port_h = (top_end - top_start).min(8);
+            for i in 0..(top_end - top_start) {
+                let row_idx = top_start + i;
+                let original = out[row_idx].clone();
+                let right = if i < port_h {
+                    portrait_row(i, port_w, port_h)
+                } else {
+                    String::new()
+                };
+                out[row_idx] = format!("{}{}",
+                    pad_visible(&original, top_left_w),
+                    right);
+            }
         }
         out.push(String::new());
 
@@ -1697,6 +1724,30 @@ fn value_cell(value: &str, min_w: usize, active: bool) -> String {
     } else {
         padded
     }
+}
+
+/// Build one row of the portrait placeholder frame in the PC sheet's
+/// top-right corner. The frame is dim — when the image renderer lands
+/// (kitty/sixel via glow), the actual portrait will be drawn over the
+/// inside cells. Until then, the frame and "(no portrait)" label make
+/// it visible that the area is reserved.
+fn portrait_row(row: usize, w: usize, total: usize) -> String {
+    use crust::style;
+    if w < 8 || total < 4 { return String::new(); }
+    let dim: u8 = 240;
+    let inner = w.saturating_sub(2);
+    let frame = if row == 0 {
+        format!("┌{}┐", "─".repeat(inner))
+    } else if row == total - 1 {
+        format!("└{}┘", "─".repeat(inner))
+    } else if row == total / 3 {
+        format!("│{:^iw$}│", "(no portrait)", iw = inner)
+    } else if row == 2 * total / 3 {
+        format!("│{:^iw$}│", "press P later", iw = inner)
+    } else {
+        format!("│{}│", " ".repeat(inner))
+    };
+    format!(" {}", style::fg(&frame, dim))
 }
 
 /// Pad a string with trailing spaces to reach the given visible width.
