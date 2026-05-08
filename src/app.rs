@@ -130,17 +130,23 @@ impl App {
             .map(|c| c.name.clone())
             .unwrap_or_else(|| "(no campaign)".to_string());
 
-        // Tab strip: highlight active.
+        // Tab strip — highlight the active tab with bold + bright fg.
+        // Avoid changing bg here: SGR 49 (bg-reset) goes to terminal
+        // default, NOT back to the pane bg, so any `style::bg` segment
+        // in mid-line would leave a black hole for the rest of the row.
         let mut tab_strip = String::new();
         for (i, t) in Tab::all().iter().enumerate() {
             let label = format!(" [{}] {} ", i + 1, t.name());
             if *t == self.tab {
-                tab_strip.push_str(&style::bold(&style::bg(&label, 24)));
+                tab_strip.push_str(&style::bold(&style::fg(&label, 226)));
             } else {
                 tab_strip.push_str(&style::fg(&label, 245));
             }
         }
-        let line = format!(" {}    {}    {}", style::bold("amar"), tab_strip, style::fg(&format!("{} | {}", camp_str, date_str), 252));
+        let line = format!(" {}    {}    {}",
+            style::bold("amar"),
+            tab_strip,
+            style::fg(&format!("{} | {}", camp_str, date_str), 252));
         self.header.say(&line);
     }
 

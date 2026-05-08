@@ -11,6 +11,8 @@ mod store;
 
 fn main() {
     crust::Crust::set_app_identity("Amar");
+    crust::Crust::init();
     let mut app = app::App::new();
     app.run();
+    crust::Crust::cleanup();
 }
