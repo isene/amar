@@ -6,6 +6,7 @@ mod app;
 mod calendar;
 mod canon;
 mod dice;
+mod lore;
 mod pc;
 mod store;
 

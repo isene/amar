@@ -6,6 +6,7 @@
 //! `Input::getchr` — no timers, no polling.
 
 use crate::canon::Canon;
+use crate::lore::{self, Node, Tree};
 use crate::store::{Campaign, GlobalConfig, list_campaigns};
 use crust::{Crust, Input, Pane};
 use crust::style;
@@ -53,8 +54,14 @@ pub struct App {
     pub rows: u16,
     pub header: Pane,
     pub body: Pane,
+    pub lore_tree_pane: Pane,
+    pub lore_content_pane: Pane,
     pub footer: Pane,
     pub status: Option<(String, u8)>,
+    /// Lore tab navigation state.
+    pub lore_idx: usize,
+    pub lore_expanded: Vec<String>,
+    pub lore_content_top: usize,
 }
 
 impl App {
@@ -67,14 +74,32 @@ impl App {
         let mut header = Pane::new(1, 1, cols, 1, 255, 236);
         header.wrap = false;
         header.scroll = false;
-        let mut body = Pane::new(1, 2, cols, rows.saturating_sub(2), 252, 0);
+
+        let body_h = rows.saturating_sub(2);
+        let mut body = Pane::new(1, 2, cols, body_h, 252, 0);
         body.wrap = true;
+
+        // Lore panes share the body area: tree on the left (~30 cols),
+        // content on the right (rest). Both have scroll markers; the
+        // content pane wraps long lines.
+        let tree_w: u16 = 30.min(cols.saturating_sub(20));
+        let content_w: u16 = cols.saturating_sub(tree_w);
+        let mut lore_tree_pane = Pane::new(1, 2, tree_w, body_h, 252, 0);
+        lore_tree_pane.wrap = false;
+        let mut lore_content_pane = Pane::new(tree_w + 1, 2, content_w, body_h, 252, 0);
+        lore_content_pane.wrap = true;
+
         let mut footer = Pane::new(1, rows, cols, 1, 245, 236);
         footer.wrap = false;
         footer.scroll = false;
         Self {
             canon, config, campaign, tab: Tab::Campaign,
-            cols, rows, header, body, footer, status: None,
+            cols, rows, header, body,
+            lore_tree_pane, lore_content_pane,
+            footer, status: None,
+            lore_idx: 0,
+            lore_expanded: Vec::new(),
+            lore_content_top: 0,
         }
     }
 
@@ -110,10 +135,74 @@ impl App {
         Crust::clear_screen();
     }
 
-    fn handle_tab_key(&mut self, _key: &str) {
-        // Tab-specific keys land here in later versions (Forge sub-nav,
-        // Lore tree navigation, Session combat actions, …). v0.1.0
-        // tabs are mostly read-only so there's nothing to do yet.
+    fn handle_tab_key(&mut self, key: &str) {
+        if self.tab == Tab::Lore {
+            self.handle_lore_key(key);
+        }
+    }
+
+    fn handle_lore_key(&mut self, key: &str) {
+        let tree = Tree::build(&self.canon, &self.lore_expanded);
+        match key {
+            "j" | "DOWN" => {
+                if self.lore_idx + 1 < tree.len() {
+                    self.lore_idx += 1;
+                    self.lore_content_top = 0;
+                }
+            }
+            "k" | "UP" => {
+                if self.lore_idx > 0 {
+                    self.lore_idx -= 1;
+                    self.lore_content_top = 0;
+                }
+            }
+            "g" => { self.lore_idx = 0; self.lore_content_top = 0; }
+            "G" => {
+                self.lore_idx = tree.len().saturating_sub(1);
+                self.lore_content_top = 0;
+            }
+            "ENTER" | "l" | "RIGHT" => {
+                if let Some(item) = tree.get(self.lore_idx) {
+                    if let Node::CanonCategory { category, .. } = &item.node {
+                        if !self.lore_expanded.iter().any(|e| e == category) {
+                            self.lore_expanded.push(category.clone());
+                        }
+                    }
+                }
+            }
+            "h" | "LEFT" => {
+                if let Some(item) = tree.get(self.lore_idx) {
+                    match &item.node {
+                        Node::CanonCategory { category, .. } => {
+                            self.lore_expanded.retain(|e| e != category);
+                        }
+                        Node::CanonEntry { .. } => {
+                            // Walk back to the parent CanonCategory and collapse it.
+                            let mut i = self.lore_idx;
+                            while i > 0 {
+                                i -= 1;
+                                if let Some(it) = tree.get(i) {
+                                    if let Node::CanonCategory { category, .. } = &it.node {
+                                        self.lore_expanded.retain(|e| e != category);
+                                        self.lore_idx = i;
+                                        self.lore_content_top = 0;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            "J" | "PgDOWN" => {
+                self.lore_content_top = self.lore_content_top.saturating_add(self.lore_content_pane.h as usize / 2);
+            }
+            "K" | "PgUP" => {
+                self.lore_content_top = self.lore_content_top.saturating_sub(self.lore_content_pane.h as usize / 2);
+            }
+            _ => {}
+        }
     }
 
     pub fn render_all(&mut self) {
@@ -151,15 +240,93 @@ impl App {
     }
 
     fn render_body(&mut self) {
+        if self.tab == Tab::Lore {
+            self.render_lore_panes();
+            return;
+        }
         let lines = match self.tab {
             Tab::Session  => self.render_session(),
             Tab::Forge    => self.render_forge(),
             Tab::Campaign => self.render_campaign(),
-            Tab::Lore     => self.render_lore(),
+            Tab::Lore     => unreachable!(),
             Tab::Inspire  => self.render_inspire(),
         };
+        // Wipe the Lore panes' area when switching off Lore so the
+        // body content doesn't sit over the old tree contents.
+        self.lore_tree_pane.clear();
+        self.lore_content_pane.clear();
         self.body.set_text(&lines.join("\n"));
         self.body.full_refresh();
+    }
+
+    fn render_lore_panes(&mut self) {
+        // Build the tree against the current expanded-set. Cheap (~ms).
+        let tree = Tree::build(&self.canon, &self.lore_expanded);
+        if self.lore_idx >= tree.len().max(1) {
+            self.lore_idx = tree.len().saturating_sub(1);
+        }
+
+        // Tree pane: one line per item, expandable categories get +/-.
+        let mut tree_lines: Vec<String> = Vec::with_capacity(tree.len());
+        for (i, item) in tree.items.iter().enumerate() {
+            let cursor = if i == self.lore_idx { "→" } else { " " };
+            let indent = "  ".repeat(item.depth as usize);
+            let glyph = if item.expandable {
+                if item.expanded { "-" } else { "+" }
+            } else {
+                " "
+            };
+            let title = item.node.title();
+            let row = format!("{} {}{} {}", cursor, indent, glyph, title);
+            let line = if i == self.lore_idx {
+                style::bold(&style::fg(&row, 226))
+            } else {
+                match &item.node {
+                    Node::Doc { .. } => row,
+                    Node::CanonCategory { .. } => style::fg(&row, 117),
+                    Node::CanonEntry { .. } => style::fg(&row, 250),
+                }
+            };
+            tree_lines.push(line);
+        }
+        self.lore_tree_pane.set_text(&tree_lines.join("\n"));
+        self.lore_tree_pane.ix = scroll_offset(self.lore_idx, tree.len(), self.lore_tree_pane.h as usize);
+        self.lore_tree_pane.full_refresh();
+
+        // Body pane: render the selected item's content.
+        let content = match tree.get(self.lore_idx) {
+            Some(item) => match &item.node {
+                Node::Doc { body, .. } => lore::render_markdown(body),
+                Node::CanonCategory { title, category, .. } => {
+                    let mut out = vec![
+                        String::new(),
+                        style::bold(&style::fg(title, 226)),
+                        style::fg(&"-".repeat(title.chars().count()), 244),
+                        String::new(),
+                        format!("ENTER or l to expand. {} entries.", self.canon.category(category).len()),
+                    ];
+                    if let Some(extra) = category_blurb(category) {
+                        out.push(String::new());
+                        out.push(extra.into());
+                    }
+                    out
+                }
+                Node::CanonEntry { name } => {
+                    if let Some(entry) = self.canon.lookup(name) {
+                        lore::render_canon_entry(entry)
+                    } else {
+                        vec![format!("(entry '{}' not found in canon)", name)]
+                    }
+                }
+            }
+            None => vec!["(empty tree)".into()],
+        };
+        let total = content.len();
+        let max_top = total.saturating_sub(self.lore_content_pane.h as usize);
+        if self.lore_content_top > max_top { self.lore_content_top = max_top; }
+        self.lore_content_pane.set_text(&content.join("\n"));
+        self.lore_content_pane.ix = self.lore_content_top;
+        self.lore_content_pane.full_refresh();
     }
 
     fn render_footer(&mut self) {
@@ -174,7 +341,7 @@ impl App {
             Tab::Session  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Forge    => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Campaign => " 1-5:tabs  TAB:next  C:new-campaign  L:load-campaign  ?:help  q:quit",
-            Tab::Lore     => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
+            Tab::Lore     => " 1-5:tabs  j/k:nav  l/h:expand/collapse  J/K:scroll  g/G:top/end  ?:help",
             Tab::Inspire  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
         };
         // Right-align the version. Pad with spaces between hint and version.
@@ -255,29 +422,6 @@ impl App {
                     }
                 }
             }
-        }
-        out
-    }
-
-    fn render_lore(&self) -> Vec<String> {
-        let mut out = Vec::new();
-        out.push(String::new());
-        out.push(style::bold("  Lore").to_string());
-        out.push(String::new());
-        out.push("  Three sources, all available offline:".into());
-        out.push(String::new());
-        out.push(format!("    Wiki canon  — {} entries scraped from d6gaming.org",
-            self.canon.entries.len()));
-        out.push("    Setting     — Mythology, Kingdom of Amar, World, Calendar".into());
-        out.push("    Author      — Death spells, magic items (filling wiki gaps)".into());
-        out.push(String::new());
-        out.push(style::fg("  Tree navigation + content viewer + search land in v0.1.x", 245).to_string());
-        out.push(String::new());
-        out.push(style::bold("  Quick reference — d6gaming.org canon").to_string());
-        let mut cats: Vec<_> = self.canon.domain_index.iter().collect();
-        cats.sort_by_key(|(k, _)| (*k).clone());
-        for (cat, list) in cats {
-            out.push(format!("    {:<22} {} entries", cat, list.len()));
         }
         out
     }
@@ -379,4 +523,26 @@ impl App {
         Crust::clear_screen();
         self.render_all();
     }
+}
+
+/// Compute the top-of-pane scroll offset that keeps `idx` near the
+/// vertical centre of a pane of height `h` rows over a list of `total`
+/// items. Returns 0 if the list fits without scrolling.
+fn scroll_offset(idx: usize, total: usize, h: usize) -> usize {
+    if total <= h { return 0; }
+    let half = h / 2;
+    if idx < half { 0 }
+    else if idx + half >= total { total - h }
+    else { idx - half }
+}
+
+/// One-line description shown for an unexpanded canon category in the
+/// Lore content pane. Plain text — no markdown.
+fn category_blurb(cat: &str) -> Option<&'static str> {
+    Some(match cat {
+        "Spells"  => "Active casting via the Casting attribute. Each spell has a domain (Fire, Water, Earth, Air, Life, Black, Ice, Lava, Magic, Perception, Protection, Summoning), a DR, a Mental Fortitude cost, and an Encumbrance value that limits how many spells can be active at once.",
+        "Rituals" => "Slow, ingredient-driven magic resolved with the Magick Rituals skill (under MIND -> Nature Knowledge). The wiki currently lists 11 rituals.",
+        "Potions" => "Alchemy: brewed in ~1 hour, last ~1 hour, resolved with the Alchemy skill (under MIND -> Nature Knowledge). The wiki currently lists 9 potions.",
+        _ => return None,
+    })
 }
