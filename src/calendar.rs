@@ -54,10 +54,19 @@ impl AmarDate {
         Self { year, day_of_year: doy }
     }
 
-    /// Header format requested by the user:
-    ///   `Liandra, DeIelina (28) Juba — Year-354`
-    /// Day-name, week-name, day-of-month in parens, month-name, year.
+    /// Compact header date: `15 Juba - Year-354`. Used everywhere we
+    /// show the current date (top header, Campaign sub-titles, the
+    /// Calendar section). Day-name and week-name are dropped — they
+    /// add visual noise without much information for the GM.
     pub fn fmt_header(&self) -> String {
+        format!("{} {} - Year-{}",
+            self.day_of_month(), self.month_name(), self.year)
+    }
+
+    /// Full ceremonial date: `Liandra, DeIelina (15) Juba - Year-354`.
+    /// Available for the Calendar section's detail view and any
+    /// future "long form" usage.
+    pub fn fmt_long(&self) -> String {
         format!("{}, {} ({}) {} - Year-{}",
             self.day_name(),
             self.week_name(),
@@ -92,16 +101,18 @@ mod tests {
     }
 
     #[test]
-    fn user_example_header_formats_correctly() {
-        // The user specified the header should read:
-        // "Liandra, DeIelina (28) Juba - Year-354"
-        // Liandra is day-of-week 7; DeIelina is week 4; Juba is month 6;
-        // day-of-month 28 puts us at month_offset = 5 * 28 + 27 = 167.
+    fn header_short_form_is_day_month_year() {
+        let d = AmarDate::from_ymd(354, 6, 15);
+        assert_eq!(d.fmt_header(), "15 Juba - Year-354");
+    }
+
+    #[test]
+    fn long_form_keeps_day_and_week_names() {
         let d = AmarDate::from_ymd(354, 6, 28);
         assert_eq!(d.day_name(), "Liandra");
         assert_eq!(d.week_name(), "DeIelina");
         assert_eq!(d.month_name(), "Juba");
-        assert_eq!(d.fmt_header(), "Liandra, DeIelina (28) Juba - Year-354");
+        assert_eq!(d.fmt_long(), "Liandra, DeIelina (28) Juba - Year-354");
     }
 
     #[test]

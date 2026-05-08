@@ -27,10 +27,20 @@ fn sanitize(s: &str) -> String {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalConfig {
     pub active_campaign: Option<String>,
+    /// Width of the left pane in two-pane tabs, on a 1-6 scale (kastrup
+    /// convention). Computed as `(cols - 4) × width / 10`. 3 ≈ 30%
+    /// of width — a comfortable default that matches the original
+    /// fixed-30-col layout.
+    #[serde(default = "default_pane_width")]
+    pub pane_width: u8,
 }
 
+fn default_pane_width() -> u8 { 3 }
+
 impl Default for GlobalConfig {
-    fn default() -> Self { Self { active_campaign: None } }
+    fn default() -> Self {
+        Self { active_campaign: None, pane_width: default_pane_width() }
+    }
 }
 
 impl GlobalConfig {

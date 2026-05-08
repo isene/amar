@@ -80,6 +80,9 @@ pub struct App {
     /// `camp_expanded` holds the expanded-sections set.
     pub camp_idx: usize,
     pub camp_expanded: Vec<String>,
+    /// Left-pane width on a 1-6 scale (kastrup convention). Persisted
+    /// in GlobalConfig.
+    pub pane_width: u8,
 }
 
 /// Sections in the Campaign tree, in display order.
@@ -152,9 +155,13 @@ impl App {
         // in bright yellow when active, dim grey when inactive; col 2
         // is blank to give the bar a little breathing room from the
         // text on its right.
-        let left_total: u16 = 30.min(cols.saturating_sub(20));
+        //
+        // Left pane width follows kastrup's 1-6 cycle persisted in
+        // GlobalConfig: left ≈ (cols - 4) × width / 10, clamped so
+        // both sides retain a minimum of 20 cols.
+        let pane_width = config.pane_width.clamp(1, 6);
+        let (left_total, right_total) = compute_left_right(cols, pane_width);
         let left_pane_w: u16 = left_total.saturating_sub(2);
-        let right_total: u16 = cols.saturating_sub(left_total);
         let right_pane_w: u16 = right_total.saturating_sub(2);
 
         let mut left_marker = Pane::new(1, 2, 2, body_h, 240, 0);
@@ -183,6 +190,7 @@ impl App {
             lore_expanded: Vec::new(),
             camp_idx: 0,
             camp_expanded: vec!["PCs".to_string()],  // PCs auto-expanded on first run
+            pane_width,
         }
     }
 
@@ -191,6 +199,11 @@ impl App {
         self.render_all();
         loop {
             let Some(key) = Input::getchr(None) else { continue };
+            // One-shot status messages: as soon as the user presses
+            // any key, the previous status is cleared. The current
+            // key's handler may set a new status; that one shows
+            // until the user's *next* keypress.
+            self.status = None;
             match key.as_str() {
                 "q" | "Q" => {
                     if let Some(ref c) = self.campaign { let _ = c.save(); }
@@ -205,30 +218,27 @@ impl App {
                 "C-RIGHT" => { self.set_tab(self.tab.next()); }
                 "C-LEFT"  => { self.set_tab(self.tab.prev()); }
                 "TAB" => {
-                    // Toggle pane focus on tabs that have two panes.
-                    // Single-pane tabs ignore TAB.
                     if self.tab_has_two_panes() {
                         self.focus = match self.focus {
                             Focus::Left  => Focus::Right,
                             Focus::Right => Focus::Left,
                         };
                         self.render_all();
+                    } else {
+                        self.render_all();
                     }
                 }
+                "w" => { self.cycle_width(false); }
+                "W" => { self.cycle_width(true); }
                 "?" => self.show_help(),
                 "C" => { self.campaign_create(); self.render_all(); }
                 "L" => { self.campaign_load(); self.render_all(); }
                 "r" => self.render_all(),
                 "ESC" => {
-                    // ESC has two cumulative effects: drop focus back to
-                    // the left pane (if currently on the right), then
-                    // clear any status message.
                     if self.focus == Focus::Right {
                         self.focus = Focus::Left;
-                        self.render_all();
                     }
-                    self.status = None;
-                    self.render_footer();
+                    self.render_all();
                 }
                 other => {
                     self.handle_tab_key(other);
@@ -236,6 +246,44 @@ impl App {
                 }
             }
         }
+        Crust::clear_screen();
+    }
+
+    fn cycle_width(&mut self, reverse: bool) {
+        self.pane_width = if reverse {
+            if self.pane_width <= 1 { 6 } else { self.pane_width - 1 }
+        } else {
+            if self.pane_width >= 6 { 1 } else { self.pane_width + 1 }
+        };
+        self.config.pane_width = self.pane_width;
+        let _ = self.config.save();
+        self.rebuild_panes();
+        self.status_msg(&format!("Pane width: {} / 6", self.pane_width), 117);
+        self.render_all();
+    }
+
+    /// Reposition + resize the two-pane layout based on `self.pane_width`.
+    /// Called whenever `w`/`W` cycles the width.
+    fn rebuild_panes(&mut self) {
+        let (cols, rows) = (self.cols, self.rows);
+        let body_h = rows.saturating_sub(2);
+        let (left_total, right_total) = compute_left_right(cols, self.pane_width);
+        let left_pane_w = left_total.saturating_sub(2);
+        let right_pane_w = right_total.saturating_sub(2);
+        self.left_marker.x = 1;
+        self.left_marker.w = 2;
+        self.left_marker.h = body_h;
+        self.left_pane.x = 3;
+        self.left_pane.w = left_pane_w;
+        self.left_pane.h = body_h;
+        self.right_marker.x = left_total + 1;
+        self.right_marker.w = 2;
+        self.right_marker.h = body_h;
+        self.right_pane.x = left_total + 3;
+        self.right_pane.w = right_pane_w;
+        self.right_pane.h = body_h;
+        // Wipe so old content from the previous (wider/narrower) layout
+        // doesn't linger in the now-uncovered area.
         Crust::clear_screen();
     }
 
@@ -1146,8 +1194,9 @@ impl App {
             NAVIGATION\n  \
               1-5            Jump to tab\n  \
               C-RIGHT/LEFT   Next / previous tab\n  \
-              TAB            Toggle focus between left + right pane (Lore)\n  \
+              TAB            Toggle focus between left + right pane\n  \
               ESC            Drop focus back to left pane\n  \
+              w / W          Cycle left-pane width (kastrup-style 1-6)\n  \
               ?              This help\n\n  \
             LORE — TREE FOCUS (left pane)\n  \
               j / k          Tree cursor down / up\n  \
@@ -1180,6 +1229,17 @@ impl App {
         Crust::clear_screen();
         self.render_all();
     }
+}
+
+/// Translate the kastrup-style 1-6 width slider into actual left /
+/// right column counts. Mirrors kastrup's formula:
+/// `left = (cols - 4) × width / 10`, then clamp so both sides keep
+/// at least ~20 cols of breathing room.
+fn compute_left_right(cols: u16, width: u8) -> (u16, u16) {
+    let raw = (cols.saturating_sub(4) as u32 * width as u32 / 10) as u16;
+    let left = raw.max(20).min(cols.saturating_sub(20));
+    let right = cols.saturating_sub(left);
+    (left, right)
 }
 
 /// Build the Campaign tree (sections + their items) against the
