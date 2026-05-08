@@ -595,7 +595,11 @@ impl App {
             style::bold("amar"),
             tab_strip,
             style::fg(&format!("{} | {}", camp_str, date_str), 252));
-        self.header.say(&line);
+        // full_refresh (rather than say()'s diff-refresh) so the bar
+        // survives a clear_screen() — kicked off by rebuild_panes when
+        // w/W cycles the layout.
+        self.header.set_text(&line);
+        self.header.full_refresh();
     }
 
     fn render_body(&mut self) {
@@ -723,7 +727,8 @@ impl App {
             let pad = self.cols.saturating_sub(crust::display_width(msg) as u16 + 12 + 1) as usize;
             let right = format!("amar v{}", VERSION);
             let line = format!("{}{}{}", style::fg(msg, color), " ".repeat(pad), style::fg(&right, 244));
-            self.footer.say(&line);
+            self.footer.set_text(&line);
+            self.footer.full_refresh();
             return;
         }
         let hint = match self.tab {
@@ -745,7 +750,8 @@ impl App {
         let rw = crust::display_width(&right);
         let pad = (self.cols as usize).saturating_sub(hw + rw);
         let line = format!("{}{}{}", style::fg(hint, 244), " ".repeat(pad), style::fg(&right, 244));
-        self.footer.say(&line);
+        self.footer.set_text(&line);
+        self.footer.full_refresh();
     }
 
     // --- Tab body renderers ---
