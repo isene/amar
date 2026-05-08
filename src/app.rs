@@ -1007,12 +1007,20 @@ impl App {
         // ENTER on the right pane to dispatch inline edits); other
         // nodes return display lines only and we leave self.edits
         // unchanged.
+        //
+        // Snapshot the previous render's active field id BEFORE we
+        // wipe self.edits. render_pc_sheet uses this to bg-highlight
+        // the value cell of the field the cursor is currently on; if
+        // we cleared first, active_id would always be None and no
+        // highlight would ever show.
+        let active_id: Option<String> = self.edits.get(self.sheet_idx)
+            .map(|e| e.field_id.clone());
         self.edits.clear();
         let content = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
             Some(CampNode::Section(sec)) => self.render_camp_section(camp, sec),
             Some(CampNode::Pc(idx)) => {
                 if let Some(pc) = camp.pcs.get(idx) {
-                    let (lines, edits) = self.render_pc_sheet(pc);
+                    let (lines, edits) = self.render_pc_sheet(pc, active_id.as_deref());
                     self.edits = edits;
                     if self.sheet_idx >= self.edits.len().max(1) {
                         self.sheet_idx = self.edits.len().saturating_sub(1);
@@ -1100,18 +1108,12 @@ impl App {
     /// Spells, Equipment, Notes. Returns the displayed lines plus a
     /// Vec<EditableField> mapping line indices to the field id the
     /// inline editor should target on ENTER.
-    fn render_pc_sheet(&self, pc: &crate::pc::Character) -> (Vec<String>, Vec<EditableField>) {
+    fn render_pc_sheet(&self, pc: &crate::pc::Character, active_id: Option<&str>) -> (Vec<String>, Vec<EditableField>) {
         use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS};
         const LBL: u8 = 245;
         let mut out: Vec<String> = Vec::new();
         let mut edits: Vec<EditableField> = Vec::new();
         let pane_w = self.right_pane.w as usize;
-
-        // Active edit id from the previous render's edit map. Used by
-        // each emit helper to bg-highlight only the value cell of the
-        // active field (the label / key stays normal).
-        let active_id: Option<String> = self.edits.get(self.sheet_idx)
-            .map(|e| e.field_id.clone());
 
         // --- Title (with status appended in parens) ---
         let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
@@ -1140,14 +1142,17 @@ impl App {
             ("height",      "Height (cm)", if pc.height_cm == 0 { String::new() } else { pc.height_cm.to_string() }),
             ("weight",      "Weight (kg)", pc.weight_kg.to_string()),
         ];
-        // Two columns — leaves the rightmost ~third of the pane free
-        // for the future portrait area. Description gets its own
-        // full-width row at the end.
-        let id_cols = if pane_w >= 90 { 2 } else { 1 };
-        let id_cell_w = (pane_w / 3).max(28);
+        // 3-column when the pane is wide; 2-column on medium; 1-column
+        // on narrow. Cell width tracks `pane_w / id_cols`; the
+        // rightmost slice is left for the future portrait area when
+        // id_cols ≤ 2.
+        let id_cols = if pane_w >= 130 { 3 }
+                      else if pane_w >= 90 { 2 }
+                      else { 1 };
+        let id_cell_w = (pane_w / id_cols.max(1)).saturating_sub(1).max(24);
         let mut row_cells: Vec<String> = Vec::new();
         for (id, label, value) in &id_cells {
-            let active = active_id.as_deref() == Some(*id);
+            let active = active_id == Some(*id);
             edits.push(EditableField {
                 line: out.len() + (row_cells.len() / id_cols),
                 field_id: (*id).to_string(),
@@ -1178,7 +1183,7 @@ impl App {
             } else { break; }
         }
         // Description on its own full-width row.
-        let desc_active = active_id.as_deref() == Some("description");
+        let desc_active = active_id == Some("description");
         edits.push(EditableField { line: out.len(),
             field_id: "description".into(),
             label: " Description".into(),
@@ -1211,7 +1216,7 @@ impl App {
         // --- Body Points block (current/max + wound state, editable) ---
         out.push(style::bold(&style::fg("Body Points", 117)));
         // Current BP — editable.
-        let bp_active = active_id.as_deref() == Some("bp_current");
+        let bp_active = active_id == Some("bp_current");
         let bp_text = format!("{} / {}", pc.bp_current.max(0), pc.bp_max());
         edits.push(EditableField { line: out.len(),
             field_id: "bp_current".into(),
@@ -1219,7 +1224,7 @@ impl App {
             current: pc.bp_current.to_string() });
         out.push(emit_cell(LBL, "Body Points", &bp_text, bp_active));
         // Mental Fortitude current — editable.
-        let mf_active = active_id.as_deref() == Some("mf_current");
+        let mf_active = active_id == Some("mf_current");
         let mf_text = format!("{} / {}", pc.mf_current.max(0), pc.mf_max());
         edits.push(EditableField { line: out.len(),
             field_id: "mf_current".into(),
@@ -1240,9 +1245,9 @@ impl App {
             let armor_id = format!("hit/{}/armor", loc);
             let ap_id    = format!("hit/{}/ap", loc);
             let bp_id    = format!("hit/{}/bp", loc);
-            let armor_active = active_id.as_deref() == Some(&armor_id);
-            let ap_active    = active_id.as_deref() == Some(&ap_id);
-            let bp_active    = active_id.as_deref() == Some(&bp_id);
+            let armor_active = active_id == Some(&armor_id);
+            let ap_active    = active_id == Some(&ap_id);
+            let bp_active    = active_id == Some(&bp_id);
             edits.push(EditableField { line: out.len(),
                 field_id: armor_id.clone(),
                 label: format!(" {} armor", loc), current: hl.armor.clone() });
@@ -1260,33 +1265,13 @@ impl App {
         }
         out.push(String::new());
 
-        // --- Characteristics row (editable per-char) ---
-        out.push(style::bold(&style::fg("Characteristics", 117)));
-        let body_active = active_id.as_deref() == Some("char/BODY");
-        let mind_active = active_id.as_deref() == Some("char/MIND");
-        let spirit_active = active_id.as_deref() == Some("char/SPIRIT");
-        edits.push(EditableField { line: out.len(), field_id: "char/BODY".into(),
-            label: " BODY rank".into(), current: pc.ch(Char::Body).to_string() });
-        edits.push(EditableField { line: out.len(), field_id: "char/MIND".into(),
-            label: " MIND rank".into(), current: pc.ch(Char::Mind).to_string() });
-        edits.push(EditableField { line: out.len(), field_id: "char/SPIRIT".into(),
-            label: " SPIRIT rank".into(), current: pc.ch(Char::Spirit).to_string() });
-        out.push(format!("  {}: {}    {}: {}    {}: {}",
-            style::fg("BODY", LBL),
-            value_cell(&pc.ch(Char::Body).to_string(), 2, body_active),
-            style::fg("MIND", LBL),
-            value_cell(&pc.ch(Char::Mind).to_string(), 2, mind_active),
-            style::fg("SPIRIT", LBL),
-            value_cell(&pc.ch(Char::Spirit).to_string(), 2, spirit_active)));
-        out.push(String::new());
-
         // --- Attributes & skills (3 columns when pane is wide enough) ---
         out.push(style::bold(&style::fg("Attributes & skills", 117)));
         let three_col = pane_w >= 96;
         if three_col {
-            let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS, active_id.as_deref());
-            let mind_col   = render_char_column(pc, Char::Mind,   ATTRIBUTES, SKILLS, active_id.as_deref());
-            let spirit_col = render_char_column(pc, Char::Spirit, ATTRIBUTES, SKILLS, active_id.as_deref());
+            let body_col   = render_char_column(pc, Char::Body,   ATTRIBUTES, SKILLS, active_id);
+            let mind_col   = render_char_column(pc, Char::Mind,   ATTRIBUTES, SKILLS, active_id);
+            let spirit_col = render_char_column(pc, Char::Spirit, ATTRIBUTES, SKILLS, active_id);
             let col_w = (pane_w / 3).max(30);
             let max_rows = body_col.lines.len()
                 .max(mind_col.lines.len())
@@ -1313,7 +1298,7 @@ impl App {
             }
         } else {
             for ch in [Char::Body, Char::Mind, Char::Spirit] {
-                let col = render_char_column(pc, ch, ATTRIBUTES, SKILLS, active_id.as_deref());
+                let col = render_char_column(pc, ch, ATTRIBUTES, SKILLS, active_id);
                 let base = out.len();
                 for line in &col.lines { out.push(line.clone()); }
                 for e in &col.edits {
@@ -1378,14 +1363,14 @@ impl App {
 
         // Equipment + money
         out.push(style::bold(&style::fg("Equipment", 117)));
-        let cloth_active = active_id.as_deref() == Some("clothing");
+        let cloth_active = active_id == Some("clothing");
         edits.push(EditableField { line: out.len(), field_id: "clothing".into(),
             label: " Clothing".into(), current: pc.clothing.clone() });
         out.push(emit_cell(LBL, "Clothing", &pc.clothing, cloth_active));
         for item in &pc.equipment {
             out.push(format!("  • {}", item));
         }
-        let money_active = active_id.as_deref() == Some("money");
+        let money_active = active_id == Some("money");
         edits.push(EditableField { line: out.len(), field_id: "money".into(),
             label: " Money (sp)".into(), current: pc.money_sp.to_string() });
         out.push(emit_cell(LBL, "Money",
@@ -1394,7 +1379,7 @@ impl App {
 
         // Notes
         out.push(style::bold(&style::fg("Notes", 117)));
-        let notes_active = active_id.as_deref() == Some("notes");
+        let notes_active = active_id == Some("notes");
         edits.push(EditableField { line: out.len(), field_id: "notes".into(),
             label: " Notes".into(), current: pc.notes.clone() });
         if pc.notes.is_empty() {
@@ -1558,10 +1543,20 @@ fn render_char_column(
     const LBL: u8 = 245;
     let mut col = CharColumn { lines: Vec::new(), edits: Vec::new() };
 
-    // Column header.
+    // Column header — also the characteristic-rank edit point. We
+    // dropped the separate "Characteristics" row above the 3-tier
+    // section because it duplicated this exact information.
+    let char_id = format!("char/{}", ch.name());
+    let char_active = active_id == Some(char_id.as_str());
+    col.edits.push(EditableField {
+        line: col.lines.len(),
+        field_id: char_id,
+        label: format!(" {} rank", ch.name()),
+        current: pc.ch(ch).to_string(),
+    });
     col.lines.push(format!("  {} {}",
         style::bold(ch.name()),
-        style::fg(&format!("({})", pc.ch(ch)), LBL)));
+        value_cell(&format!("({})", pc.ch(ch)), 4, char_active)));
 
     for (_, attr) in attributes.iter().filter(|(c, _)| *c == ch) {
         let attr: &str = attr;
