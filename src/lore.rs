@@ -103,13 +103,16 @@ impl Tree {
 }
 
 /// Render a markdown body into a vec of styled lines for a content
-/// pane. We support the basics: # / ## / ### headings, **bold**,
-/// *italic*, - / * lists, and link text. Tables get pass-through (the
-/// pane renders the pipe characters as-is — fine for monospace).
-pub fn render_markdown(body: &str) -> Vec<String> {
+/// pane. Markdown tables are converted to Unicode-box layouts via
+/// crust::text::format_markdown_tables BEFORE the line-by-line pass,
+/// so the table renderer sees raw `| x | y |` rows with their
+/// separator and emits clean ─/│/┼ output. Headings, bold, italic,
+/// bullets, links, and inline `code` are styled per-line afterwards.
+pub fn render_markdown(body: &str, max_width: usize) -> Vec<String> {
     use crust::style;
+    let cooked = crust::text::format_markdown_tables(body, max_width);
     let mut out: Vec<String> = Vec::new();
-    for line in body.lines() {
+    for line in cooked.lines() {
         if let Some(rest) = line.strip_prefix("# ") {
             out.push(String::new());
             out.push(style::bold(&style::fg(rest, 226)));
@@ -121,8 +124,6 @@ pub fn render_markdown(body: &str) -> Vec<String> {
             out.push(style::bold(&style::fg(rest, 250)));
         } else if let Some(rest) = line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")) {
             out.push(format!("  • {}", inline(rest)));
-        } else if line.starts_with("|") {
-            out.push(style::fg(line, 250));
         } else {
             out.push(inline(line));
         }

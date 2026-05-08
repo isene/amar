@@ -58,10 +58,11 @@ pub struct App {
     pub lore_content_pane: Pane,
     pub footer: Pane,
     pub status: Option<(String, u8)>,
-    /// Lore tab navigation state.
+    /// Lore tab navigation state. `lore_idx` is the cursor in the
+    /// flattened tree; the content pane's scroll position lives on the
+    /// pane itself (ix), driven by linedown/lineup/pagedown/pageup.
     pub lore_idx: usize,
     pub lore_expanded: Vec<String>,
-    pub lore_content_top: usize,
 }
 
 impl App {
@@ -99,7 +100,6 @@ impl App {
             footer, status: None,
             lore_idx: 0,
             lore_expanded: Vec::new(),
-            lore_content_top: 0,
         }
     }
 
@@ -144,22 +144,23 @@ impl App {
     fn handle_lore_key(&mut self, key: &str) {
         let tree = Tree::build(&self.canon, &self.lore_expanded);
         match key {
+            // Tree cursor (left pane).
             "j" | "DOWN" => {
                 if self.lore_idx + 1 < tree.len() {
                     self.lore_idx += 1;
-                    self.lore_content_top = 0;
+                    self.lore_content_pane.ix = 0;
                 }
             }
             "k" | "UP" => {
                 if self.lore_idx > 0 {
                     self.lore_idx -= 1;
-                    self.lore_content_top = 0;
+                    self.lore_content_pane.ix = 0;
                 }
             }
-            "g" => { self.lore_idx = 0; self.lore_content_top = 0; }
+            "g" => { self.lore_idx = 0; self.lore_content_pane.ix = 0; }
             "G" => {
                 self.lore_idx = tree.len().saturating_sub(1);
-                self.lore_content_top = 0;
+                self.lore_content_pane.ix = 0;
             }
             "ENTER" | "l" | "RIGHT" => {
                 if let Some(item) = tree.get(self.lore_idx) {
@@ -177,7 +178,6 @@ impl App {
                             self.lore_expanded.retain(|e| e != category);
                         }
                         Node::CanonEntry { .. } => {
-                            // Walk back to the parent CanonCategory and collapse it.
                             let mut i = self.lore_idx;
                             while i > 0 {
                                 i -= 1;
@@ -185,7 +185,7 @@ impl App {
                                     if let Node::CanonCategory { category, .. } = &it.node {
                                         self.lore_expanded.retain(|e| e != category);
                                         self.lore_idx = i;
-                                        self.lore_content_top = 0;
+                                        self.lore_content_pane.ix = 0;
                                         break;
                                     }
                                 }
@@ -195,12 +195,11 @@ impl App {
                     }
                 }
             }
-            "J" | "PgDOWN" => {
-                self.lore_content_top = self.lore_content_top.saturating_add(self.lore_content_pane.h as usize / 2);
-            }
-            "K" | "PgUP" => {
-                self.lore_content_top = self.lore_content_top.saturating_sub(self.lore_content_pane.h as usize / 2);
-            }
+            // Right pane scroll - same bindings as kastrup's right pane.
+            "S-DOWN"  => self.lore_content_pane.linedown(),
+            "S-UP"    => self.lore_content_pane.lineup(),
+            "S-RIGHT" => self.lore_content_pane.pagedown(),
+            "S-LEFT"  => self.lore_content_pane.pageup(),
             _ => {}
         }
     }
@@ -296,7 +295,7 @@ impl App {
         // Body pane: render the selected item's content.
         let content = match tree.get(self.lore_idx) {
             Some(item) => match &item.node {
-                Node::Doc { body, .. } => lore::render_markdown(body),
+                Node::Doc { body, .. } => lore::render_markdown(body, self.lore_content_pane.w as usize),
                 Node::CanonCategory { title, category, .. } => {
                     let mut out = vec![
                         String::new(),
@@ -321,11 +320,10 @@ impl App {
             }
             None => vec!["(empty tree)".into()],
         };
-        let total = content.len();
-        let max_top = total.saturating_sub(self.lore_content_pane.h as usize);
-        if self.lore_content_top > max_top { self.lore_content_top = max_top; }
+        // set_text() doesn't reset ix — the pane keeps its scroll position
+        // across selection changes. Cursor moves in the tree explicitly
+        // reset ix to 0 in handle_lore_key.
         self.lore_content_pane.set_text(&content.join("\n"));
-        self.lore_content_pane.ix = self.lore_content_top;
         self.lore_content_pane.full_refresh();
     }
 
@@ -341,7 +339,7 @@ impl App {
             Tab::Session  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Forge    => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Campaign => " 1-5:tabs  TAB:next  C:new-campaign  L:load-campaign  ?:help  q:quit",
-            Tab::Lore     => " 1-5:tabs  j/k:nav  l/h:expand/collapse  J/K:scroll  g/G:top/end  ?:help",
+            Tab::Lore     => " 1-5:tabs  j/k:tree  l/h:expand/collapse  S-DOWN/UP:line  S-RIGHT/LEFT:page  g/G:top/end",
             Tab::Inspire  => " 1-5:tabs  TAB:next  C:new-campaign  L:load  ?:help  q:quit",
         };
         // Right-align the version. Pad with spaces between hint and version.
