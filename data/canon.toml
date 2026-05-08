@@ -1,0 +1,4815 @@
+[domain_index]
+Air_Magick = [
+    "Air Breathing",
+    "Animal Sense",
+    "Banish",
+    "Breathe in Water",
+    "Bug Shield",
+    "Cage O' Magic",
+    "Cleaning",
+    "Clear Air",
+    "Control Elemental",
+    "Control Wind",
+    "Cooling",
+    "Dispel Air Magic",
+    "Dry",
+    "Electric Shock",
+    "Enhance Coordination",
+    "Extinguish",
+    "Fly",
+    "Fog",
+    "Freeze Air",
+    "Invisibility",
+    "Jump Boost",
+    "Levitation",
+    "Lightningbolt",
+    "Make Familiar",
+    "Minor Telekinesis",
+    "Polish",
+    "Prepared Teleport",
+    "Puff of Wind",
+    "Push",
+    "Rain Shield",
+    "Seek",
+    "Silence",
+    "Speed of Winds",
+    "Summon Elemental",
+    "Telekinesis",
+    "Teleport",
+    "Tornado",
+    "Wall of Force",
+    "Warmth",
+    "Water Walking",
+    "Whispering Wind",
+]
+Black_Magick = [
+    "Agony",
+    "Animate Dead",
+    "Banish",
+    "Blindness",
+    "Cage O' Magic",
+    "Call",
+    "Change Emotion",
+    "Command",
+    "Command Demon",
+    "Command Undead",
+    "Darkness",
+    "Death Touch",
+    "Dispel Black Magic",
+    "Exteriorize",
+    "Immobilize",
+    "Itchiness",
+    "Life Steal",
+    "Magical Drain",
+    "Magick Dreams",
+    "Make Familiar",
+    "Possession",
+    "Protection from Demons",
+    "Protection from Undeads",
+    "Sleep",
+    "Summoning",
+    "Wings Of Darkness",
+]
+Earth_Magick = [
+    "Animal Sense",
+    "Armor",
+    "Banish",
+    "Cage O' Magic",
+    "Camouflage",
+    "Cleaning",
+    "Control Elemental",
+    "Cooling",
+    "Darkness",
+    "Dispel Earth Magic",
+    "Divine Rune Of Magic",
+    "Divine Rune of Power",
+    "Dry",
+    "Enhance Strength",
+    "Extinguish",
+    "Freeze Solid",
+    "Glue",
+    "Immobilize",
+    "Magnetization",
+    "Make Familiar",
+    "Polish",
+    "Protection from Fire",
+    "Quicksand Trap",
+    "Repair",
+    "Sandstorm",
+    "Summon Elemental",
+    "Warmth",
+]
+Fire_Magick = [
+    "Animal Sense",
+    "Banish",
+    "Breath Of Fire",
+    "Bug Shield",
+    "Cage O' Magic",
+    "Cleaning",
+    "Cone of Light",
+    "Control Elemental",
+    "Control Fire",
+    "Cooling",
+    "Create Fire",
+    "Dispel Fire Magic",
+    "Dry",
+    "Extinguish",
+    "Fireball",
+    "Flash",
+    "Heat Smoke",
+    "Hidden Flames",
+    "Ignite",
+    "Increase Light",
+    "Light",
+    "Polish",
+    "Protection from Fire",
+    "Summon Elemental",
+    "Warmth",
+]
+Ice_Magick = [
+    "Armor of Ice",
+    "Blizzard",
+    "Control Elemental",
+    "Control Ice",
+    "Create Ice",
+    "Death by Frost",
+    "Freeze",
+    "Freeze Liquid",
+    "Frost Breath",
+    "Frostbite",
+    "Frozen Trap",
+    "Ice Shards",
+    "Ice Strike",
+    "Ice Teleport",
+    "Summon Elemental",
+    "Wall of Ice",
+]
+Lava_Magick = [
+    "Fiery Phoenix",
+    "Melting Stones",
+    "Volcanic Eruption",
+]
+Life_Magick = [
+    "Animal Sense",
+    "Banish",
+    "Blindness",
+    "Breathe in Water",
+    "Bug Shield",
+    "Change Emotion",
+    "Change Size",
+    "Charm I",
+    "Charm II",
+    "Command",
+    "Cooling",
+    "Detect Disembodied Spirit",
+    "Dispel Life Magic",
+    "Ease Pain",
+    "Ease Thirst and Hunger",
+    "Enhance Awareness",
+    "Enhance Coordination",
+    "Enhance Endurance",
+    "Enhance Learning",
+    "Enhance Strength",
+    "Exteriorize",
+    "Farsee",
+    "Healing",
+    "Immobilize",
+    "Magical Gift",
+    "Magick Dreams",
+    "Make Familiar",
+    "Memorize",
+    "Minor Healing",
+    "Night Vision",
+    "Personal Farsee",
+    "Pleasant Sleep",
+    "Polymorph",
+    "Possession",
+    "Project Thought",
+    "Protection from Demons",
+    "Protection from Undeads",
+    "Read Thought",
+    "Recall",
+    "Regeneration",
+    "Remove Cold",
+    "Resurrection",
+    "Sleep",
+    "Sleep Lightly",
+    "Stop Bleeding",
+    "Turn Undead",
+    "Warmth",
+]
+Magic_Magick = [
+    "Assemble Weapon",
+    "Bug Shield",
+    "Clone item",
+    "Delay",
+    "Detect Magic",
+    "Dispel Magic",
+    "Enchant Item",
+    "Enchant Weapon",
+    "Identify Magic",
+    "Memorize",
+    "Passify",
+    "Permanency",
+    "Protection from Magic",
+    "Rain Shield",
+    "Recall",
+    "Sharpness",
+    "Wall of Force",
+    "Warding",
+]
+Perception_Magick = [
+    "Animal Sense",
+    "Camouflage",
+    "Change Emotion",
+    "Cone of Light",
+    "Detect Disembodied Spirit",
+    "Detect Magic",
+    "Detect Truth",
+    "Dispel Perception Magic",
+    "Enhance Awareness",
+    "Farsee",
+    "Identify Magic",
+    "Increase Light",
+    "Light",
+    "Magick Dreams",
+    "Memorize",
+    "Night Vision",
+    "Personal Farsee",
+    "Read Thought",
+    "Recall",
+    "Sleep Lightly",
+]
+Potions = [
+    "Bear Potion",
+    "Cat’s Eye Potion",
+    "Diver’s Delight Potion",
+    "Panther Potion",
+    "Potion of Battle Frenzy",
+    "Potion of Detection",
+    "Potion of Healing",
+    "Potion of Seeing the Truth",
+    "Potion of Shivering",
+]
+Protection_Magick = [
+    "Armor",
+    "Armor of Ice",
+    "Bug Shield",
+    "Cooling",
+    "Dispel Protection Magic",
+    "Protection from Demons",
+    "Protection from Fire",
+    "Protection from Magic",
+    "Protection from Undeads",
+    "Protection from Water",
+    "Rain Shield",
+    "Warmth",
+]
+Rituals = [
+    "Blind Curse",
+    "Catch Fire",
+    "Curse of Fairies",
+    "Eyes of Tekali",
+    "Flames of Life",
+    "Nightfall",
+    "Raven Of Darkness",
+    "Snake Eyes",
+    "Tekali’s Torch",
+    "Volani’s Cure",
+    "Witch Curse",
+]
+Spells = [
+    "Acidic Zap",
+    "Agony",
+    "Air Breathing",
+    "Animal Sense",
+    "Animate Dead",
+    "Armor",
+    "Armor of Ice",
+    "Assemble Weapon",
+    "Banish",
+    "Blindness",
+    "Blizzard",
+    "Breath Of Fire",
+    "Breathe in Water",
+    "Bug Shield",
+    "Burn",
+    "Cage O' Magic",
+    "Call",
+    "Camouflage",
+    "Change Emotion",
+    "Change Size",
+    "Charm I",
+    "Charm II",
+    "Cleaning",
+    "Clear Air",
+    "Command",
+    "Command Demon",
+    "Command Undead",
+    "Cone of Light",
+    "Control Elemental",
+    "Control Fire",
+    "Control Ice",
+    "Control Water",
+    "Control Wind",
+    "Cooling",
+    "Create Fire",
+    "Create Ice",
+    "Create Water",
+    "Darkness",
+    "Death Touch",
+    "Death by Frost",
+    "Delay",
+    "Detect Disembodied Spirit",
+    "Detect Magic",
+    "Detect Truth",
+    "Dispel Air Magic",
+    "Dispel Black Magic",
+    "Dispel Earth Magic",
+    "Dispel Fire Magic",
+    "Dispel Life Magic",
+    "Dispel Magic",
+    "Dispel Perception Magic",
+    "Dispel Protection Magic",
+    "Dispel Summoning Magic",
+    "Dispel Water Magic",
+    "Divine Rune Of Magic",
+    "Divine Rune of Power",
+    "Drown",
+    "Dry",
+    "Ease Pain",
+    "Ease Thirst and Hunger",
+    "Electric Shock",
+    "Enchant Item",
+    "Enchant Weapon",
+    "Enhance Awareness",
+    "Enhance Coordination",
+    "Enhance Endurance",
+    "Enhance Learning",
+    "Enhance Strength",
+    "Exteriorize",
+    "Extinguish",
+    "Farsee",
+    "Fiery Phoenix",
+    "Fireball",
+    "Flash",
+    "Fly",
+    "Fog",
+    "Forest Hands",
+    "Freeze",
+    "Freeze Air",
+    "Freeze Liquid",
+    "Freeze Solid",
+    "Frost Breath",
+    "Frostbite",
+    "Frozen Trap",
+    "Fuse",
+    "Galaxy Rift",
+    "Glue",
+    "Healing",
+    "Healing Water",
+    "Heat Smoke",
+    "Hidden Flames",
+    "Ice Shards",
+    "Ice Strike",
+    "Ice Teleport",
+    "Identify Magic",
+    "Ignite",
+    "Immobilize",
+    "Increase Light",
+    "Invisibility",
+    "Itchiness",
+    "Jump Boost",
+]
+Summoning_Magick = [
+    "Banish",
+    "Call",
+    "Command Demon",
+    "Control Elemental",
+    "Dispel Summoning Magic",
+    "Protection from Demons",
+    "Summon Elemental",
+    "Summoning",
+]
+Water_Magick = [
+    "Air Breathing",
+    "Animal Sense",
+    "Banish",
+    "Breathe in Water",
+    "Cage O' Magic",
+    "Change Size",
+    "Cleaning",
+    "Control Elemental",
+    "Control Water",
+    "Cooling",
+    "Create Ice",
+    "Create Water",
+    "Dispel Water Magic",
+    "Drown",
+    "Dry",
+    "Electric Shock",
+    "Extinguish",
+    "Fog",
+    "Freeze Liquid",
+    "Healing Water",
+    "Lightningbolt",
+    "Make Familiar",
+    "Polish",
+    "Polymorph",
+    "Protection from Fire",
+    "Protection from Water",
+    "Rain Shield",
+    "Summon Elemental",
+    "Tornado",
+    "Warmth",
+    "Water Barrier",
+    "Water Mirage",
+    "Water O' Restoring",
+    "Water Teleport",
+    "Water Walking",
+    "Water to Wine",
+]
+
+[entries."Acidic Zap"]
+name = "Acidic Zap"
+url = "https://d6gaming.org/index.php/Acidic_Zap"
+details = "full"
+domains = ["Spells"]
+
+[entries."Acidic Zap".fields]
+active_passive = "Active"
+area_of_effect = "1C* or 1O*"
+casting_time = "2 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+display_name = "Acidic Zap"
+distance = "30m"
+domain = "Poison"
+dr = "13"
+duration = "Instant."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Poison Attunement 3"
+restrictions = "None"
+
+[entries.Agony]
+name = "Agony"
+url = "https://d6gaming.org/index.php/Agony"
+details = "full"
+domains = ["Spells"]
+
+[entries.Agony.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Creates pain giving -1 in status per level."
+display_name = "Agony"
+distance = "24m"
+domain = "Black"
+dr = "9"
+duration = "1 round"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Black Attunement 2"
+restrictions = "None"
+
+[entries."Air Breathing"]
+name = "Air Breathing"
+url = "https://d6gaming.org/index.php/Air_Breathing"
+details = "full"
+domains = ["Spells"]
+
+[entries."Air Breathing".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the target to breathe in air as it was water. It only works on water breathing creatures"
+display_name = "Air Breathing"
+distance = "Touch"
+domain = "Air, Water"
+dr = "11"
+duration = "10 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air, Water Attunement 3"
+restrictions = "None"
+
+[entries."Animal Sense"]
+name = "Animal Sense"
+url = "https://d6gaming.org/index.php/Animal_Sense"
+details = "full"
+domains = ["Spells"]
+
+[entries."Animal Sense".fields]
+active_passive = "Active"
+area_of_effect = "1 animal*"
+casting_time = "5 rounds"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Enables you to use the senses of the animal you cast it on instead of your own (see through its eyes, etc.). You are able to switch it on and off at will. A distraction doesn’t cancel the spell, it only jolts you back to your own senses. If you learn the spell based on an elemental lore, it only wor…"
+display_name = "Animal Sense"
+distance = "1000m"
+domain = "Air, Earth, Fire, Life, Perception, Water"
+dr = "9"
+duration = "5 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Life, Perception, Water Attunement 2"
+restrictions = "None"
+
+[entries."Animate Dead"]
+name = "Animate Dead"
+url = "https://d6gaming.org/index.php/Animate_Dead"
+details = "full"
+domains = ["Spells"]
+
+[entries."Animate Dead".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 day"
+cooldown = "6 hours"
+cost = "3 Mental Fortitude"
+description = """
+325px|thumb
+Animates one corpse to a zombie or skeleton (depending on the state of the dead body. The zombie gets 6 BP + 1 BP per 2 levels and melee skill of 1 per level. A skeleton gets 1 BP per 2 levels and 1 per 2 levels in melee skill."""
+display_name = "Animate Dead"
+distance = "Touch"
+domain = "Black"
+dr = "13"
+duration = "1 day"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Black Attunement 3"
+restrictions = "None"
+
+[entries.Armor]
+name = "Armor"
+url = "https://d6gaming.org/index.php/Armor"
+details = "full"
+domains = ["Spells"]
+
+[entries.Armor.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Gives 1 AP per level to the creature or object it is cast on. If cast on a creature, it does not protect any equipment it may carry."
+display_name = "Armor"
+distance = "Touch"
+domain = "Earth, Protection"
+dr = "11"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Earth, Protection Attunement 3"
+restrictions = "None"
+
+[entries."Armor of Ice"]
+name = "Armor of Ice"
+url = "https://d6gaming.org/index.php/Armor_of_Ice"
+details = "full"
+domains = ["Spells"]
+
+[entries."Armor of Ice".fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Gives 1 AP per level to the creature or object it is cast on. If cast on a creature, it does not protect any equipment it may carry."
+display_name = "Armor of Ice"
+distance = "Touch"
+domain = "Ice, Protection"
+dr = "11"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Ice, Protection Attunement 3"
+restrictions = "None"
+
+[entries."Assemble Weapon"]
+name = "Assemble Weapon"
+url = "https://d6gaming.org/index.php/Assemble_Weapon"
+details = "full"
+domains = ["Spells"]
+
+[entries."Assemble Weapon".fields]
+active_passive = "Active"
+area_of_effect = "1 object*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = 'Assembles a weapon(s) from the elements nearby, creating it out of "thin air". The weapon(s) can be maximum 0.5 kg per level and will have 2 HP per level.'
+display_name = "Assemble Weapon"
+distance = "Touch"
+domain = "Magic"
+dr = "7"
+duration = "1 minute"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Magic Attunement 1"
+restrictions = "None"
+
+[entries.Banish]
+name = "Banish"
+url = "https://d6gaming.org/index.php/Banish"
+details = "full"
+domains = ["Spells"]
+
+[entries.Banish.fields]
+active_passive = "Active"
+area_of_effect = "1 demon*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Sends a summoned demon back to the place it was summoned from."
+display_name = "Banish"
+distance = "35m"
+domain = "Air, Black, Earth, Fire, Life, Summoning, Water"
+dr = "13"
+duration = "Instant."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Black, Earth, Fire, Life, Summoning, Water Attunement 3"
+restrictions = "None"
+
+[entries."Bear Potion"]
+name = "Bear Potion"
+url = "https://d6gaming.org/index.php/Bear_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Bear Potion".fields]
+description = "The strength of a person is doubled after drinking this potion."
+display_name = "Bear Potion"
+dr = "10"
+duration = "1 year"
+
+[entries."Blind Curse"]
+name = "Blind Curse"
+url = "https://d6gaming.org/index.php/Blind_Curse"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Blind Curse".fields]
+area_of_effect = "1 creature"
+casting_time = "10 min."
+description = "This ritual will make the victim blind for one month. It actually affects the mind of the victim so there are no visible physical effects."
+display_name = "Blind Curse"
+dr = "8"
+duration = "1 month"
+"path(s)" = "Ritual"
+range = "1 km"
+"resist?" = "Y"
+
+[entries.Blindness]
+name = "Blindness"
+url = "https://d6gaming.org/index.php/Blindness"
+details = "full"
+domains = ["Spells"]
+
+[entries.Blindness.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "The target is blinded for the duration of the spell."
+display_name = "Blindness"
+distance = "30m"
+domain = "Black, Life"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Black, Life Attunement 3"
+restrictions = "None"
+
+[entries.Blizzard]
+name = "Blizzard"
+url = "https://d6gaming.org/index.php/Blizzard"
+details = "full"
+domains = ["Spells"]
+
+[entries.Blizzard.fields]
+active_passive = "Active"
+area_of_effect = "1 O*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Blizzard is an area of effect spell which does d-2 + 1 per level in damage per round to all characters inside the Blizzard."
+display_name = "Blizzard"
+distance = "44m"
+domain = "Ice"
+dr = "11"
+duration = "5 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Ice Attunement 3"
+restrictions = "None"
+
+[entries."Breath Of Fire"]
+name = "Breath Of Fire"
+url = "https://d6gaming.org/index.php/Breath_Of_Fire"
+details = "full"
+domains = ["Spells"]
+
+[entries."Breath Of Fire".fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "The target the spell has been used on will breathe fire.  Anyone within the fire takes d-3 + 1 per level in damage each round."
+display_name = "Breath Of Fire"
+distance = "11m"
+domain = "Fire"
+dr = "11"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Breathe in Water"]
+name = "Breathe in Water"
+url = "https://d6gaming.org/index.php/Breathe_in_Water"
+details = "full"
+domains = ["Spells"]
+
+[entries."Breathe in Water".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the target to breathe in water as if it was air. It only works on air breathing creatures."
+display_name = "Breathe in Water"
+distance = "Touch"
+domain = "Air, Life, Water"
+dr = "11"
+duration = "10 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Life, Water Attunement 3"
+restrictions = "None"
+
+[entries."Bug Shield"]
+name = "Bug Shield"
+url = "https://d6gaming.org/index.php/Bug_Shield"
+details = "full"
+domains = ["Spells"]
+
+[entries."Bug Shield".fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Keeps normal sized bugs away from you and anything you are wearing or carrying."
+display_name = "Bug Shield"
+distance = "0m"
+domain = "Air, Fire, Life, Magic, Protection"
+dr = "8"
+duration = "2 hours"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Fire, Life, Magic, Protection Attunement 2"
+restrictions = "None"
+
+[entries.Burn]
+name = "Burn"
+url = "https://d6gaming.org/index.php/Burn"
+details = "full"
+domains = ["Spells"]
+
+[entries.Burn.fields]
+active_passive = "Active"
+area_of_effect = "2 m r"
+casting_time = "2 rounds"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Inside the area of effect every creature will burn and take D-2 + 1 per level in damage. Metal armor does not protect against this."
+display_name = "Burn"
+distance = "10m"
+domain = "Heat"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Heat Attunement 3"
+restrictions = "None"
+
+[entries."Cage O' Magic"]
+name = "Cage O' Magic"
+url = "https://d6gaming.org/index.php/Cage_O%27_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Cage O' Magic".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = """
+Creates a magic cage made out of the magick element of the spell. Nothing gets out of or into the cage while the spell is active. A dispel magic spell of the same element is required to break the cage.  
+
+
+The air cage is almost invisible. The fire cage gives warmth but doesn't do damage."""
+display_name = "Cage O' Magic"
+distance = "16m"
+domain = "Air, Black, Earth, Fire, Water"
+dr = "9"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Black, Earth, Fire, Water Attunement 2"
+restrictions = "None"
+
+[entries.Call]
+name = "Call"
+url = "https://d6gaming.org/index.php/Call"
+details = "full"
+domains = ["Spells"]
+
+[entries.Call.fields]
+active_passive = "Active"
+area_of_effect = "1 demon*"
+casting_time = "5 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Summons a specific demon. It requires the true name of the demon summoned."
+display_name = "Call"
+distance = "23m"
+domain = "Black, Summoning"
+dr = "11"
+duration = "2 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Summoning Attunement 3"
+restrictions = "None"
+
+[entries.Camouflage]
+name = "Camouflage"
+url = "https://d6gaming.org/index.php/Camouflage"
+details = "full"
+domains = ["Spells"]
+
+[entries.Camouflage.fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = """
+Gives the creature that the spell has been casted on, the same texture as the background that is behind the creature. Any objects that is carried by the creature will also gain the same texture. If there is no object behind the creature, the spell will not work. 
+
+
+Each level the DR of seeing the cr…"""
+display_name = "Camouflage"
+distance = "32m"
+domain = "Earth, Perception"
+dr = "11"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Earth, Perception Attunement 3"
+restrictions = "None"
+
+[entries."Catch Fire"]
+name = "Catch Fire"
+url = "https://d6gaming.org/index.php/Catch_Fire"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Catch Fire".fields]
+area_of_effect = "1 object"
+casting_time = "1 round"
+description = "This ritual will create fire. To make the fire, the caster must have a flammable object with a maximum volume of 30 cm³ to start burning as the effect of this ritual."
+display_name = "Catch Fire"
+dr = "6"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "10 m"
+"resist?" = "N"
+
+[entries."Cat’s Eye Potion"]
+name = "Cat’s Eye Potion"
+url = "https://d6gaming.org/index.php/Cat%E2%80%99s_Eye_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Cat’s Eye Potion".fields]
+description = "Upon drinking this potion, the person will be able to see in the night like a cat."
+display_name = "Cat’s Eye Potion"
+dr = "8"
+duration = "1 year"
+
+[entries."Change Emotion"]
+name = "Change Emotion"
+url = "https://d6gaming.org/index.php/Change_Emotion"
+details = "full"
+domains = ["Spells"]
+
+[entries."Change Emotion".fields]
+active_passive = "Active"
+area_of_effect = "1 creature"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Changes the emotion of a specific creature / creatures."
+display_name = "Change Emotion"
+distance = "86m"
+domain = "Life, Perception, Black"
+dr = "7"
+duration = "5 min."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life, Perception, Black Attunement 1"
+restrictions = "None"
+
+[entries."Change Size"]
+name = "Change Size"
+url = "https://d6gaming.org/index.php/Change_Size"
+details = "full"
+domains = ["Spells"]
+
+[entries."Change Size".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Changes the size of the target by up to +20 % or -10 % of the weight per level.  Above level 9 the size decreases by 1 % per level."
+display_name = "Change Size"
+distance = "Touch"
+domain = "Life, Water"
+dr = "11"
+duration = "5 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Life, Water Attunement 3"
+restrictions = "None"
+
+[entries."Charm I"]
+name = "Charm I"
+url = "https://d6gaming.org/index.php/Charm_I"
+details = "full"
+domains = ["Spells"]
+
+[entries."Charm I".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "The target will regard you as a good friend."
+display_name = "Charm I"
+distance = "16m"
+domain = "Life"
+dr = "11"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Life Attunement 3"
+restrictions = "None"
+
+[entries."Charm II"]
+name = "Charm II"
+url = "https://d6gaming.org/index.php/Charm_II"
+details = "full"
+domains = ["Spells"]
+
+[entries."Charm II".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "The target will regard you as a good friend."
+display_name = "Charm II"
+distance = "22m"
+domain = "Life"
+dr = "11"
+duration = "1 hour"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Life Attunement 3"
+restrictions = "None"
+
+[entries.Cleaning]
+name = "Cleaning"
+url = "https://d6gaming.org/index.php/Cleaning"
+details = "full"
+domains = ["Spells"]
+
+[entries.Cleaning.fields]
+active_passive = "Active"
+area_of_effect = "5 m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Cleans the area, comparable to sweeping, dusting, mopping. Does not get rid of really ingrained dirt. Any potensial dirt that is created during the duration will be cleaned."
+display_name = "Cleaning"
+distance = "29m"
+domain = "Air, Earth, Fire, Water"
+dr = "5"
+duration = "10 min."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Water Attunement 1"
+restrictions = "None"
+
+[entries."Clear Air"]
+name = "Clear Air"
+url = "https://d6gaming.org/index.php/Clear_Air"
+details = "full"
+domains = ["Spells"]
+
+[entries."Clear Air".fields]
+active_passive = "Active"
+area_of_effect = "5 m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Clears the air within the area of effect of any smoke, dust, fog, smell, etc. and keeps it clear for the duration of the spell."
+display_name = "Clear Air"
+distance = "27m"
+domain = "Air"
+dr = "5"
+duration = "10 min."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 1"
+restrictions = "None"
+
+[entries."Clone item"]
+name = "Clone item"
+url = "https://d6gaming.org/index.php/Clone_item"
+details = "full"
+domains = []
+
+[entries."Clone item".fields]
+description = "The clone spell will clone 1 item and the item you have cloned will last up to one day before it disappears. To clone a magic item the DR of the original item will be halfed and added to the difficulty of the spell."
+
+[entries.Command]
+name = "Command"
+url = "https://d6gaming.org/index.php/Command"
+details = "full"
+domains = ["Spells"]
+
+[entries.Command.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "The target must follow all understandable commands from the caster for the duration of the spell. The magic defense is doubled if a command goes against the moral code of the target, and tripled if it is self destructive."
+display_name = "Command"
+distance = "29m"
+domain = "Black, Life"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Life Attunement 3"
+restrictions = "None"
+
+[entries."Command Demon"]
+name = "Command Demon"
+url = "https://d6gaming.org/index.php/Command_Demon"
+details = "full"
+domains = ["Spells"]
+
+[entries."Command Demon".fields]
+active_passive = "Active"
+area_of_effect = "1 demon*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Allows you to give the demon a command consisting of up to 5 words per level. The demon must understand the command or the spell does not work.  The magic defense is doubled if a command goes against the moral code of the target, and tripled if it is self destructive."
+display_name = "Command Demon"
+distance = "21m"
+domain = "Black, Summoning"
+dr = "11"
+duration = "Special"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Summoning Attunement 3"
+restrictions = "None"
+
+[entries."Command Undead"]
+name = "Command Undead"
+url = "https://d6gaming.org/index.php/Command_Undead"
+details = "full"
+domains = ["Spells"]
+
+[entries."Command Undead".fields]
+active_passive = "Active"
+area_of_effect = "1 undead*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Allows you to give the undead a command consisting of up to 5 words per level. If the undead is intelligent it must understand the command or the spell does not work. If the undead is intelligent the magic defense is doubled if a command goes against the moral code of the target, and tripled if it i…"
+display_name = "Command Undead"
+distance = "33m"
+domain = "Black"
+dr = "13"
+duration = "2 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black Attunement 3"
+restrictions = "None"
+
+[entries."Cone of Light"]
+name = "Cone of Light"
+url = "https://d6gaming.org/index.php/Cone_of_Light"
+details = "full"
+domains = ["Spells"]
+
+[entries."Cone of Light".fields]
+active_passive = "Active"
+area_of_effect = "3 m radius at end of cone"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "The palm of the caster emits a cone of light."
+display_name = "Cone of Light"
+distance = "250m"
+domain = "Fire, Perception"
+dr = "9"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Fire, Perception Attunement 2"
+restrictions = "None"
+
+[entries."Control Elemental"]
+name = "Control Elemental"
+url = "https://d6gaming.org/index.php/Control_Elemental"
+details = "full"
+domains = ["Spells"]
+
+[entries."Control Elemental".fields]
+active_passive = "Active"
+area_of_effect = "1 elemental*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "The controlled elemental must obey any order you give it for the duration of the spell. If you learned this spell on the summoning path you may control any type of elemental. With the elemental paths you may only control elementals of that type."
+display_name = "Control Elemental"
+distance = "32m"
+domain = "Air, Earth, Fire, Summoning, Water, Ice"
+dr = "9"
+duration = "2 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Summoning, Water, Ice Attunement 2"
+restrictions = "None"
+
+[entries."Control Fire"]
+name = "Control Fire"
+url = "https://d6gaming.org/index.php/Control_Fire"
+details = "full"
+domains = ["Spells"]
+
+[entries."Control Fire".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Can move fire along the ground, up walls, etc., but not across water. You can move the area of effect 1/2 m/s per level.  Within the area of effect you can move the fire 1 m/s per level."
+display_name = "Control Fire"
+distance = "39m"
+domain = "Fire"
+dr = "13"
+duration = "5 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Control Ice"]
+name = "Control Ice"
+url = "https://d6gaming.org/index.php/Control_Ice"
+details = "full"
+domains = ["Spells"]
+
+[entries."Control Ice".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Can move ice along the ground or in water. You can move the area of effect ½ m/s per level. Within the area of effect you can move the ice 1 m/s per level."
+display_name = "Control Ice"
+distance = "30m"
+domain = "Ice"
+dr = "13"
+duration = "5 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Ice Attunement 3"
+restrictions = "None"
+
+[entries."Control Water"]
+name = "Control Water"
+url = "https://d6gaming.org/index.php/Control_Water"
+details = "full"
+domains = ["Spells"]
+
+[entries."Control Water".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+display_name = "Control Water"
+distance = "36m"
+domain = "Water"
+dr = "13"
+duration = "5 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Water Attunement 3"
+restrictions = "None"
+
+[entries."Control Wind"]
+name = "Control Wind"
+url = "https://d6gaming.org/index.php/Control_Wind"
+details = "full"
+domains = ["Spells"]
+
+[entries."Control Wind".fields]
+active_passive = "Active"
+area_of_effect = "2 m radius"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Can move air. You can move the area of effect 1/2 m/s per level. Within the area of effect you can move the air 5 m/s per level. Every 5 m/s of wind gives -1 in melee combat and -2 on missiles."
+display_name = "Control Wind"
+distance = "36m"
+domain = "Air"
+dr = "11"
+duration = "5 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries.Cooling]
+name = "Cooling"
+url = "https://d6gaming.org/index.php/Cooling"
+details = "full"
+domains = ["Spells"]
+
+[entries.Cooling.fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Keeps the caster cool (feels like it is up to 10°C cooler per level)."
+display_name = "Cooling"
+distance = "0m"
+domain = "Air, Earth, Fire, Life, Protection, Water"
+dr = "6"
+duration = "1 hour"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Life, Protection, Water Attunement 1"
+restrictions = "None"
+
+[entries."Create Fire"]
+name = "Create Fire"
+url = "https://d6gaming.org/index.php/Create_Fire"
+details = "full"
+domains = ["Spells"]
+
+[entries."Create Fire".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "5 rounds"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Must be cast on an object or on the ground. Anyone within the fire takes d-3 + 1 per level in damage each round. It also ignites flammable materials as an ignite spell of the same level + 1 level per round of burning."
+display_name = "Create Fire"
+distance = "29m"
+domain = "Fire"
+dr = "11"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Create Ice"]
+name = "Create Ice"
+url = "https://d6gaming.org/index.php/Create_Ice"
+details = "full"
+domains = ["Spells"]
+
+[entries."Create Ice".fields]
+active_passive = "Active"
+area_of_effect = "10 liter"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Creates fresh ice."
+display_name = "Create Ice"
+distance = "22m"
+domain = "Water, Ice"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Water, Ice Attunement 2"
+restrictions = "None"
+
+[entries."Create Water"]
+name = "Create Water"
+url = "https://d6gaming.org/index.php/Create_Water"
+details = "full"
+domains = ["Spells"]
+
+[entries."Create Water".fields]
+active_passive = "Active"
+area_of_effect = "10 liter"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Creates fresh water."
+display_name = "Create Water"
+distance = "21m"
+domain = "Water"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Water Attunement 2"
+restrictions = "None"
+
+[entries."Curse of Fairies"]
+name = "Curse of Fairies"
+url = "https://d6gaming.org/index.php/Curse_of_Fairies"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Curse of Fairies".fields]
+area_of_effect = "1 creature"
+casting_time = "10 min."
+description = "This curse will bring bad luck to its target. This is simulated by adjusting all dice rolls concerning the target by one so as to be unfavorable to the target."
+display_name = "Curse of Fairies"
+dr = "8"
+duration = "1 month"
+"path(s)" = "Ritual"
+range = "100 km"
+"resist?" = "Y"
+
+[entries.Darkness]
+name = "Darkness"
+url = "https://d6gaming.org/index.php/Darkness"
+details = "full"
+domains = ["Spells"]
+
+[entries.Darkness.fields]
+active_passive = "Active"
+area_of_effect = "5 m radius"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Creates an area of darkness which completely blocks sight. The spell is not cast on any object, and the caster can move it at the rate of 1 m/s per level."
+display_name = "Darkness"
+distance = "14m"
+domain = "Black, Earth"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Black, Earth Attunement 3"
+restrictions = "None"
+
+[entries."Death Touch"]
+name = "Death Touch"
+url = "https://d6gaming.org/index.php/Death_Touch"
+details = "full"
+domains = ["Spells"]
+
+[entries."Death Touch".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Does d-1 +2 per level in damage to the creature touched (you need to touch the skin of the creature)."
+display_name = "Death Touch"
+distance = "Touch"
+domain = "Black"
+dr = "11"
+duration = "Instant."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black Attunement 3"
+restrictions = "None"
+
+[entries."Death by Frost"]
+name = "Death by Frost"
+url = "https://d6gaming.org/index.php/Death_by_Frost"
+details = "full"
+domains = ["Spells"]
+
+[entries."Death by Frost".fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "5 round"
+cooldown = "6 hours"
+cost = "6 Mental Fortitude"
+description = "Death by Frost is the most powerful Ice spell. It is a single target spell which does d+5 + 1 per level in damage for 3 rounds. It also reduces status by 1 per level. Armor can not block this effect due to the fact that the target gets frozen from the inside."
+display_name = "Death by Frost"
+distance = "20m"
+domain = "Ice"
+dr = "17"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Ice Attunement 5"
+restrictions = "None"
+
+[entries.Delay]
+name = "Delay"
+url = "https://d6gaming.org/index.php/Delay"
+details = "full"
+domains = ["Spells"]
+
+[entries.Delay.fields]
+active_passive = "Active"
+area_of_effect = "1 spell*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "The spell it is cast together with will not take effect until the delay expires. You decide how long a delay you want, and the DR of the spell is increased by 1 per level of delay. The total cost in MA is 2, one for each spell."
+display_name = "Delay"
+distance = "0m"
+domain = "Magic"
+dr = "0"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Magic Attunement 5"
+restrictions = "None"
+
+[entries."Detect Disembodied Spirit"]
+name = "Detect Disembodied Spirit"
+url = "https://d6gaming.org/index.php/Detect_Disembodied_Spirit"
+details = "full"
+domains = ["Spells"]
+
+[entries."Detect Disembodied Spirit".fields]
+active_passive = "Active"
+area_of_effect = "10 m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Detects all disembodied spirits within the area of effect."
+display_name = "Detect Disembodied Spirit"
+distance = "0m"
+domain = "Life, Perception"
+dr = "8"
+duration = "1 round"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 2"
+restrictions = "None"
+
+[entries."Detect Magic"]
+name = "Detect Magic"
+url = "https://d6gaming.org/index.php/Detect_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Detect Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Increases the MA by 3 per level for the purpose of detecting magic only."
+display_name = "Detect Magic"
+distance = "Touch"
+domain = "Magic, Perception"
+dr = "6"
+duration = "1 round"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Magic, Perception Attunement 1"
+restrictions = "None"
+
+[entries."Detect Truth"]
+name = "Detect Truth"
+url = "https://d6gaming.org/index.php/Detect_Truth"
+details = "full"
+domains = ["Spells"]
+
+[entries."Detect Truth".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Lets the caster know if the target believes he is telling the truth or not. The spell is broken if the target moves out of range or out of sight."
+display_name = "Detect Truth"
+distance = "15m"
+domain = "Perception"
+dr = "9"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Perception Attunement 2"
+restrictions = "None"
+
+[entries."Dispel Air Magic"]
+name = "Dispel Air Magic"
+url = "https://d6gaming.org/index.php/Dispel_Air_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Air Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Air Magic"
+distance = "25m"
+domain = "Air"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Air Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Black Magic"]
+name = "Dispel Black Magic"
+url = "https://d6gaming.org/index.php/Dispel_Black_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Black Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Black Magic"
+distance = "13m"
+domain = "Black"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Black Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Earth Magic"]
+name = "Dispel Earth Magic"
+url = "https://d6gaming.org/index.php/Dispel_Earth_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Earth Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Earth Magic"
+distance = "29m"
+domain = "Earth"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 2 months"
+receiving = "Earth Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Fire Magic"]
+name = "Dispel Fire Magic"
+url = "https://d6gaming.org/index.php/Dispel_Fire_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Fire Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Fire Magic"
+distance = "19m"
+domain = "Fire"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 2 months"
+receiving = "Fire Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Life Magic"]
+name = "Dispel Life Magic"
+url = "https://d6gaming.org/index.php/Dispel_Life_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Life Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Life Magic"
+distance = "25m"
+domain = "Life"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Life Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Magic"]
+name = "Dispel Magic"
+url = "https://d6gaming.org/index.php/Dispel_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Magic"
+distance = "15m"
+domain = "Magic"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "10"
+giving = "Ritual 1 months"
+receiving = "Magic Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Perception Magic"]
+name = "Dispel Perception Magic"
+url = "https://d6gaming.org/index.php/Dispel_Perception_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Perception Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Perception Magic"
+distance = "27m"
+domain = "Perception"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Perception Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Protection Magic"]
+name = "Dispel Protection Magic"
+url = "https://d6gaming.org/index.php/Dispel_Protection_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Protection Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Protection Magic"
+distance = "29m"
+domain = "Protection"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Protection Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Summoning Magic"]
+name = "Dispel Summoning Magic"
+url = "https://d6gaming.org/index.php/Dispel_Summoning_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Summoning Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Summoning Magic"
+distance = "23m"
+domain = "Summoning"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Summoning Attunement 5"
+restrictions = "None"
+
+[entries."Dispel Water Magic"]
+name = "Dispel Water Magic"
+url = "https://d6gaming.org/index.php/Dispel_Water_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Dispel Water Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 spell* or 1 C* or area"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "If cast on an area or a creature it dispels all spells in the area or on the creature with a total (DR+level) less than the level of the dispel magic. It may dispel only some of the spells if they have different totals. Spells are not dispelled as such, but only suppressed for the duration of the di…"
+display_name = "Dispel Water Magic"
+distance = "17m"
+domain = "Water"
+dr = "3"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Water Attunement 5"
+restrictions = "None"
+
+[entries."Diver’s Delight Potion"]
+name = "Diver’s Delight Potion"
+url = "https://d6gaming.org/index.php/Diver%E2%80%99s_Delight_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Diver’s Delight Potion".fields]
+description = "After having drunk this potion, the person is able to breathe underwater for 1 hour, but tires easily from physical exertion."
+display_name = "Diver’s Delight Potion"
+dr = "12"
+duration = "1 year"
+
+[entries."Divine Rune Of Magic"]
+name = "Divine Rune Of Magic"
+url = "https://d6gaming.org/index.php/Divine_Rune_Of_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Divine Rune Of Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 m r"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+display_name = "Divine Rune Of Magic"
+distance = "29m"
+domain = "Earth"
+dr = "13"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Earth Attunement 3"
+restrictions = "None"
+
+[entries."Divine Rune of Power"]
+name = "Divine Rune of Power"
+url = "https://d6gaming.org/index.php/Divine_Rune_of_Power"
+details = "full"
+domains = ["Spells"]
+
+[entries."Divine Rune of Power".fields]
+active_passive = "Active"
+area_of_effect = "1 m r"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+display_name = "Divine Rune of Power"
+distance = "17m"
+domain = "Earth"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Earth Attunement 3"
+restrictions = "None"
+
+[entries.Drown]
+name = "Drown"
+url = "https://d6gaming.org/index.php/Drown"
+details = "full"
+domains = ["Spells"]
+
+[entries.Drown.fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "3 rounds"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "When the spell is used, the target's throat will be filled up with water. The water will fall down to the target's lung if the target does not spit the water out. While spitting out the water the target can't attack and will get -10 in defence. If the water falls down to the target's lung, they will…"
+display_name = "Drown"
+distance = "25m"
+domain = "Water"
+dr = "13"
+duration = "Instant"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Water Attunement 3"
+restrictions = "None"
+
+[entries.Dry]
+name = "Dry"
+url = "https://d6gaming.org/index.php/Dry"
+details = "full"
+domains = ["Spells"]
+
+[entries.Dry.fields]
+active_passive = "Active"
+area_of_effect = "1 m radius"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Dries out the object(s) and/or creature(s) targeted. Note that when used on living creatures (including plants) it only dries the surface, not the body itself. The fire version leaves the target(s) slightly warm."
+display_name = "Dry"
+distance = "Touch"
+domain = "Air, Earth, Fire, Water"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Water Attunement 1"
+restrictions = "None"
+
+[entries."Ease Pain"]
+name = "Ease Pain"
+url = "https://d6gaming.org/index.php/Ease_Pain"
+details = "full"
+domains = ["Spells"]
+
+[entries."Ease Pain".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "8 hours"
+cost = "1 Mental Fortitude"
+description = "Reduses the effect of wounds by 1 BP +1 per full 5 levels for the purpose of half or quarter action, uncounsiousness and disabling. It will never make the target more resistant to damage than a zombie."
+display_name = "Ease Pain"
+distance = "Touch"
+domain = "Life"
+dr = "7"
+duration = "1 hour"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries."Ease Thirst and Hunger"]
+name = "Ease Thirst and Hunger"
+url = "https://d6gaming.org/index.php/Ease_Thirst_and_Hunger"
+details = "full"
+domains = ["Spells"]
+
+[entries."Ease Thirst and Hunger".fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "You will not feel thirst or hunger while the spell lasts. It does not feed your body, so you will eventually grow weaker and finally die if you go too long without eating or drinking."
+display_name = "Ease Thirst and Hunger"
+distance = "0m"
+domain = "Life"
+dr = "6"
+duration = "6 hours"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries."Electric Shock"]
+name = "Electric Shock"
+url = "https://d6gaming.org/index.php/Electric_Shock"
+details = "full"
+domains = ["Spells"]
+
+[entries."Electric Shock".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "2 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = """
+Gives a electric shock to the targeted creature. The creature takes D6/2 (the damage is rounded down, but the spell does minimum one damage) damage. Metal armor does not protect against this. 
+The creature will lose anything that is held in their hands.  
+
+In water the electric shock spreads out in …"""
+display_name = "Electric Shock"
+distance = "28m"
+domain = "Air, Water"
+dr = "13"
+duration = "Instant."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air, Water Attunement 3"
+restrictions = "None"
+
+[entries."Enchant Item"]
+name = "Enchant Item"
+url = "https://d6gaming.org/index.php/Enchant_Item"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enchant Item".fields]
+active_passive = "Active"
+area_of_effect = "1 O* and 1 spell"
+casting_time = "12 hours"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Stores the spell(s) it is cast together with in an object. It can store 1 usage of a spell per level. The MA cost is 1 per usage stored +1 for enchant item. When the release word(s) are uttered, the spell takes effect in the way described when enchanting the item. The enchanted item may be used as m…"
+display_name = "Enchant Item"
+distance = "Touch"
+domain = "Magic"
+dr = "8"
+duration = "Perm."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Magic Attunement 2"
+restrictions = "None"
+
+[entries."Enchant Weapon"]
+name = "Enchant Weapon"
+url = "https://d6gaming.org/index.php/Enchant_Weapon"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enchant Weapon".fields]
+active_passive = "Active"
+area_of_effect = "1 weapon*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Gives the user of the weapon +1 in skill per full 2 levels. The weapon is considered magic."
+display_name = "Enchant Weapon"
+distance = "Touch"
+domain = "Magic"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Magic Attunement 3"
+restrictions = "None"
+
+[entries."Enhance Awareness"]
+name = "Enhance Awareness"
+url = "https://d6gaming.org/index.php/Enhance_Awareness"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enhance Awareness".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Increases the awareness of the recipient by 20 % per level."
+display_name = "Enhance Awareness"
+distance = "Touch"
+domain = "Life, Perception"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 2"
+restrictions = "None"
+
+[entries."Enhance Coordination"]
+name = "Enhance Coordination"
+url = "https://d6gaming.org/index.php/Enhance_Coordination"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enhance Coordination".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Increases the coordination of the recipient by 20 % per level."
+display_name = "Enhance Coordination"
+distance = "Touch"
+domain = "Air, Life"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Life Attunement 2"
+restrictions = "None"
+
+[entries."Enhance Endurance"]
+name = "Enhance Endurance"
+url = "https://d6gaming.org/index.php/Enhance_Endurance"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enhance Endurance".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Increases the endurance of the recipient by 20 % per level."
+display_name = "Enhance Endurance"
+distance = "Touch"
+domain = "Life"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 2"
+restrictions = "None"
+
+[entries."Enhance Learning"]
+name = "Enhance Learning"
+url = "https://d6gaming.org/index.php/Enhance_Learning"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enhance Learning".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Increases the learning of the recipient by 20 % per level."
+display_name = "Enhance Learning"
+distance = "Touch"
+domain = "Life"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 2"
+restrictions = "None"
+
+[entries."Enhance Strength"]
+name = "Enhance Strength"
+url = "https://d6gaming.org/index.php/Enhance_Strength"
+details = "full"
+domains = ["Spells"]
+
+[entries."Enhance Strength".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Increases the strength of the recipient by 20 % per level."
+display_name = "Enhance Strength"
+distance = "Touch"
+domain = "Earth, Life"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Earth, Life Attunement 2"
+restrictions = "None"
+
+[entries.Exteriorize]
+name = "Exteriorize"
+url = "https://d6gaming.org/index.php/Exteriorize"
+details = "full"
+domains = ["Spells"]
+
+[entries.Exteriorize.fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "5 Mental Fortitude"
+description = """
+Allows the spirit of the caster to “step out” of the body. He may cast spells as usual while in spirit form. Perception, speed of movement, and range of movement from the body is described in the tables below. At level 4 the spirit can move through liquids, at level 7 it can move through solids.
+
+{|…"""
+display_name = "Exteriorize"
+distance = "0m"
+domain = "Black, Life"
+dr = "14"
+duration = "1 min."
+effects = "See below"
+encumbrance = "8"
+giving = "Ritual 3 weeks"
+receiving = "Black, Life Attunement 4"
+restrictions = "None"
+
+[entries.Extinguish]
+name = "Extinguish"
+url = "https://d6gaming.org/index.php/Extinguish"
+details = "full"
+domains = ["Spells"]
+
+[entries.Extinguish.fields]
+active_passive = "Active"
+area_of_effect = "1 m radius"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+display_name = "Extinguish"
+distance = "10m"
+domain = "Air, Earth, Fire, Water"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Water Attunement 2"
+restrictions = "None"
+
+[entries."Eyes of Tekali"]
+name = "Eyes of Tekali"
+url = "https://d6gaming.org/index.php/Eyes_of_Tekali"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Eyes of Tekali".fields]
+area_of_effect = "Self"
+casting_time = "10 min."
+description = "This ritual must be performed on a specially prepared bowl of water. It will create a picture from a place or in the vicinity of an object or creature that the caster is familiar with. The place, object or creature must be within 1 km or no picture will appear. If you include a part of the place, ob…"
+display_name = "Eyes of Tekali"
+dr = "12"
+duration = "1 round"
+"path(s)" = "Ritual"
+range = "1 km"
+"resist?" = "N"
+
+[entries.Farsee]
+name = "Farsee"
+url = "https://d6gaming.org/index.php/Farsee"
+details = "full"
+domains = ["Spells"]
+
+[entries.Farsee.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Everything looks like it is only one tenth of the actual distance away per level, i.e.  one tenth at level 1, one twenthieth at level 2, one thirtieth at level 3, etc. May be turned on and off at will by the target."
+display_name = "Farsee"
+distance = "Touch"
+domain = "Life, Perception"
+dr = "9"
+duration = "1 min."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 2"
+restrictions = "None"
+
+[entries."Fiery Phoenix"]
+name = "Fiery Phoenix"
+url = "https://d6gaming.org/index.php/Fiery_Phoenix"
+details = "full"
+domains = ["Spells"]
+
+[entries."Fiery Phoenix".fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "3 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+display_name = "Fiery Phoenix"
+distance = "Touch"
+domain = "Lava"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Lava Attunement 3"
+restrictions = "None"
+
+[entries.Fireball]
+name = "Fireball"
+url = "https://d6gaming.org/index.php/Fireball"
+details = "full"
+domains = ["Spells"]
+
+[entries.Fireball.fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "A tiny ball of flame thrown from the hand of the caster. The ball explodes in a fireball of the described size when it reaches the desired range, or the maximum range if this is shorter. If the tiny ball hits something solid on its way, it explodes immediately. The fireball does d-3 +1 per level in …"
+display_name = "Fireball"
+distance = "21m"
+domain = "Fire"
+dr = "11"
+duration = "Instant."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Flames of Life"]
+name = "Flames of Life"
+url = "https://d6gaming.org/index.php/Flames_of_Life"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Flames of Life".fields]
+area_of_effect = "10 liters"
+casting_time = "1 round"
+description = "This ritual must be performed with a fire at least the size of a torch no more than 1 meter away from the caster. The ritual causes flames to shoot forth from the fire and hit the intended target in the chest, causing d in damage. The flames cannot be dodged as they will be magically guided towards …"
+display_name = "Flames of Life"
+dr = "6"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "10 m"
+"resist?" = "Y"
+
+[entries.Flash]
+name = "Flash"
+url = "https://d6gaming.org/index.php/Flash"
+details = "full"
+domains = ["Spells"]
+
+[entries.Flash.fields]
+active_passive = "Active"
+area_of_effect = "Special"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Gives a bright flash of light temporarily impairing the sight of those looking at it.  It gives -1 in status per level to those looking in the direction of the flash when it goes off. This penalty is reduced by 1 per meter of distance from the flash, and is further reduced by 1 per round."
+display_name = "Flash"
+distance = "22m"
+domain = "Fire"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Fire Attunement 2"
+restrictions = "None"
+
+[entries.Fly]
+name = "Fly"
+url = "https://d6gaming.org/index.php/Fly"
+details = "full"
+domains = ["Spells"]
+
+[entries.Fly.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "5 Mental Fortitude"
+description = "Enables the target to fly at a speed of 2 m/s per level and dive at a speed of 4 m/s per level."
+display_name = "Fly"
+distance = "Touch"
+domain = "Air"
+dr = "15"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "7"
+giving = "Ritual 3 weeks"
+receiving = "Air Attunement 4"
+restrictions = "None"
+
+[entries.Fog]
+name = "Fog"
+url = "https://d6gaming.org/index.php/Fog"
+details = "full"
+domains = ["Spells"]
+
+[entries.Fog.fields]
+active_passive = "Active"
+area_of_effect = "10 m radius"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Creates fog. Sight within the fog is limited to 2 meters, and combat modifiers for moonlight applies."
+display_name = "Fog"
+distance = "47m"
+domain = "Air, Water"
+dr = "9"
+duration = "5 min."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air, Water Attunement 2"
+restrictions = "None"
+
+[entries."Forest Hands"]
+name = "Forest Hands"
+url = "https://d6gaming.org/index.php/Forest_Hands"
+details = "full"
+domains = ["Spells"]
+
+[entries."Forest Hands".fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+The spell is cast on a target and a tree. The tree will try to capture the targeted creature with its branches, after the duration of the spell the targeted creature will be let free. 
+
+Every level the branches get +2 in strength and unarmed. 
+Small sized trees start with 1 in unarmed and strength. …"""
+display_name = "Forest Hands"
+distance = "47m"
+domain = "Swamp, Anashina"
+dr = "7"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Swamp, Anashina Attunement 1"
+restrictions = "None"
+
+[entries.Freeze]
+name = "Freeze"
+url = "https://d6gaming.org/index.php/Freeze"
+details = "full"
+domains = ["Spells"]
+
+[entries.Freeze.fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Freeze is a single target, status effect spell which can be blocked. The spell give the target a -1 per level status effect which effects all actions."
+display_name = "Freeze"
+distance = "49m"
+domain = "Ice"
+dr = "9"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Ice Attunement 2"
+restrictions = "None"
+
+[entries."Freeze Air"]
+name = "Freeze Air"
+url = "https://d6gaming.org/index.php/Freeze_Air"
+details = "full"
+domains = ["Spells"]
+
+[entries."Freeze Air".fields]
+active_passive = "Active"
+area_of_effect = "1 m radius"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Lowers the temperature of the air by 5°C per level. The air heats up normally after the spell ends. It may not be cast on a living creature."
+display_name = "Freeze Air"
+distance = "21m"
+domain = "Air"
+dr = "9"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 2"
+restrictions = "None"
+
+[entries."Freeze Liquid"]
+name = "Freeze Liquid"
+url = "https://d6gaming.org/index.php/Freeze_Liquid"
+details = "full"
+domains = ["Spells"]
+
+[entries."Freeze Liquid".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Lowers the temperature of the liquid by 5°C per level. The liquid melts or heats up normally after the spell ends. It may not be cast on a living creature."
+display_name = "Freeze Liquid"
+distance = "12m"
+domain = "Water, Ice"
+dr = "9"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Water, Ice Attunement 2"
+restrictions = "None"
+
+[entries."Freeze Solid"]
+name = "Freeze Solid"
+url = "https://d6gaming.org/index.php/Freeze_Solid"
+details = "full"
+domains = ["Spells"]
+
+[entries."Freeze Solid".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Lowers the temperature of the object by 5°C per level. The object heats up normally after the spell ends. It may not be cast on a living creature."
+display_name = "Freeze Solid"
+distance = "13m"
+domain = "Earth"
+dr = "9"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Earth Attunement 2"
+restrictions = "None"
+
+[entries."Frost Breath"]
+name = "Frost Breath"
+url = "https://d6gaming.org/index.php/Frost_Breath"
+details = "full"
+domains = ["Spells"]
+
+[entries."Frost Breath".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Heals 1 Body Point per level. The spell is instant and stops bleeding because of it's freezing effect. However Frost Breath can not heal broken bones or reattach a severed body part. If you use this spell on a dead body, it will extend the amount of days 1 per level for the purpose of resurrecting t…"
+display_name = "Frost Breath"
+distance = "26m"
+domain = "Ice"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Ice Attunement 2"
+restrictions = "None"
+
+[entries.Frostbite]
+name = "Frostbite"
+url = "https://d6gaming.org/index.php/Frostbite"
+details = "full"
+domains = ["Spells"]
+
+[entries.Frostbite.fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Frostbite is a single target spell, which can be blocked. The spell does d-3 + 1 per level damage per round, for a total of 3 rounds."
+display_name = "Frostbite"
+distance = "12m"
+domain = "Ice"
+dr = "9"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Ice Attunement 2"
+restrictions = "None"
+
+[entries."Frozen Trap"]
+name = "Frozen Trap"
+url = "https://d6gaming.org/index.php/Frozen_Trap"
+details = "full"
+domains = ["Spells"]
+
+[entries."Frozen Trap".fields]
+active_passive = "Active"
+area_of_effect = "1 O*"
+casting_time = "2 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Freezes an object for the duration of the spell. If something or someone comes in contact with the frozen object, the ice will spread over and freeze that object or bodypart too. After the duration of the spell the ice will disappear and the temperature will go up."
+display_name = "Frozen Trap"
+distance = "15m"
+domain = "Ice"
+dr = "11"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Ice Attunement 3"
+restrictions = "None"
+
+[entries.Fuse]
+name = "Fuse"
+url = "https://d6gaming.org/index.php/Fuse"
+details = "full"
+domains = ["Spells"]
+
+[entries.Fuse.fields]
+active_passive = "Active"
+area_of_effect = "2c or 2o"
+casting_time = "3 rounds"
+cooldown = "6 hours"
+cost = "3 Mental Fortitude"
+description = """
+Fuses multiple objects or creatures together. Fusing two creatures together will give severe damage to their bodies and will lose D6+1 + 1 per level of the characters body points. When fusing objects they will interact different depending on the objects. 
+
+This spell was used a long time ago in Giel…"""
+display_name = "Fuse"
+distance = "31m"
+domain = "Forbidden Spells"
+dr = "13"
+duration = "Instant"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Forbidden Spells Attunement 3"
+restrictions = "None"
+
+[entries."Galaxy Rift"]
+name = "Galaxy Rift"
+url = "https://d6gaming.org/index.php/Galaxy_Rift"
+details = "full"
+domains = ["Spells"]
+
+[entries."Galaxy Rift".fields]
+active_passive = "Active"
+area_of_effect = "1c* or 1o*"
+casting_time = "1 hour"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = """
+Summons a rift that pulls in a creature or a object into the rift and destroys it. 
+
+This spell was created by a Spell Searcher a long time ago."""
+display_name = "Galaxy Rift"
+distance = "13m"
+domain = "Forbidden Spells"
+dr = "18"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 1 months"
+receiving = "Forbidden Spells Attunement 5"
+restrictions = "None"
+
+[entries.Glue]
+name = "Glue"
+url = "https://d6gaming.org/index.php/Glue"
+details = "full"
+domains = ["Spells"]
+
+[entries.Glue.fields]
+active_passive = "Active"
+area_of_effect = "5 cm radius"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Glues the touching surface of two objects together. The spell holds 50 kg per level, and requires a strength of 2 per level to break apart. Caution: If the glue is strong, you may tear the surface off the object instead of breaking the glue."
+display_name = "Glue"
+distance = "18m"
+domain = "Earth"
+dr = "9"
+duration = "1 round"
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Earth Attunement 2"
+restrictions = "None"
+
+[entries.Healing]
+name = "Healing"
+url = "https://d6gaming.org/index.php/Healing"
+details = "full"
+domains = ["Spells"]
+
+[entries.Healing.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Heals 1 Body Point per level at the rate of 1 BP per 30 minutes. The spell lasts until it has healed its maximum number of BP or until the target is completely healed, whichever comes first. Healing a broken bone requires a level 4 healing. To reattach a severed body part you must apply a level 7 he…"
+display_name = "Healing"
+distance = "Touch"
+domain = "Life"
+dr = "9"
+duration = "Special"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 2"
+restrictions = "None"
+
+[entries."Healing Water"]
+name = "Healing Water"
+url = "https://d6gaming.org/index.php/Healing_Water"
+details = "full"
+domains = ["Spells"]
+
+[entries."Healing Water".fields]
+active_passive = "Active"
+area_of_effect = "1 liter*"
+casting_time = "2 rounds"
+cooldown = "6 hours"
+cost = "3 Mental Fortitude"
+description = "Creates a blue glowing liquid. Anybody who consumes the liquid heals 1 BP + 1 per level, per liter. If a creature drinks less than one liter, divide the bodypoints given by the amount that is drunk, in liters. Healing a broken bone requires liquid from the spell higher than level 4 to be poured over…"
+display_name = "Healing Water"
+distance = "16m"
+domain = "Water"
+dr = "11"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Water Attunement 3"
+restrictions = "None"
+
+[entries."Heat Smoke"]
+name = "Heat Smoke"
+url = "https://d6gaming.org/index.php/Heat_Smoke"
+details = "full"
+domains = ["Spells"]
+
+[entries."Heat Smoke".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "3 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = """
+When the spell is used, a black-red smoke will appear. The spell level has special actions that unlock as the spell level increase. The caster can choose what actions the smoke will do, as long as the level is high enough.
+
+{| class="wikitable"
+|+Heat Smoke 
+|-
+|Actions  || Level || Description
+|-
+|…"""
+display_name = "Heat Smoke"
+distance = "16m"
+domain = "Fire"
+dr = "11"
+duration = "3 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Hidden Flames"]
+name = "Hidden Flames"
+url = "https://d6gaming.org/index.php/Hidden_Flames"
+details = "full"
+domains = ["Spells"]
+
+[entries."Hidden Flames".fields]
+active_passive = "Active"
+area_of_effect = "1 O"
+casting_time = "3 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Heats up an object making it extremly hot for the duration of the spell. If anyone touches it or walks on it they will need to cooldown as fast as possible. Each round the creature takes 1 BP in damage untill they are cooled down or the creature reaches half action. The object that has been used the…"
+display_name = "Hidden Flames"
+distance = "12m"
+domain = "Fire"
+dr = "11"
+duration = "3 hours"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Fire Attunement 3"
+restrictions = "None"
+
+[entries."Ice Shards"]
+name = "Ice Shards"
+url = "https://d6gaming.org/index.php/Ice_Shards"
+details = "full"
+domains = ["Spells"]
+
+[entries."Ice Shards".fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+The Ice Shards does d-3 damage per shard. The spell fires 1 shard per level.  
+
+The skill of Pointing is used to determine if this spell hits its intended target."""
+display_name = "Ice Shards"
+distance = "38m"
+domain = "Ice"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Ice Attunement 1"
+restrictions = "None"
+
+[entries."Ice Strike"]
+name = "Ice Strike"
+url = "https://d6gaming.org/index.php/Ice_Strike"
+details = "full"
+domains = ["Spells"]
+
+[entries."Ice Strike".fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = """
+The Ice Strike does d-2 + 1 per level in damage.  
+
+The skill of Pointing is used to determine if this spell hits its intended target."""
+display_name = "Ice Strike"
+distance = "36m"
+domain = "Ice"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Ice Attunement 2"
+restrictions = "None"
+
+[entries."Ice Teleport"]
+name = "Ice Teleport"
+url = "https://d6gaming.org/index.php/Ice_Teleport"
+details = "full"
+domains = ["Spells"]
+
+[entries."Ice Teleport".fields]
+active_passive = "Active"
+area_of_effect = "1 C* or 1 O*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "5 Mental Fortitude"
+description = "Put the object or creature in a bubble and teleports it. It is only possible to teleport in ice."
+display_name = "Ice Teleport"
+distance = "500m"
+domain = "Ice"
+dr = "15"
+duration = "Instant."
+effects = "See below"
+encumbrance = "7"
+giving = "Ritual 4 weeks"
+receiving = "Ice Attunement 4"
+restrictions = "None"
+
+[entries."Identify Magic"]
+name = "Identify Magic"
+url = "https://d6gaming.org/index.php/Identify_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Identify Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 O*, 1 C* or 1 spelled area*"
+casting_time = "10 minutes"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Identifies a spell or magic item. The DR for identifying is the DR of the original spell to be identified -2 per level of the Identify spell. You get a -3 on the DR if you know the spell you are identifying. If the spell is too difficult for you to identify, the GM may still give you some hints abou…"
+display_name = "Identify Magic"
+distance = "25m"
+domain = "Magic, Perception"
+dr = "10"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Magic, Perception Attunement 2"
+restrictions = "None"
+
+[entries.Ignite]
+name = "Ignite"
+url = "https://d6gaming.org/index.php/Ignite"
+details = "full"
+domains = ["Spells"]
+
+[entries.Ignite.fields]
+active_passive = "Active"
+area_of_effect = "5 cm radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+Ignites flammable materials, see the table below.
+
+{| class="wikitable"
+|+Ignite
+|-
+|Level  || Material
+|-
+| 1 || Paper, kindling
+|-
+| 2 || Dry porous wood, linen
+|-
+| 3 || Dry wood
+|-
+| 4 || Hard, dry wood
+|-
+| 5 || Trees
+|-
+| 6 || Wet wood
+|-
+| 7 || Dead body
+|}"""
+display_name = "Ignite"
+distance = "10m"
+domain = "Fire"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Fire Attunement 1"
+restrictions = "None"
+
+[entries.Immobilize]
+name = "Immobilize"
+url = "https://d6gaming.org/index.php/Immobilize"
+details = "full"
+domains = ["Spells"]
+
+[entries.Immobilize.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Immobilizes the target in the position it was in when the spell took effect. The target will fall unless it has a well balanced stance."
+display_name = "Immobilize"
+distance = "49m"
+domain = "Black, Earth, Life"
+dr = "13"
+duration = "1 round"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Black, Earth, Life Attunement 3"
+restrictions = "None"
+
+[entries."Increase Light"]
+name = "Increase Light"
+url = "https://d6gaming.org/index.php/Increase_Light"
+details = "full"
+domains = ["Spells"]
+
+[entries."Increase Light".fields]
+active_passive = "Active"
+area_of_effect = "1 light source*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Multiplies the intensity (effect) of the light source by 1 + 1 per level."
+display_name = "Increase Light"
+distance = "19m"
+domain = "Fire, Perception"
+dr = "6"
+duration = "10 min."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Fire, Perception Attunement 1"
+restrictions = "None"
+
+[entries.Invisibility]
+name = "Invisibility"
+url = "https://d6gaming.org/index.php/Invisibility"
+details = "full"
+domains = ["Spells"]
+
+[entries.Invisibility.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Makes the object or creature invisible.  This includes any objects carried or worn by the creature as long as it is worn or carried. It does not include objects picked up after the spell is cast, unless the objects are completely hidden by something that is invisible."
+display_name = "Invisibility"
+distance = "Touch"
+domain = "Air"
+dr = "13"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries.Itchiness]
+name = "Itchiness"
+url = "https://d6gaming.org/index.php/Itchiness"
+details = "full"
+domains = ["Spells"]
+
+[entries.Itchiness.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "7 hours"
+cost = "1 Mental Fortitude"
+description = "Give the target an itch in a body part. The affected body part will get a -1 status + -1 per two levels, so every skill done by this body part will be harder to execute. The spell cannot be used on the targets head and will not give a -1 status to every skill."
+display_name = "Itchiness"
+distance = "41m"
+domain = "Black"
+dr = "7"
+duration = "1 round"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Black Attunement 1"
+restrictions = "None"
+
+[entries."Jump Boost"]
+name = "Jump Boost"
+url = "https://d6gaming.org/index.php/Jump_Boost"
+details = "full"
+domains = ["Spells"]
+
+[entries."Jump Boost".fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Boosts a creatures jump height. Each level the creature's speed will be increased by 25%."
+display_name = "Jump Boost"
+distance = "15m"
+domain = "Air"
+dr = "7"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 1"
+restrictions = "None"
+
+[entries.Levitation]
+name = "Levitation"
+url = "https://d6gaming.org/index.php/Levitation"
+details = "full"
+domains = ["Spells"]
+
+[entries.Levitation.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the caster to move the target vertically at a speed of 1 m/s per level."
+display_name = "Levitation"
+distance = "16m"
+domain = "Air"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries."Life Steal"]
+name = "Life Steal"
+url = "https://d6gaming.org/index.php/Life_Steal"
+details = "full"
+domains = ["Spells"]
+
+[entries."Life Steal".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = """
+Steales 1BP per level from a creature and gives it back to the caster.
+At level 5 the caster can choose what creature that will receive the bodypoints."""
+display_name = "Life Steal"
+distance = "28m"
+domain = "Black, Kraagh, Mestronorpha"
+dr = "8"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Black, Kraagh, Mestronorpha Attunement 2"
+restrictions = "None"
+
+[entries.Light]
+name = "Light"
+url = "https://d6gaming.org/index.php/Light"
+details = "full"
+domains = ["Spells"]
+
+[entries.Light.fields]
+active_passive = "Active"
+area_of_effect = "1 m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Lights a sphere with a radius of 1 m per level."
+display_name = "Light"
+distance = "17m"
+domain = "Fire, Perception"
+dr = "7"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Fire, Perception Attunement 1"
+restrictions = "None"
+
+[entries.Lightningbolt]
+name = "Lightningbolt"
+url = "https://d6gaming.org/index.php/Lightningbolt"
+details = "full"
+domains = ["Spells"]
+
+[entries.Lightningbolt.fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "8 hours"
+cost = "3 Mental Fortitude"
+description = """
+The lightningbolt delivers an electric shock which does d-1 + 1 per level in damage. Metal armor does not protect against this. 
+
+In water the electric shock spreads out in all directions.
+
+The skill of Pointing is used to determine if this spell hits its intended target."""
+display_name = "Lightningbolt"
+distance = "40m"
+domain = "Air, Water"
+dr = "11"
+duration = "Instant."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Water Attunement 3"
+restrictions = "None"
+
+[entries."Magical Drain"]
+name = "Magical Drain"
+url = "https://d6gaming.org/index.php/Magical_Drain"
+details = "full"
+domains = ["Spells"]
+
+[entries."Magical Drain".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "3 rounds"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+Draines 1 Magical Aptitude from the target. The range gets increased each spell level. The spell uses 1 BP of the caster.
+The target will regain the magical aptitude after a good night sleep.
+
+Can not reduce the target's MA below 0."""
+display_name = "Magical Drain"
+distance = "18m"
+domain = "Black"
+dr = "7"
+duration = "Instant"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Black Attunement 1"
+restrictions = "None"
+
+[entries."Magical Gift"]
+name = "Magical Gift"
+url = "https://d6gaming.org/index.php/Magical_Gift"
+details = "full"
+domains = ["Spells"]
+
+[entries."Magical Gift".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "5 min."
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = "Gives the target an extra Magical Aptitude that lasts for 12 hours. If the target has already been given an extra Magical Aptitude the spell can not be used untill the previous Magical Aptitude disappears. The spell can raise a target that has reduced its magical aptitude to -1 if the spell is cast …"
+display_name = "Magical Gift"
+distance = "Touch"
+domain = "Life"
+dr = "9"
+duration = "12 hours"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 2"
+restrictions = "None"
+
+[entries."Magick Dreams"]
+name = "Magick Dreams"
+url = "https://d6gaming.org/index.php/Magick_Dreams"
+details = "full"
+domains = ["Spells"]
+
+[entries."Magick Dreams".fields]
+active_passive = "Active"
+area_of_effect = "1 creature"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+Allows the caster to choose what happens in the dream the target or targets have the next time they sleep.
+If the spell is used while some one is sleeping, the target's old dream will stop and the magick dream will start."""
+display_name = "Magick Dreams"
+distance = "89m"
+domain = "Life, Perception, Black"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life, Perception, Black Attunement 1"
+restrictions = "None"
+
+[entries.Magnetization]
+name = "Magnetization"
+url = "https://d6gaming.org/index.php/Magnetization"
+details = "full"
+domains = ["Spells"]
+
+[entries.Magnetization.fields]
+active_passive = "Active"
+area_of_effect = "1 meter radius*"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Everything made out of metal within the area of effect will be pulled towards the caster."
+display_name = "Magnetization"
+distance = "30m"
+domain = "Earth"
+dr = "13"
+duration = "Instant."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Earth Attunement 3"
+restrictions = "None"
+
+[entries."Make Familiar"]
+name = "Make Familiar"
+url = "https://d6gaming.org/index.php/Make_Familiar"
+details = "full"
+domains = ["Spells"]
+
+[entries."Make Familiar".fields]
+active_passive = "Active"
+area_of_effect = "1 animal*"
+casting_time = "12 hours"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = """
+325px|thumb
+A person may only have one familiar at a time. You can not make a familiar for someone else. See the table below for the effect(s) of the spell. You also get all the effects listed below the level you cast. Even though you may communicate with your familiar, it will still have the unders…"""
+display_name = "Make Familiar"
+distance = "Touch"
+domain = "Air, Black, Earth, Life, Water"
+dr = "11"
+duration = "Perm."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air, Black, Earth, Life, Water Attunement 3"
+restrictions = "None"
+
+[entries."Melting Stones"]
+name = "Melting Stones"
+url = "https://d6gaming.org/index.php/Melting_Stones"
+details = "full"
+domains = ["Spells"]
+
+[entries."Melting Stones".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "2 rounds"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+display_name = "Melting Stones"
+distance = "21m"
+domain = "Lava"
+dr = "9"
+duration = "1 round"
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Lava Attunement 2"
+restrictions = "None"
+
+[entries.Memorize]
+name = "Memorize"
+url = "https://d6gaming.org/index.php/Memorize"
+details = "full"
+domains = ["Spells"]
+
+[entries.Memorize.fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Creates a complete record of all your perceptions for 1 minute per level when cast. This record can later be retrieved with a recall spell."
+display_name = "Memorize"
+distance = "0m"
+domain = "Life, Magic, Perception"
+dr = "6"
+duration = "1 week"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life, Magic, Perception Attunement 1"
+restrictions = "None"
+
+[entries."Minor Healing"]
+name = "Minor Healing"
+url = "https://d6gaming.org/index.php/Minor_Healing"
+details = "full"
+domains = ["Spells"]
+
+[entries."Minor Healing".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Heals 1 BP + 1 per full 2 levels during the week it lasts. It only heals damage received before the spell is cast. Healing a broken bone requires a level 6 healing."
+display_name = "Minor Healing"
+distance = "Touch"
+domain = "Life"
+dr = "6"
+duration = "1 week*"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries."Minor Telekinesis"]
+name = "Minor Telekinesis"
+url = "https://d6gaming.org/index.php/Minor_Telekinesis"
+details = "full"
+domains = ["Spells"]
+
+[entries."Minor Telekinesis".fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Enables the caster to move the object or creature through air with a speed of 2 m/s per level or through water with a speed of 1 m/s per level."
+display_name = "Minor Telekinesis"
+distance = "22m"
+domain = "Air"
+dr = "9"
+duration = "1 round"
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 2"
+restrictions = "None"
+
+[entries."Night Vision"]
+name = "Night Vision"
+url = "https://d6gaming.org/index.php/Night_Vision"
+details = "full"
+domains = ["Spells"]
+
+[entries."Night Vision".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Makes the target able to see in the dark like a cat. Twilight is treated as normal light, moonlight as twilight and starlight as moonlight."
+display_name = "Night Vision"
+distance = "Touch"
+domain = "Life, Perception"
+dr = "9"
+duration = "10 min."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 2"
+restrictions = "None"
+
+[entries.Nightfall]
+name = "Nightfall"
+url = "https://d6gaming.org/index.php/Nightfall"
+details = "full"
+domains = ["Rituals"]
+
+[entries.Nightfall.fields]
+area_of_effect = "3 m radius"
+casting_time = "1 min."
+description = "By performing this ritual, the caster conjures a sphere of darkness with a radius of 3 m around himself."
+display_name = "Nightfall"
+dr = "8"
+duration = "10 min."
+"path(s)" = "Ritual"
+range = "None"
+"resist?" = "N"
+
+[entries."Panther Potion"]
+name = "Panther Potion"
+url = "https://d6gaming.org/index.php/Panther_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Panther Potion".fields]
+description = "This potion will increase the coordination by 3 and coordination skills by 1."
+display_name = "Panther Potion"
+dr = "10"
+duration = "1 year"
+
+[entries.Passify]
+name = "Passify"
+url = "https://d6gaming.org/index.php/Passify"
+details = "full"
+domains = ["Spells"]
+
+[entries.Passify.fields]
+active_passive = "Active"
+area_of_effect = "1 spell*"
+casting_time = "As spell"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "Makes the spell it is cast together with passive for its duration. The caster chooses when to activate the passify during the duration of the spell."
+display_name = "Passify"
+distance = "0m"
+domain = "Magic"
+dr = "0"
+duration = "1 round"
+effects = "See below"
+encumbrance = "9"
+giving = "Ritual 2 months"
+receiving = "Magic Attunement 5"
+restrictions = "None"
+
+[entries.Permanency]
+name = "Permanency"
+url = "https://d6gaming.org/index.php/Permanency"
+details = "full"
+domains = ["Spells"]
+
+[entries.Permanency.fields]
+active_passive = "Active"
+area_of_effect = "1 spell*"
+casting_time = "12 hours"
+cooldown = "6 hours"
+cost = "1 Mental Fortitude"
+description = "Increases the duration of the spell it is cast together with. The DR of the permanency is added to the DR of the spell it is cast together with and the desired (set) level of one of the spells.  The level of the other (not set) spell is determined by how much the roll exceeds this. If the spell is c…"
+display_name = "Permanency"
+distance = "Touch"
+domain = "Magic"
+dr = "5"
+duration = "Special"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Magic Attunement 1"
+restrictions = "None"
+
+[entries."Personal Farsee"]
+name = "Personal Farsee"
+url = "https://d6gaming.org/index.php/Personal_Farsee"
+details = "full"
+domains = ["Spells"]
+
+[entries."Personal Farsee".fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Everything looks like it is only one tenth of the actual distance away per level, i.e.  one tenth at level 1, one twenthieth at level 2, one thirtieth at level 3, etc."
+display_name = "Personal Farsee"
+distance = "0m"
+domain = "Life, Perception"
+dr = "7"
+duration = "1 round"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 1"
+restrictions = "None"
+
+[entries."Pleasant Sleep"]
+name = "Pleasant Sleep"
+url = "https://d6gaming.org/index.php/Pleasant_Sleep"
+details = "full"
+domains = ["Spells"]
+
+[entries."Pleasant Sleep".fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Allows you to fall asleep and have a pleasant sleep. This is normal sleep and you can be awakened just like normally."
+display_name = "Pleasant Sleep"
+distance = "0m"
+domain = "Life"
+dr = "6"
+duration = "1 period of sleep"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries.Polish]
+name = "Polish"
+url = "https://d6gaming.org/index.php/Polish"
+details = "full"
+domains = ["Spells"]
+
+[entries.Polish.fields]
+active_passive = "Active"
+area_of_effect = "1 object"
+casting_time = "5 rounds"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Cleans the object(s) thoroughly leaving them gleaming as if polished. The weight is the total weight of all the objects affected. Whether such things as paint, etc. is removed depends on the intention of the caster.  The air version blows the dirt away, the earth version leaves the dirt on the groun…"
+display_name = "Polish"
+distance = "Touch"
+domain = "Air, Earth, Fire, Water"
+dr = "6"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Water Attunement 1"
+restrictions = "None"
+
+[entries.Polymorph]
+name = "Polymorph"
+url = "https://d6gaming.org/index.php/Polymorph"
+details = "full"
+domains = ["Spells"]
+
+[entries.Polymorph.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "8 hours"
+cost = "5 Mental Fortitude"
+description = "Turns the target into any creature of any sex. The caster must have possessed a creature of the same race and sex. The size of the target may not change more than +20 % or -10 % per level (-1 % per level above level 9). The strength, endurance, coordination and awareness of the target will usually b…"
+display_name = "Polymorph"
+distance = "Touch"
+domain = "Life, Water"
+dr = "15"
+duration = "5 min."
+effects = "See below"
+encumbrance = "8"
+giving = "Ritual 3 weeks"
+receiving = "Life, Water Attunement 5"
+restrictions = "None"
+
+[entries.Possession]
+name = "Possession"
+url = "https://d6gaming.org/index.php/Possession"
+details = "full"
+domains = ["Spells"]
+
+[entries.Possession.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "The caster takes over the body of the creature possessed. It only works if the caster is already disembodied. If the possessed body is knocked unconscious, the caster is thrown back to his disembodied state. If the possessed body is killed, the shock throws the caster back into his own body if he ha…"
+display_name = "Possession"
+distance = "0m"
+domain = "Black, Life"
+dr = "10"
+duration = "10 min."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Black, Life Attunement 2"
+restrictions = "None"
+
+[entries."Potion of Battle Frenzy"]
+name = "Potion of Battle Frenzy"
+url = "https://d6gaming.org/index.php/Potion_of_Battle_Frenzy"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Battle Frenzy".fields]
+description = "This potion will cause the person to fight with more aggression and strength. It will also increase the endurance so as to increase the body points. The endurance will be increased by 3 and the strength will be doubled. Since the person drinking the potion will fight like a berserker, he subtracts f…"
+display_name = "Potion of Battle Frenzy"
+dr = "12"
+duration = "1 year"
+
+[entries."Potion of Detection"]
+name = "Potion of Detection"
+url = "https://d6gaming.org/index.php/Potion_of_Detection"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Detection".fields]
+description = "This potion will raise the awareness of the drinker by 5."
+display_name = "Potion of Detection"
+dr = "10"
+duration = "1 year"
+
+[entries."Potion of Healing"]
+name = "Potion of Healing"
+url = "https://d6gaming.org/index.php/Potion_of_Healing"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Healing".fields]
+description = "A healing potion of this type gives a healing rate of one body point per day."
+display_name = "Potion of Healing"
+dr = "10"
+duration = "1 month"
+
+[entries."Potion of Seeing the Truth"]
+name = "Potion of Seeing the Truth"
+url = "https://d6gaming.org/index.php/Potion_of_Seeing_the_Truth"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Seeing the Truth".fields]
+description = "This potion makes the drinker very resistant to illusions (increases the awareness by 10 for the purpose of detecting illusions)."
+display_name = "Potion of Seeing the Truth"
+dr = "10"
+duration = "1 year"
+
+[entries."Potion of Shivering"]
+name = "Potion of Shivering"
+url = "https://d6gaming.org/index.php/Potion_of_Shivering"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Shivering".fields]
+description = "This potion causes fear in the drinker.  Subtract five from his endurance. Any negative result is subtracted from all attribute and skill rolls."
+display_name = "Potion of Shivering"
+dr = "6"
+duration = "10 years"
+
+[entries."Prepared Teleport"]
+name = "Prepared Teleport"
+url = "https://d6gaming.org/index.php/Prepared_Teleport"
+details = "full"
+domains = ["Spells"]
+
+[entries."Prepared Teleport".fields]
+active_passive = "Active"
+area_of_effect = "1 C* or 1 O*"
+casting_time = "1 rounds"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "With this spell it is only possible to teleport to a pentagram prepared by the caster. This does not have to be in line of sight, but it must be on top of a solid surface displacing only air."
+display_name = "Prepared Teleport"
+distance = "1000m"
+domain = "Air"
+dr = "17"
+duration = "Instant."
+effects = "See below"
+encumbrance = "10"
+giving = "Ritual 1 months"
+receiving = "Air Attunement 5"
+restrictions = "None"
+
+[entries."Project Thought"]
+name = "Project Thought"
+url = "https://d6gaming.org/index.php/Project_Thought"
+details = "full"
+domains = ["Spells"]
+
+[entries."Project Thought".fields]
+active_passive = "Active"
+area_of_effect = "Self and 1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Enables you to project thoughts to the target. At level 1 you can project words, at level 3 pictures and at level 5 concepts."
+display_name = "Project Thought"
+distance = "11m"
+domain = "Life"
+dr = "13"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Life Attunement 3"
+restrictions = "None"
+
+[entries."Protection from Demons"]
+name = "Protection from Demons"
+url = "https://d6gaming.org/index.php/Protection_from_Demons"
+details = "full"
+domains = ["Spells"]
+
+[entries."Protection from Demons".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "A demon must exceed the target’s MD +2 per level (+4 per level if the spell is active) with its MD+d in order to attack him."
+display_name = "Protection from Demons"
+distance = "Touch"
+domain = "Black, Life, Protection, Summoning"
+dr = "11"
+duration = "1 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Life, Protection, Summoning Attunement 3"
+restrictions = "None"
+
+[entries."Protection from Fire"]
+name = "Protection from Fire"
+url = "https://d6gaming.org/index.php/Protection_from_Fire"
+details = "full"
+domains = ["Spells"]
+
+[entries."Protection from Fire".fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Gives 3 armor points per level against fire damage. It also protects any objects carried by the target."
+display_name = "Protection from Fire"
+distance = "17m"
+domain = "Earth, Fire, Protection, Water"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Earth, Fire, Protection, Water Attunement 3"
+restrictions = "None"
+
+[entries."Protection from Magic"]
+name = "Protection from Magic"
+url = "https://d6gaming.org/index.php/Protection_from_Magic"
+details = "full"
+domains = ["Spells"]
+
+[entries."Protection from Magic".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Increases the magic defense of the target by 2 per level."
+display_name = "Protection from Magic"
+distance = "Touch"
+domain = "Magic, Protection"
+dr = "11"
+duration = "1 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Magic, Protection Attunement 3"
+restrictions = "None"
+
+[entries."Protection from Undeads"]
+name = "Protection from Undeads"
+url = "https://d6gaming.org/index.php/Protection_from_Undeads"
+details = "full"
+domains = ["Spells"]
+
+[entries."Protection from Undeads".fields]
+active_passive = "Active"
+area_of_effect = "1 undead*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "An undead must exceed the target’s MD +2 per level (+4 per level if the spell is active) with its MD+d in order to attack him."
+display_name = "Protection from Undeads"
+distance = "Touch"
+domain = "Black, Life, Protection"
+dr = "11"
+duration = "1 min."
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Life, Protection Attunement 3"
+restrictions = "None"
+
+[entries."Protection from Water"]
+name = "Protection from Water"
+url = "https://d6gaming.org/index.php/Protection_from_Water"
+details = "full"
+domains = ["Spells"]
+
+[entries."Protection from Water".fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Protects the object or creature from water and keeps it from getting wet.  If it is cast on a creature it also protects any objects it is wearing or carrying."
+display_name = "Protection from Water"
+distance = "Touch"
+domain = "Protection, Water"
+dr = "7"
+duration = "2 min."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Protection, Water Attunement 1"
+restrictions = "None"
+
+[entries."Puff of Wind"]
+name = "Puff of Wind"
+url = "https://d6gaming.org/index.php/Puff_of_Wind"
+details = "full"
+domains = ["Spells"]
+
+[entries."Puff of Wind".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Creates a soft puff of wind in the direction the caster decides. Higher levels creates a stronger puff, but even a level 10 spell is not going to bowl someone over."
+display_name = "Puff of Wind"
+distance = "27m"
+domain = "Air"
+dr = "6"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 1"
+restrictions = "None"
+
+[entries.Push]
+name = "Push"
+url = "https://d6gaming.org/index.php/Push"
+details = "full"
+domains = ["Spells"]
+
+[entries.Push.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "6 hours"
+cost = "1 Mental Fortitude"
+description = "Gives a strong push from the direction of the caster. If the level equals the size of the target, he must make a coordination roll of 5 (+2 per level over the size) or fall.  Damage from falling is as from falling 1 m.  It can push 5 kg 1 m backwards on stone surface per level."
+display_name = "Push"
+distance = "26m"
+domain = "Air"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 1"
+restrictions = "None"
+
+[entries."Quicksand Trap"]
+name = "Quicksand Trap"
+url = "https://d6gaming.org/index.php/Quicksand_Trap"
+details = "full"
+domains = ["Spells"]
+
+[entries."Quicksand Trap".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 min"
+cooldown = "7 hours"
+cost = "2 Mental Fortitude"
+description = """
+Turns dirt and sand into quicksand. The spell can only be used in open areas, and does not effect mountains or buildings.
+
+Detecting the trap requires a Detect Traps roll with DR 3 + 1 per spell level.
+
+To recover from the trap requires a Climb roll with DR 3 +1 per spell level. It takes 1 round per…"""
+display_name = "Quicksand Trap"
+distance = "29m"
+domain = "Earth"
+dr = "9"
+duration = "10 min"
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Earth Attunement 2"
+restrictions = "None"
+
+[entries."Rain Shield"]
+name = "Rain Shield"
+url = "https://d6gaming.org/index.php/Rain_Shield"
+details = "full"
+domains = ["Spells"]
+
+[entries."Rain Shield".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Forms an invisible umbrella over the caster which repels rain."
+display_name = "Rain Shield"
+distance = "0m"
+domain = "Air, Magic, Protection, Water"
+dr = "6"
+duration = "10 min."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Air, Magic, Protection, Water Attunement 1"
+restrictions = "None"
+
+[entries."Raven Of Darkness"]
+name = "Raven Of Darkness"
+url = "https://d6gaming.org/index.php/Raven_Of_Darkness"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Raven Of Darkness".fields]
+area_of_effect = "1 m radius"
+casting_time = "5 min."
+description = """
+By performing this ritual, the area arnound the character will become dark and the Raven Demon will summon. 
+When the demon is encountered the player must do a fear roll of D6+3.
+If the character has done this ritual before, the ingredients are not needed and the DR is decreased by 3."""
+display_name = "Raven Of Darkness"
+dr = "11"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "1m"
+"resist?" = "N"
+
+[entries."Read Thought"]
+name = "Read Thought"
+url = "https://d6gaming.org/index.php/Read_Thought"
+details = "full"
+domains = ["Spells"]
+
+[entries."Read Thought".fields]
+active_passive = "Active"
+area_of_effect = "Self and 1 C*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the caster to read the thoughts of the target. At level 1 you can read words, at level 3 pictures and at level 5 concepts.  You can only read what the target is thinking about, you can not search through his mind for information."
+display_name = "Read Thought"
+distance = "17m"
+domain = "Life, Perception"
+dr = "13"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Life, Perception Attunement 3"
+restrictions = "None"
+
+[entries.Recall]
+name = "Recall"
+url = "https://d6gaming.org/index.php/Recall"
+details = "full"
+domains = ["Spells"]
+
+[entries.Recall.fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Allows you to recall something you have stored with a memorize spell. When consentrating it is as clear as when you originally observed it."
+display_name = "Recall"
+distance = "0m"
+domain = "Life, Magic, Perception"
+dr = "6"
+duration = "10 min."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life, Magic, Perception Attunement 1"
+restrictions = "None"
+
+[entries.Regeneration]
+name = "Regeneration"
+url = "https://d6gaming.org/index.php/Regeneration"
+details = "full"
+domains = ["Spells"]
+
+[entries.Regeneration.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 hour"
+cooldown = "4 hours"
+cost = "5 Mental Fortitude"
+description = "Regenerates any one limb, finger, nose, etc. which has been cut off. An arm regenerates in one week, a leg in two weeks. The spell lasts until the missing body part has regenerated."
+display_name = "Regeneration"
+distance = "Touch"
+domain = "Life"
+dr = "15"
+duration = "Special"
+effects = "See below"
+encumbrance = "8"
+giving = "Ritual 3 weeks"
+receiving = "Life Attunement 5"
+restrictions = "None"
+
+[entries."Remove Cold"]
+name = "Remove Cold"
+url = "https://d6gaming.org/index.php/Remove_Cold"
+details = "full"
+domains = ["Spells"]
+
+[entries."Remove Cold".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "10 min."
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Finally, a cure for the common cold."
+display_name = "Remove Cold"
+distance = "Touch"
+domain = "Life"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries.Repair]
+name = "Repair"
+url = "https://d6gaming.org/index.php/Repair"
+details = "full"
+domains = ["Spells"]
+
+[entries.Repair.fields]
+active_passive = "Active"
+area_of_effect = "1 object*"
+casting_time = "10 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = "Repairs any broken object, but it does not replace missing parts."
+display_name = "Repair"
+distance = "Touch"
+domain = "Earth"
+dr = "9"
+duration = "Instant."
+effects = "See below"
+encumbrance = "4"
+giving = "Ritual 1 week"
+receiving = "Earth Attunement 2"
+restrictions = "None"
+
+[entries.Resurrection]
+name = "Resurrection"
+url = "https://d6gaming.org/index.php/Resurrection"
+details = "full"
+domains = ["Spells"]
+
+[entries.Resurrection.fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "2 hours"
+cooldown = "4 hours"
+cost = "6 Mental Fortitude"
+description = "Brings a dead creature back to life. The creature must not have been dead more than 1 day per level. The spell will not regenerate lost body parts.  After having been brought back to life, the target lies helpless for 1 week, after which he has 1 BP and heals normally. The target also looses 1/5 of …"
+display_name = "Resurrection"
+distance = "Touch"
+domain = "Life"
+dr = "19"
+duration = "Instant."
+effects = "See below"
+encumbrance = "10"
+giving = "Ritual 1 months"
+receiving = "Life Attunement 5"
+restrictions = "None"
+
+[entries.Sandstorm]
+name = "Sandstorm"
+url = "https://d6gaming.org/index.php/Sandstorm"
+details = "full"
+domains = ["Spells"]
+
+[entries.Sandstorm.fields]
+active_passive = "Active"
+area_of_effect = "3 m radius"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+display_name = "Sandstorm"
+distance = "36m"
+domain = "Earth"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Earth Attunement 3"
+restrictions = "None"
+
+[entries.Seek]
+name = "Seek"
+url = "https://d6gaming.org/index.php/Seek"
+details = "full"
+domains = ["Spells"]
+
+[entries.Seek.fields]
+active_passive = "Active"
+area_of_effect = "1 missile*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Gives the missile +2 per level to hit for the next shot. The missile is considered magick. Each consecutive seek spell on a missile gives it an extra shot."
+display_name = "Seek"
+distance = "Touch"
+domain = "Air"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries.Sharpness]
+name = "Sharpness"
+url = "https://d6gaming.org/index.php/Sharpness"
+details = "full"
+domains = ["Spells"]
+
+[entries.Sharpness.fields]
+active_passive = "Active"
+area_of_effect = "1 weapon*"
+casting_time = "1 round"
+cooldown = "6 hours"
+cost = "3 Mental Fortitude"
+description = "The weapon does +1 in damage per full 2 levels. It only works on sharp weapons.  The weapon is considered magic."
+display_name = "Sharpness"
+distance = "Touch"
+domain = "Magic"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Magic Attunement 3"
+restrictions = "None"
+
+[entries.Silence]
+name = "Silence"
+url = "https://d6gaming.org/index.php/Silence"
+details = "full"
+domains = ["Spells"]
+
+[entries.Silence.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Renders the object or creature unable to make any noise. This includes any objects carried or worn by the creature as long as they are worn or carried."
+display_name = "Silence"
+distance = "Touch"
+domain = "Air"
+dr = "11"
+duration = "10 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries.Sleep]
+name = "Sleep"
+url = "https://d6gaming.org/index.php/Sleep"
+details = "full"
+domains = ["Spells"]
+
+[entries.Sleep.fields]
+active_passive = "Active"
+area_of_effect = "1 creature"
+casting_time = "1 min."
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "The target(s) sleep deeply for the duration of the spell (hard to wake up). This becomes normal sleep when the spell ends. The target(s) fall asleep gradually during the casting of the spell."
+display_name = "Sleep"
+distance = "47m"
+domain = "Black, Life"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Black, Life Attunement 3"
+restrictions = "None"
+
+[entries."Sleep Lightly"]
+name = "Sleep Lightly"
+url = "https://d6gaming.org/index.php/Sleep_Lightly"
+details = "full"
+domains = ["Spells"]
+
+[entries."Sleep Lightly".fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Ensures that you sleep lightly and are easily awakened."
+display_name = "Sleep Lightly"
+distance = "0m"
+domain = "Life, Perception"
+dr = "6"
+duration = "1 period of sleep"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life, Perception Attunement 1"
+restrictions = "None"
+
+[entries."Snake Eyes"]
+name = "Snake Eyes"
+url = "https://d6gaming.org/index.php/Snake_Eyes"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Snake Eyes".fields]
+area_of_effect = "1 creature"
+casting_time = "1 round"
+description = "This ritual will hypnotize the victim so as to obey the caster. He will not however undertake actions directly opposing his survival or basic principles. The caster must have the attention of the victim for the whole casting time of one round or the ritual will not take effect."
+display_name = "Snake Eyes"
+dr = "6"
+duration = "1 min."
+"path(s)" = "Ritual"
+range = "10 m"
+"resist?" = "Y"
+
+[entries."Speed of Winds"]
+name = "Speed of Winds"
+url = "https://d6gaming.org/index.php/Speed_of_Winds"
+details = "full"
+domains = ["Spells"]
+
+[entries."Speed of Winds".fields]
+active_passive = "Active"
+area_of_effect = "1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "2 Mental Fortitude"
+description = """
+Makes a creature's movement speed faster. Each level the creature's speed will be increased by 50%.
+When the spell is active, it is possible to see wind behind the creature."""
+display_name = "Speed of Winds"
+distance = "24m"
+domain = "Air"
+dr = "9"
+duration = "5 rounds"
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 2"
+restrictions = "None"
+
+[entries."Stop Bleeding"]
+name = "Stop Bleeding"
+url = "https://d6gaming.org/index.php/Stop_Bleeding"
+details = "full"
+domains = ["Spells"]
+
+[entries."Stop Bleeding".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = "Stops external or internal bleeding."
+display_name = "Stop Bleeding"
+distance = "Touch"
+domain = "Life"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Life Attunement 1"
+restrictions = "None"
+
+[entries."Summon Elemental"]
+name = "Summon Elemental"
+url = "https://d6gaming.org/index.php/Summon_Elemental"
+details = "full"
+domains = ["Spells"]
+
+[entries."Summon Elemental".fields]
+active_passive = "Active"
+area_of_effect = "1 elemental*"
+casting_time = "5 min."
+cooldown = "6 hours"
+cost = "3 Mental Fortitude"
+description = """
+325px|thumb
+
+The elemental uses 1 round to manifest.  You must have a sufficient amount of the element for the elemental to form a body or the spell will fail.  Elementals are hostile to life and will try to kill all living creatures, starting with the summoner.  
+
+{| class="wikitable"
+|+Elementals
+…"""
+display_name = "Summon Elemental"
+distance = "14m"
+domain = "Air, Earth, Fire, Summoning, Water, Ice"
+dr = "11"
+duration = "2 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Earth, Fire, Summoning, Water, Ice Attunement 3"
+restrictions = "None"
+
+[entries.Summoning]
+name = "Summoning"
+url = "https://d6gaming.org/index.php/Summoning"
+details = "full"
+domains = ["Spells"]
+
+[entries.Summoning.fields]
+active_passive = "Active"
+area_of_effect = "1 demon*"
+casting_time = "5 min."
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Summons a demon with a total of up to 10 per level in its attributes including size. The caster has no control over what kind of demon is summoned."
+display_name = "Summoning"
+distance = "11m"
+domain = "Black, Summoning"
+dr = "11"
+duration = "2 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Black, Summoning Attunement 3"
+restrictions = "None"
+
+[entries."Tekali’s Torch"]
+name = "Tekali’s Torch"
+url = "https://d6gaming.org/index.php/Tekali%E2%80%99s_Torch"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Tekali’s Torch".fields]
+area_of_effect = "1 object"
+casting_time = "1 round"
+description = "This ritual must be performed on a crystal to take effect. It will illuminate an area as a torch, except that the light created is homogeneous."
+display_name = "Tekali’s Torch"
+dr = "8"
+duration = "10 min."
+"path(s)" = "Ritual"
+range = "10 m"
+"resist?" = "N"
+
+[entries.Telekinesis]
+name = "Telekinesis"
+url = "https://d6gaming.org/index.php/Telekinesis"
+details = "full"
+domains = ["Spells"]
+
+[entries.Telekinesis.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 C*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the caster to move the object or creature through air with a speed of 1 m/s per level or through water with a speed of ½ m/s per level."
+display_name = "Telekinesis"
+distance = "24m"
+domain = "Air"
+dr = "13"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air Attunement 3"
+restrictions = "None"
+
+[entries.Teleport]
+name = "Teleport"
+url = "https://d6gaming.org/index.php/Teleport"
+details = "full"
+domains = ["Spells"]
+
+[entries.Teleport.fields]
+active_passive = "Active"
+area_of_effect = "1 C* or 1 O*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "It is only possible to teleport on top of a solid surface displacing air."
+display_name = "Teleport"
+distance = "500m"
+domain = "Air"
+dr = "17"
+duration = "Instant."
+effects = "See below"
+encumbrance = "10"
+giving = "Ritual 2 months"
+receiving = "Air Attunement 5"
+restrictions = "None"
+
+[entries.Tornado]
+name = "Tornado"
+url = "https://d6gaming.org/index.php/Tornado"
+details = "full"
+domains = ["Spells"]
+
+[entries.Tornado.fields]
+active_passive = "Active"
+area_of_effect = "1 target*"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = """
+Shoots a small tornado towards the target. The tornado will suck up the target, whirling itin a circle for the duration of the spell. For the duration of the spell, the tornado does 1BP + 1 every other level in damage. 
+The target will get -3 in combat while whirling around.  
+
+While the air version…"""
+display_name = "Tornado"
+distance = "49m"
+domain = "Air, Water"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Water Attunement 3"
+restrictions = "None"
+
+[entries."Turn Undead"]
+name = "Turn Undead"
+url = "https://d6gaming.org/index.php/Turn_Undead"
+details = "full"
+domains = ["Spells"]
+
+[entries."Turn Undead".fields]
+active_passive = "Active"
+area_of_effect = "1 m radius and 1 undead"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Forces the undead(s) to run away from the caster until they can no longer see him. They may return after the spell expires. If there are more undeads within the area of effect than you can turn, the one with the lowest MD is turned first, then the one with the second lowest MD, etc.  until you have …"
+display_name = "Turn Undead"
+distance = "27m"
+domain = "Life"
+dr = "11"
+duration = "Instant."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Life Attunement 3"
+restrictions = "None"
+
+[entries."Volani’s Cure"]
+name = "Volani’s Cure"
+url = "https://d6gaming.org/index.php/Volani%E2%80%99s_Cure"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Volani’s Cure".fields]
+area_of_effect = "1 creature"
+casting_time = "1 round"
+description = "While under the effect of this ritual you will heal at the rate of one body point per day."
+display_name = "Volani’s Cure"
+dr = "8"
+duration = "1 week"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Volcanic Eruption"]
+name = "Volcanic Eruption"
+url = "https://d6gaming.org/index.php/Volcanic_Eruption"
+details = "full"
+domains = ["Spells"]
+
+[entries."Volcanic Eruption".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "2 rounds"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+display_name = "Volcanic Eruption"
+distance = "50m"
+domain = "Lava"
+dr = "11"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Lava Attunement 3"
+restrictions = "None"
+
+[entries."Wall of Force"]
+name = "Wall of Force"
+url = "https://d6gaming.org/index.php/Wall_of_Force"
+details = "full"
+domains = ["Spells"]
+
+[entries."Wall of Force".fields]
+active_passive = "Active"
+area_of_effect = "½ m r “wall”"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Creates an impenetrable and immovable wall 1 cm thick. The wall may not be less than 10 cm in any direction. It is almost invisible. If you concentrate you can see a slight shimmering."
+display_name = "Wall of Force"
+distance = "19m"
+domain = "Air, Magic"
+dr = "13"
+duration = "1 round"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Air, Magic Attunement 3"
+restrictions = "None"
+
+[entries."Wall of Ice"]
+name = "Wall of Ice"
+url = "https://d6gaming.org/index.php/Wall_of_Ice"
+details = "full"
+domains = ["Spells"]
+
+[entries."Wall of Ice".fields]
+active_passive = "Active"
+area_of_effect = "1 m² per level, and ½m thick"
+casting_time = "2 round"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Wall of Ice is an area of effect spell which creates a wall of ice. The spell has 1 m² area per level."
+display_name = "Wall of Ice"
+distance = "40m"
+domain = "Ice"
+dr = "11"
+duration = "2 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Ice Attunement 3"
+restrictions = "None"
+
+[entries.Warding]
+name = "Warding"
+url = "https://d6gaming.org/index.php/Warding"
+details = "full"
+domains = ["Spells"]
+
+[entries.Warding.fields]
+active_passive = "Active"
+area_of_effect = "1 O* or 1 m r"
+casting_time = "10 min."
+cooldown = "3 hours"
+cost = "6 Mental Fortitude"
+description = "You can “program” the warding with 5 words per level. If what you have thus specified occurs within the area or to the object, the spell the warding is cast with takes effect. You must work out the exact wording before casting the spell. If you have used more words than is supported by the level of …"
+display_name = "Warding"
+distance = "Touch"
+domain = "Magic"
+dr = "0"
+duration = "1 day"
+effects = "See below"
+encumbrance = "10"
+giving = "Ritual 2 months"
+receiving = "Magic Attunement 5"
+restrictions = "None"
+
+[entries.Warmth]
+name = "Warmth"
+url = "https://d6gaming.org/index.php/Warmth"
+details = "full"
+domains = ["Spells"]
+
+[entries.Warmth.fields]
+active_passive = "Active"
+area_of_effect = "Self"
+casting_time = "1 round"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Keeps the caster warm (feels like it is up to 10°C warmer per level)."
+display_name = "Warmth"
+distance = "0m"
+domain = "Air, Earth, Fire, Heat, Life, Protection, Water"
+dr = "6"
+duration = "1 hour"
+effects = "See below"
+encumbrance = "2"
+giving = "Ritual 1 week"
+receiving = "Air, Earth, Fire, Heat, Life, Protection, Water Attunement 1"
+restrictions = "None"
+
+[entries."Water Barrier"]
+name = "Water Barrier"
+url = "https://d6gaming.org/index.php/Water_Barrier"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water Barrier".fields]
+active_passive = "Active"
+area_of_effect = "½ m radius"
+casting_time = "2 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = "Creates a circular barrier of water that will slowdown projectiles. The barrier will make it 1DR harder + 1 each level to hit a target inside the barrier. If a projectile is shot from inside of the water barrier, a hole will open in the barrier and let the projectile fly through. The water barrier w…"
+display_name = "Water Barrier"
+distance = "22m"
+domain = "Water"
+dr = "11"
+duration = "2 rounds"
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Water Attunement 3"
+restrictions = "None"
+
+[entries."Water Mirage"]
+name = "Water Mirage"
+url = "https://d6gaming.org/index.php/Water_Mirage"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water Mirage".fields]
+active_passive = "Active"
+area_of_effect = "1 mirage*"
+casting_time = "3 rounds"
+cooldown = "4 hours"
+cost = "3 Mental Fortitude"
+description = """
+Creates a mirage of what the caster wants out of water. To create the mirage, 5 liters of water is required per level of size. 
+Each level the maxiumum size of the mirage increases by 1, starting on 2. When the duration is over the mirage will transform back into water. 
+
+The spell Control Water can…"""
+display_name = "Water Mirage"
+distance = "45m"
+domain = "Water"
+dr = "11"
+duration = "1 min.*"
+effects = "See below"
+encumbrance = "6"
+giving = "Ritual 2 weeks"
+receiving = "Water Attunement 3"
+restrictions = "None"
+
+[entries."Water O' Restoring"]
+name = "Water O' Restoring"
+url = "https://d6gaming.org/index.php/Water_O%27_Restoring"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water O' Restoring".fields]
+active_passive = "Active"
+area_of_effect = "1 liter"
+casting_time = "1 min."
+cooldown = "4 hours"
+cost = "2 Mental Fortitude"
+description = """
+Creates fresh water capable of healing creatures who drink it. 
+The water heals a creature 2BP, over 30 minutes, per liter that is drunk."""
+display_name = "Water O' Restoring"
+distance = "26m"
+domain = "Water"
+dr = "10"
+duration = "Instant."
+effects = "See below"
+encumbrance = "3"
+giving = "Ritual 1 week"
+receiving = "Water Attunement 2"
+restrictions = "None"
+
+[entries."Water Teleport"]
+name = "Water Teleport"
+url = "https://d6gaming.org/index.php/Water_Teleport"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water Teleport".fields]
+active_passive = "Active"
+area_of_effect = "1 C* or 1 O*"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "4 Mental Fortitude"
+description = "Put the object or creature in a bubble and teleports it. It is only possible to teleport in water."
+display_name = "Water Teleport"
+distance = "500m"
+domain = "Water"
+dr = "15"
+duration = "Instant."
+effects = "See below"
+encumbrance = "8"
+giving = "Ritual 4 weeks"
+receiving = "Water Attunement 5"
+restrictions = "None"
+
+[entries."Water Walking"]
+name = "Water Walking"
+url = "https://d6gaming.org/index.php/Water_Walking"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water Walking".fields]
+active_passive = "Active"
+area_of_effect = "1 creature*"
+casting_time = "5 rounds"
+cooldown = "3 hours"
+cost = "3 Mental Fortitude"
+description = "Enables the target to walk on water. The weight limit is also the maximum weight he can carry including his body."
+display_name = "Water Walking"
+distance = "42m"
+domain = "Air, Water"
+dr = "13"
+duration = "2 min."
+effects = "See below"
+encumbrance = "5"
+giving = "Ritual 2 weeks"
+receiving = "Air, Water Attunement 3"
+restrictions = "None"
+
+[entries."Water to Wine"]
+name = "Water to Wine"
+url = "https://d6gaming.org/index.php/Water_to_Wine"
+details = "full"
+domains = ["Spells"]
+
+[entries."Water to Wine".fields]
+active_passive = "Active"
+area_of_effect = "1 liter"
+casting_time = "2 rounds"
+cooldown = "4 hours"
+cost = "1 Mental Fortitude"
+description = "Turns water into the wine of your choice.  The quality of the wine increases with the levels."
+display_name = "Water to Wine"
+distance = "24m"
+domain = "Water"
+dr = "7"
+duration = "Instant."
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Water Attunement 1"
+restrictions = "None"
+
+[entries."Whispering Wind"]
+name = "Whispering Wind"
+url = "https://d6gaming.org/index.php/Whispering_Wind"
+details = "full"
+domains = ["Spells"]
+
+[entries."Whispering Wind".fields]
+active_passive = "Active"
+area_of_effect = "1 creature"
+casting_time = "1 round"
+cooldown = "3 hours"
+cost = "1 Mental Fortitude"
+description = """
+Creates a weak wind with a message from the caster that will travel to the selected target or targets.  
+The wind moves 5m/s and will die out after telling its message to the targeted creature or creatures."""
+display_name = "Whispering Wind"
+distance = "250m"
+domain = "Air"
+dr = "7"
+duration = "Instant"
+effects = "See below"
+encumbrance = "1"
+giving = "Ritual 1 week"
+receiving = "Air Attunement 1"
+restrictions = "None"
+
+[entries."Wings Of Darkness"]
+name = "Wings Of Darkness"
+url = "https://d6gaming.org/index.php/Wings_Of_Darkness"
+details = "full"
+domains = ["Spells"]
+
+[entries."Wings Of Darkness".fields]
+active_passive = "Active"
+area_of_effect = "1 creature"
+casting_time = "1 round."
+cooldown = "3 hours"
+cost = "5 Mental Fortitude"
+display_name = "Wings Of Darkness"
+distance = "89m"
+domain = "Black"
+dr = "16"
+duration = "Instant"
+effects = "See below"
+encumbrance = "8"
+giving = "Ritual 4 weeks"
+receiving = "Black Attunement 5"
+restrictions = "None"
+
+[entries."Witch Curse"]
+name = "Witch Curse"
+url = "https://d6gaming.org/index.php/Witch_Curse"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Witch Curse".fields]
+area_of_effect = "1 creature"
+casting_time = "30 min."
+description = "This curse will decrease the current of one of the target’s attributes (chosen by the caster) by one (to a minimum of one).  It can only be performed at midnight under a full moon."
+display_name = "Witch Curse"
+dr = "10"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "100 m"
+"resist?" = "Y"

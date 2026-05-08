@@ -1,0 +1,39 @@
+[package]
+name = "amar"
+version = "0.1.0"
+edition = "2021"
+authors = ["Geir Isene <g@isene.com>"]
+description = "Amar RPG companion: NPC/encounter/town/weather forge, campaign tracker, lore, AI inspiration. Honors d6gaming.org."
+license = "Unlicense"
+repository = "https://github.com/isene/amar"
+
+[dependencies]
+crust = { version = "0.1", path = "../crust", package = "fe2o3-crust" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+[dev-dependencies]
+
+# Scraper-only deps: pulled in by src/bin/scrape_canon.rs but compiled lazily —
+# main amar binary doesn't carry them at runtime.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "2", features = ["tls"], optional = true }
+regex = { version = "1", optional = true }
+
+[features]
+default = []
+scraper = ["ureq", "regex"]
+
+[[bin]]
+name = "amar"
+path = "src/main.rs"
+
+[[bin]]
+name = "scrape_canon"
+path = "src/bin/scrape_canon.rs"
+required-features = ["scraper"]
+
+[profile.release]
+opt-level = 3
+lto = true
