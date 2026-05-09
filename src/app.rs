@@ -406,28 +406,40 @@ impl App {
     }
 
     fn handle_camp_content_key(&mut self, key: &str) {
-        // If this is a PC node and we have an edit map, j/k moves
-        // between editable fields and ENTER opens the edit prompt.
-        // Otherwise (Section / Adventure / NPC nodes) j/k is a plain
-        // line scroll.
+        // Navigation:
+        //   l / RIGHT  → next field (+1)
+        //   h / LEFT   → prev field (-1)
+        //   j / DOWN   → +10 fields (page-style jump)
+        //   k / UP     → -10 fields
+        // PgUp/PgDn still page-scroll the pane visually so very long
+        // sheets are still browsable without moving the edit cursor.
         let editable = !self.edits.is_empty();
         match key {
+            "l" | "RIGHT" => {
+                if editable && self.sheet_idx + 1 < self.edits.len() {
+                    self.sheet_idx += 1;
+                    self.scroll_active_field_into_view();
+                }
+            }
+            "h" | "LEFT" => {
+                if editable && self.sheet_idx > 0 {
+                    self.sheet_idx -= 1;
+                    self.scroll_active_field_into_view();
+                }
+            }
             "j" | "DOWN" => {
                 if editable {
-                    if self.sheet_idx + 1 < self.edits.len() {
-                        self.sheet_idx += 1;
-                        self.scroll_active_field_into_view();
-                    }
+                    let last = self.edits.len().saturating_sub(1);
+                    self.sheet_idx = (self.sheet_idx + 10).min(last);
+                    self.scroll_active_field_into_view();
                 } else {
                     self.right_pane.linedown();
                 }
             }
             "k" | "UP" => {
                 if editable {
-                    if self.sheet_idx > 0 {
-                        self.sheet_idx -= 1;
-                        self.scroll_active_field_into_view();
-                    }
+                    self.sheet_idx = self.sheet_idx.saturating_sub(10);
+                    self.scroll_active_field_into_view();
                 } else {
                     self.right_pane.lineup();
                 }
@@ -435,16 +447,14 @@ impl App {
             "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
             "PgUP"   | "b" => self.right_pane.pageup(),
             "g" | "HOME" => {
-                if editable { self.sheet_idx = 0; self.right_pane.ix = 0; }
-                else { self.right_pane.ix = 0; }
+                if editable { self.sheet_idx = 0; }
+                self.right_pane.ix = 0;
             }
             "G" | "END" => {
                 if editable {
                     self.sheet_idx = self.edits.len().saturating_sub(1);
-                    for _ in 0..200 { self.right_pane.pagedown(); }
-                } else {
-                    for _ in 0..200 { self.right_pane.pagedown(); }
                 }
+                for _ in 0..200 { self.right_pane.pagedown(); }
             }
             "ENTER" => {
                 if editable {
@@ -456,7 +466,107 @@ impl App {
                     self.add_custom_skill();
                 }
             }
+            // Weapons + spells — context-free shortcuts so the user
+            // doesn't have to navigate to a specific section.
+            "M" => self.add_weapon(crate::pc::WeaponKind::Melee),
+            "I" => self.add_weapon(crate::pc::WeaponKind::Missile),
+            "S" => self.add_spell(),
             _ => {}
+        }
+    }
+
+    /// Add a melee or missile weapon to the focused PC. Prompts in
+    /// sequence: name, hands (1H/2H, melee only), Init, ±O, ±D (melee
+    /// only) or shots/round (missile only), Damage, Range (missile
+    /// only), HP. Defaults are sensible for a knife / short sword.
+    fn add_weapon(&mut self, kind: crate::pc::WeaponKind) {
+        let pc_idx = match self.current_pc_idx() {
+            Some(i) => i,
+            None => return,
+        };
+        let kind_name = match kind {
+            crate::pc::WeaponKind::Melee   => "melee",
+            crate::pc::WeaponKind::Missile => "missile",
+        };
+        let name = self.footer.ask(&format!(" New {} weapon name: ", kind_name), "");
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            self.status_msg("Cancelled.", 208);
+            return;
+        }
+        let two_handed = if matches!(kind, crate::pc::WeaponKind::Melee) {
+            self.footer.ask(" Two-handed? (y/N): ", "").trim().eq_ignore_ascii_case("y")
+        } else { false };
+        let init: i32  = self.footer.ask(" Init: ", "0").trim().parse().unwrap_or(0);
+        let off: i32   = self.footer.ask(" ±O (offence mod): ", "0").trim().parse().unwrap_or(0);
+        let def: i32 = if matches!(kind, crate::pc::WeaponKind::Melee) {
+            self.footer.ask(" ±D (defence mod): ", "0").trim().parse().unwrap_or(0)
+        } else { 0 };
+        let shots: u8 = if matches!(kind, crate::pc::WeaponKind::Missile) {
+            self.footer.ask(" shots/round: ", "1").trim().parse().unwrap_or(1)
+        } else { 0 };
+        let dam: i32  = self.footer.ask(" Damage: ", "0").trim().parse().unwrap_or(0);
+        let range: u32 = if matches!(kind, crate::pc::WeaponKind::Missile) {
+            self.footer.ask(" Range (m): ", "30").trim().parse().unwrap_or(30)
+        } else { 0 };
+        let hp: i32   = self.footer.ask(" HP: ", "8").trim().parse().unwrap_or(8);
+
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(pc) = c.pcs.get_mut(pc_idx) {
+                pc.weapons.push(crate::pc::Weapon {
+                    name: name.clone(),
+                    kind: kind.clone(),
+                    two_handed,
+                    init,
+                    off_mod: off,
+                    def_mod: def,
+                    shots_per_round: shots,
+                    damage: dam,
+                    hp,
+                    range_m: range,
+                    xp: 0,
+                });
+            }
+            let _ = c.save();
+        }
+        self.status_msg(&format!("Added {} weapon '{}'.", kind_name, name), 46);
+    }
+
+    /// Add a spell to the focused PC. The spell name is matched
+    /// against the wiki canon — known spells display their full stat
+    /// block on the sheet. Unknown names are accepted but flagged
+    /// "(not in canon)" until the canon is regenerated.
+    fn add_spell(&mut self) {
+        let pc_idx = match self.current_pc_idx() {
+            Some(i) => i,
+            None => return,
+        };
+        let name = self.footer.ask(" Spell name (canon entry): ", "");
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            self.status_msg("Cancelled.", 208);
+            return;
+        }
+        let in_canon = self.canon.lookup(&name).is_some();
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(pc) = c.pcs.get_mut(pc_idx) {
+                pc.spells.push(name.clone());
+            }
+            let _ = c.save();
+        }
+        let suffix = if in_canon { "" } else { " (not in canon — will show as such)" };
+        self.status_msg(&format!("Added spell '{}'.{}", name, suffix), 46);
+    }
+
+    /// Index of the PC the cursor is currently pointing at (in the
+    /// Campaign tree). Returns None if the cursor is on a non-PC
+    /// node, or no campaign is loaded.
+    fn current_pc_idx(&self) -> Option<usize> {
+        let camp = self.campaign.as_ref()?;
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        match tree.get(self.camp_idx).map(|t| t.node.clone()) {
+            Some(CampNode::Pc(i)) => Some(i),
+            _ => None,
         }
     }
 
@@ -878,7 +988,7 @@ impl App {
             Tab::Forge    => " 1-5:tabs  C-LEFT/RIGHT:tabs  C:new-campaign  L:load  ?:help  q:quit",
             Tab::Campaign => match self.focus {
                 Focus::Left  => " TAB:focus-sheet  j/k:tree  l/h:expand/collapse  n:add-PC  D:delete  C:new-camp  L:load",
-                Focus::Right => " TAB:focus-tree   j/k:fields  ENTER:edit  +:add-skill  PgUp/PgDn:page  g/G:top/end",
+                Focus::Right => " l/h:±1  j/k:±10  ENTER:edit  +:skill  M:melee  I:missile  S:spell  TAB:list",
             },
             Tab::Lore     => match self.focus {
                 Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
@@ -1110,14 +1220,6 @@ impl App {
     /// inline editor should target on ENTER.
     fn render_pc_sheet(&self, pc: &crate::pc::Character, active_id: Option<&str>) -> (Vec<String>, Vec<EditableField>) {
         use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS, bp_for_location};
-        // Color palette inspired by a printed character sheet:
-        //   LBL_ID    — identity field labels (cool grey)
-        //   LBL_PHYS  — physical / combat block labels (warm rose)
-        //   LBL_HIT   — hit-location names (cyan)
-        //   DICE      — hit-location dice glyphs (gold)
-        //   ID_VAL    — identity values (light)
-        //   TITLE     — PC name (yellow bold)
-        //   PLAYER    — player name in title parens (dim)
         const LBL_ID:    u8 = 245;
         const LBL_PHYS:  u8 = 174;
         const LBL_HIT:   u8 = 117;
@@ -1128,7 +1230,6 @@ impl App {
         const STATUS_W:  u8 = 220;
         const STATUS_HW: u8 = 208;
         const STATUS_X:  u8 = 196;
-        const _LBL_DEF:   u8 = 245;
         const LBL: u8 = LBL_ID;
         let mut out: Vec<String> = Vec::new();
         let mut edits: Vec<EditableField> = Vec::new();
@@ -1185,8 +1286,9 @@ impl App {
                         current: value.clone(),
                     });
                 }
-                cells.push(format!(" {:<7}{}",
-                    style::fg(&format!("{}:", label), LBL_ID),
+                let label_styled = style::fg(&format!("{}:", label), LBL_ID);
+                cells.push(format!(" {} {}",
+                    pad_visible(&label_styled, 7),
                     value_cell(value, 5, active)));
             }
             out.push(cells.iter().map(|c| pad_visible(c, id_cell_w)).collect::<String>());
@@ -1259,8 +1361,9 @@ impl App {
                     current: value.to_string(),
                 });
             }
-            let stat_text = format!(" {:<7} {}",
-                style::fg(&format!("{}:", label), LBL_PHYS),
+            let label_styled = style::fg(&format!("{}:", label), LBL_PHYS);
+            let stat_text = format!(" {} {}",
+                pad_visible(&label_styled, 7),
                 if *active {
                     value_cell(value, value.chars().count().max(3), true)
                 } else if id_opt.is_none() && *label == "Status" {
@@ -1299,24 +1402,27 @@ impl App {
         }
 
         // Post-process the top section: overlay a portrait placeholder
-        // box in the top-right corner. The frame sits inside its own
-        // `port_w` columns and is `port_h` rows tall — the image
-        // renderer (image-display work) will fill the inside on
-        // demand. For now, only the dim frame + "(no portrait)"
-        // label show up.
+        // box whose right edge aligns with the right edge of the
+        // SPIRIT column in the 3-tier section below. Frame extends
+        // through every row of the top section so it lines up
+        // visually with the Stats column.
         let top_end = out.len();
-        if port_w >= 16 && top_end - top_start >= 4 {
-            let port_h = (top_end - top_start).min(8);
-            for i in 0..(top_end - top_start) {
+        let three_col_right = if pane_w >= 96 {
+            (pane_w / 3).max(30) * 3
+        } else {
+            pane_w
+        };
+        let port_left_col = three_col_right.saturating_sub(port_w);
+        let port_h = top_end - top_start;
+        if port_w >= 16 && port_h >= 4 {
+            for i in 0..port_h {
                 let row_idx = top_start + i;
                 let original = out[row_idx].clone();
-                let right = if i < port_h {
-                    portrait_row(i, port_w, port_h)
-                } else {
-                    String::new()
-                };
+                let right = portrait_row(i, port_w, port_h);
+                // Pad the original content to start the portrait at
+                // `port_left_col` (right-edge aligned with SPIRIT).
                 out[row_idx] = format!("{}{}",
-                    pad_visible(&original, top_left_w),
+                    pad_visible(&original, port_left_col),
                     right);
             }
         }
@@ -1600,15 +1706,14 @@ fn render_char_column(
     const LBL: u8 = 245;
     let mut col = CharColumn { lines: Vec::new(), edits: Vec::new() };
 
-    // Column header in a per-characteristic accent colour. The
-    // characteristic rank lives next to the header so each column's
-    // header IS the rank's edit cell — no separate "Characteristics"
-    // row needed above the section.
+    // Per-characteristic 3-shade colour gradient: header darkest,
+    // attributes a lighter shade of the same hue, skills lightest.
+    // Lets the eye skim the visual hierarchy without reading.
     use crate::pc::Char as Ch;
-    let head_color: u8 = match ch {
-        Ch::Body   => 209,  // warm red — physical
-        Ch::Mind   => 75,   // cool blue — mental
-        Ch::Spirit => 141,  // soft purple — mystical
+    let (head_color, attr_color, skill_color): (u8, u8, u8) = match ch {
+        Ch::Body   => (124, 167, 217),  // dark red   → indian red → light pink
+        Ch::Mind   => (24,  67,  117),  // dark blue  → sky blue   → light sky
+        Ch::Spirit => (90,  134, 183),  // dark purple→ med purple → thistle
     };
     let char_id = format!("char/{}", ch.name());
     let char_active = active_id == Some(char_id.as_str());
@@ -1621,6 +1726,7 @@ fn render_char_column(
     col.lines.push(format!("  {} {}",
         style::bold(&style::fg(ch.name(), head_color)),
         value_cell(&format!("({})", pc.ch(ch)), 4, char_active)));
+    let _ = LBL;
 
     for (_, attr) in attributes.iter().filter(|(c, _)| *c == ch) {
         let attr: &str = attr;
@@ -1633,12 +1739,14 @@ fn render_char_column(
             label: format!(" {} rank", attr),
             current: av.to_string(),
         });
-        col.lines.push(format!("    {:<22}{}",
-            style::fg(attr, 250),
-            value_cell(&format!("{:>3}", av), 3, attr_active)));
+        // Attribute name in the lighter hue. Pad with pad_visible so
+        // ANSI escapes don't throw off the rank column alignment.
+        let attr_styled = style::fg(attr, attr_color);
+        col.lines.push(format!("   {} {}",
+            pad_visible(&attr_styled, 19),
+            value_cell(&format!("{:>2}", av), 3, attr_active)));
 
-        // Skills under this attribute. Canonical list (always rendered)
-        // plus any extra skills the user has tracked beyond canon.
+        // Skills — even lighter shade of the same hue.
         let canonical: &[&str] = skills.iter()
             .find(|(a, _)| *a == attr)
             .map(|(_, s)| *s)
@@ -1655,9 +1763,10 @@ fn render_char_column(
                 label: format!(" {} (rank)", skill),
                 current: rank.to_string(),
             });
-            col.lines.push(format!("      {:<20}{}  {:>3}",
-                skill,
-                value_cell(&format!("{:>3}", rank), 3, skill_active),
+            let skill_styled = style::fg(skill, skill_color);
+            col.lines.push(format!("     {} {}  {:>3}",
+                pad_visible(&skill_styled, 19),
+                value_cell(&format!("{:>2}", rank), 3, skill_active),
                 total));
             shown.insert((*skill).to_string());
         }
@@ -1673,9 +1782,10 @@ fn render_char_column(
                     label: format!(" {} (rank)", skill),
                     current: rank.to_string(),
                 });
-                col.lines.push(format!("      {:<20}{}  {:>3}",
-                    skill,
-                    value_cell(&format!("{:>3}", rank), 3, skill_active),
+                let skill_styled = style::fg(skill, skill_color);
+                col.lines.push(format!("     {} {}  {:>3}",
+                    pad_visible(&skill_styled, 19),
+                    value_cell(&format!("{:>2}", rank), 3, skill_active),
                     total));
             }
         }

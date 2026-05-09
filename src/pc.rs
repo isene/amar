@@ -75,8 +75,12 @@ pub const SKILLS: &[(&str, &[&str])] = &[
     ("Nature Knowledge", &["Medical Lore", "Plant Lore", "Animal Lore", "Animal Handling", "Magick Rituals", "Alchemy"]),
     ("Social Knowledge", &["Social Lore", "Spoken Language", "Literacy", "Mythology", "Legend Lore"]),
     ("Practical Knowledge", &["Survival Lore", "Set Traps", "Ambush"]),
-    ("Awareness",        &["Reaction Speed", "Alertness", "Tracking", "Detect Traps", "Sense Emotions",
-                           "Sense Ambush", "Sense of Direction", "Sense Magick", "Listening"]),
+    // Awareness: defaults trimmed to the four most-used skills.
+    // The five wiki-canonical extras (Sense Emotions, Sense Ambush,
+    // Sense of Direction, Sense Magick, Listening) cluttered the
+    // sheet for most PCs; users can add them back via '+' if their
+    // character actually trains them.
+    ("Awareness",        &["Reaction Speed", "Alertness", "Tracking", "Detect Traps"]),
     ("Willpower",        &["Pain Tolerance", "Courage", "Hold Breath", "Mental Fortitude"]),
     // Spirit
     ("Casting",    &["Range", "Duration", "Area of Effect", "Weight", "Number of Targets"]),
@@ -85,7 +89,7 @@ pub const SKILLS: &[(&str, &[&str])] = &[
     ("Worship",    &[]),  // god names added per-PC
 ];
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub enum WeaponKind {
     #[default]
     Melee,
