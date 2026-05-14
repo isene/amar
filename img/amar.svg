@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" style="stop-color:#2a2050"/>
+      <stop offset="55%" style="stop-color:#15103a"/>
+      <stop offset="100%" style="stop-color:#06051a"/>
+    </radialGradient>
+    <linearGradient id="rust" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f74c00"/>
+      <stop offset="100%" style="stop-color:#b7410e"/>
+    </linearGradient>
+    <linearGradient id="moon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f3e6c8"/>
+      <stop offset="100%" style="stop-color:#b9a06a"/>
+    </linearGradient>
+    <linearGradient id="die" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2c2540"/>
+      <stop offset="100%" style="stop-color:#13102a"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+    <filter id="moonglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <!-- Night sky disc -->
+  <circle cx="128" cy="128" r="120" fill="url(#sky)" stroke="url(#rust)" stroke-width="3"/>
+
+  <!-- Three concentric tier rings (Char + Attr + Skill = Total) -->
+  <circle cx="128" cy="148" r="86" fill="none" stroke="#f74c00" stroke-width="0.6" opacity="0.18"/>
+  <circle cx="128" cy="148" r="68" fill="none" stroke="#f74c00" stroke-width="0.6" opacity="0.25"/>
+  <circle cx="128" cy="148" r="50" fill="none" stroke="#f74c00" stroke-width="0.6" opacity="0.35"/>
+
+  <!-- Stars scattered across the sky -->
+  <g fill="#f3e6c8">
+    <circle cx="44" cy="58" r="1.0" opacity="0.8"/>
+    <circle cx="72" cy="42" r="0.7" opacity="0.6"/>
+    <circle cx="96" cy="64" r="0.9" opacity="0.7"/>
+    <circle cx="184" cy="44" r="0.8" opacity="0.7"/>
+    <circle cx="210" cy="80" r="1.0" opacity="0.8"/>
+    <circle cx="62" cy="92" r="0.7" opacity="0.5"/>
+    <circle cx="220" cy="118" r="0.8" opacity="0.7"/>
+    <circle cx="40" cy="138" r="0.7" opacity="0.5"/>
+    <circle cx="218" cy="162" r="0.7" opacity="0.5"/>
+    <circle cx="160" cy="56" r="0.6" opacity="0.5"/>
+    <circle cx="110" cy="40" r="0.6" opacity="0.5"/>
+    <circle cx="200" cy="200" r="0.6" opacity="0.4"/>
+  </g>
+
+  <!-- Crescent moon (Ielina) upper-right -->
+  <g>
+    <circle cx="180" cy="72" r="20" fill="url(#moon)" opacity="0.25" filter="url(#moonglow)"/>
+    <path d="M 180 52 a 20 20 0 1 0 0 40 a 16 18 0 1 1 0 -40 z" fill="url(#moon)"/>
+  </g>
+
+  <!-- d6 die (the system), tilted slightly, showing the 6 face -->
+  <g transform="translate(128 152) rotate(-8)">
+    <rect x="-34" y="-34" width="68" height="68" rx="10" fill="url(#die)" stroke="#f74c00" stroke-width="2"/>
+    <!-- soft inner highlight -->
+    <rect x="-30" y="-30" width="60" height="60" rx="8" fill="none" stroke="#f74c00" stroke-width="0.6" opacity="0.3"/>
+    <!-- six pips (3 rows of 2) -->
+    <g fill="#f74c00" filter="url(#glow)">
+      <circle cx="-16" cy="-18" r="4.2"/>
+      <circle cx="16"  cy="-18" r="4.2"/>
+      <circle cx="-16" cy="0"   r="4.2"/>
+      <circle cx="16"  cy="0"   r="4.2"/>
+      <circle cx="-16" cy="18"  r="4.2"/>
+      <circle cx="16"  cy="18"  r="4.2"/>
+    </g>
+    <g fill="#ffb070">
+      <circle cx="-16" cy="-18" r="2.4"/>
+      <circle cx="16"  cy="-18" r="2.4"/>
+      <circle cx="-16" cy="0"   r="2.4"/>
+      <circle cx="16"  cy="0"   r="2.4"/>
+      <circle cx="-16" cy="18"  r="2.4"/>
+      <circle cx="16"  cy="18"  r="2.4"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="128" y="232" font-family="monospace" font-size="22" font-weight="bold" fill="url(#rust)" text-anchor="middle" letter-spacing="6">amar</text>
+</svg>

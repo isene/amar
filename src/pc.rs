@@ -45,47 +45,51 @@ pub const ATTRIBUTES: &[(Char, &str)] = &[
     (Char::Body, "Melee Combat"),
     (Char::Body, "Missile Combat"),
     (Char::Body, "Sleight"),
-    // MIND
-    (Char::Mind, "Intelligence"),
+    // MIND — Intelligence dropped; its sub-skills now live in the
+    // free-form 4-slot section per char column.
     (Char::Mind, "Nature Knowledge"),
     (Char::Mind, "Social Knowledge"),
     (Char::Mind, "Practical Knowledge"),
     (Char::Mind, "Awareness"),
     (Char::Mind, "Willpower"),
-    // SPIRIT
+    // SPIRIT — Innate dropped; rare per-race ability, not a default.
     (Char::Spirit, "Casting"),
     (Char::Spirit, "Attunement"),
-    (Char::Spirit, "Innate"),
     (Char::Spirit, "Worship"),
 ];
 
-/// Skills under each attribute. Verbatim from d6gaming.org/The_Character.
-/// Worship sub-skills are god names per Mythology page; we list the
-/// commonly-worshipped ones plus a free-form slot users can fill in.
+/// Skills under each attribute. Verbatim from d6gaming.org/The_Character
+/// minus a few defaults the user prefers in the free-form slots:
+/// Plant Lore, Animal Lore, Courage, Hold Breath. The slots show 4
+/// open rows per char column where the user picks an attribute, names
+/// the skill and sets a rank, so any of these can be added back
+/// per-character without cluttering the canonical list.
 pub const SKILLS: &[(&str, &[&str])] = &[
     // Body
     ("Strength",       &["Carrying", "Weight Lifting", "Wield Weapon"]),
     ("Endurance",      &["Fortitude", "Combat Tenacity", "Running", "Poison Resistance"]),
-    ("Athletics",      &["Hide", "Move Quietly", "Climb", "Swim", "Ride", "Jump", "Balance", "Tumble"]),
+    ("Athletics",      &["Hide", "Move Quietly", "Climb", "Swim", "Ride", "Jump", "Balance", "Tumble", "Dodge"]),
     ("Melee Combat",   &[]),  // weapon skills added per-PC as they're acquired
     ("Missile Combat", &[]),
-    ("Sleight",        &["Pick Pockets", "Stage Magic", "Disarm Traps"]),
+    ("Sleight",        &["Pick Pockets", "Disarm Traps"]),
     // Mind
-    ("Intelligence",     &["Innovation", "Problem Solving"]),
-    ("Nature Knowledge", &["Medical Lore", "Plant Lore", "Animal Lore", "Animal Handling", "Magick Rituals", "Alchemy"]),
+    ("Nature Knowledge", &["Medical Lore", "Animal Handling", "Magick Rituals", "Alchemy"]),
     ("Social Knowledge", &["Social Lore", "Spoken Language", "Literacy", "Mythology", "Legend Lore"]),
     ("Practical Knowledge", &["Survival Lore", "Set Traps", "Ambush"]),
     // Awareness: defaults trimmed to the four most-used skills.
     // The five wiki-canonical extras (Sense Emotions, Sense Ambush,
     // Sense of Direction, Sense Magick, Listening) cluttered the
-    // sheet for most PCs; users can add them back via '+' if their
-    // character actually trains them.
+    // sheet for most PCs; users can add them back via the open slots
+    // if their character actually trains them.
     ("Awareness",        &["Reaction Speed", "Alertness", "Tracking", "Detect Traps"]),
-    ("Willpower",        &["Pain Tolerance", "Courage", "Hold Breath", "Mental Fortitude"]),
+    ("Willpower",        &["Pain Tolerance", "Mental Fortitude"]),
     // Spirit
     ("Casting",    &["Range", "Duration", "Area of Effect", "Weight", "Number of Targets"]),
-    ("Attunement", &["Self", "Fire", "Water", "Air", "Earth", "Life", "Death", "Mind", "Body"]),
-    ("Innate",     &["Flying", "Camouflage", "Shape Shifting"]),
+    // Attunement skills (Self, Fire, Water, Air, Earth, Life, Death,
+    // Mind, Body) live in the generic open-slot section under SPIRIT
+    // — most PCs only train a couple, so the canonical list cluttered
+    // the column for everyone else.
+    ("Attunement", &[]),
     ("Worship",    &[]),  // god names added per-PC
 ];
 
@@ -100,10 +104,17 @@ pub enum WeaponKind {
 /// CharacterSheet-new.xml: H (one/two-handed), Init, ±O, ±D (melee
 /// only) or shots-per-round (missile only), OFF, DEF, Dam, HP, plus
 /// xp marks.
+///
+/// `skill_name` is the per-weapon skill (e.g. "Sword", "Bow") used to
+/// derive OFF / DEF totals. The skill rank is read from
+/// `pc.skills["Melee Combat"][skill_name]` (or "Missile Combat") so
+/// weapon-skill bookkeeping flows through the normal skill system.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Weapon {
     pub name: String,
     pub kind: WeaponKind,
+    #[serde(default)]
+    pub skill_name: String,
     pub two_handed: bool,
     pub init: i32,
     pub off_mod: i32,
@@ -113,6 +124,44 @@ pub struct Weapon {
     pub hp: i32,
     pub range_m: u32,
     pub xp: i32,
+}
+
+/// One spell on a PC sheet. Captures the printed-character-sheet
+/// fields so a GM can record house-ruled spells alongside the
+/// canonical wiki ones. Mirrors the canon entry shape so the lookup
+/// in `add_spell` can pre-fill every field for known spells.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Spell {
+    pub name: String,
+    #[serde(default)] pub domain: String,        // Fire / Water / Air / …
+    #[serde(default)] pub active_passive: String, // "Active" or "Passive"
+    #[serde(default)] pub dr: i32,
+    #[serde(default)] pub cost: i32,
+    #[serde(default)] pub casting_time: String,
+    #[serde(default)] pub distance: String,
+    #[serde(default)] pub duration: String,
+    #[serde(default)] pub area: String,
+    #[serde(default)] pub cooldown: String,
+    #[serde(default)] pub effects: String,
+}
+
+/// One open / free-form skill slot. Lives in the generic slot area
+/// under the SPIRIT column on the PC sheet — but the slot itself can
+/// target any characteristic + attribute (so e.g. a "Singing"
+/// Athletics-under-BODY skill, or a "Folklore" Social Knowledge-under-
+/// MIND skill, both fit). Total = char + attr + rank.
+///
+/// `#[serde(default)]` applies to every field so old per-char-map
+/// saves (which had no `parent_char`) still load — the flatten step
+/// in `deserialize_open_skills` stamps `parent_char` from the map key.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OpenSkill {
+    /// "BODY" / "MIND" / "SPIRIT" (also accepts "B" / "M" / "S" on input).
+    pub parent_char: String,
+    pub attribute: String,
+    pub name: String,
+    pub rank: i32,
 }
 
 /// Per-location armor + AP, per the hit-location table on the
@@ -170,14 +219,83 @@ pub struct Character {
     /// store any number.
     pub modifiers: Vec<(String, i32)>,
 
+    /// Absolute path to the PC's portrait image. Set when the user
+    /// generates one via the P key (clipboard → ChatGPT path import,
+    /// or DALL-E / Gemini direct API). Empty string means no
+    /// portrait — the placeholder frame is shown instead.
+    #[serde(default)]
+    pub portrait_path: String,
+
     // Equipment
     pub hit_locations: BTreeMap<String, HitLocation>,
     pub weapons: Vec<Weapon>,
-    pub spells: Vec<String>,
+    /// Spells the PC knows. Backwards-compatible deserializer accepts
+    /// the legacy `Vec<String>` shape and upgrades to the full Spell
+    /// struct (other fields default to 0 / empty).
+    #[serde(default, deserialize_with = "deserialize_spells")]
+    pub spells: Vec<Spell>,
     pub equipment: Vec<String>,
     pub money_sp: i32,
 
+    /// Generic open / free-form skill slots. All slots live in one
+    /// flat list rendered under the SPIRIT column on the PC sheet
+    /// (which has plenty of vertical space since Attunement no longer
+    /// has canonical skills). Each slot independently picks its
+    /// parent characteristic + attribute, so a "Singing" slot can
+    /// roll under BODY/Athletics while a "Folklore" slot rolls under
+    /// MIND/Social Knowledge.
+    ///
+    /// Backwards-compat deserializer accepts the original map shape
+    /// (`{ "BODY": [...], "MIND": [...], "SPIRIT": [...] }`) and
+    /// flattens it into the flat list, stamping `parent_char` from
+    /// the map key.
+    #[serde(default, deserialize_with = "deserialize_open_skills")]
+    pub open_skills: Vec<OpenSkill>,
+
     pub notes: String,
+}
+
+/// Backwards-compat deserializer: accepts either `["Fireball", ...]`
+/// (old format) or `[{ "name": "Fireball", "dr": 4, ... }, ...]`
+/// (new format). Bare strings become Spells with their stat fields
+/// zeroed / empty so existing saves load cleanly.
+fn deserialize_spells<'de, D>(d: D) -> Result<Vec<Spell>, D::Error>
+where D: serde::Deserializer<'de> {
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum SpellRepr { Name(String), Full(Spell) }
+    let raw: Vec<SpellRepr> = Vec::deserialize(d)?;
+    Ok(raw.into_iter().map(|r| match r {
+        SpellRepr::Name(n) => Spell { name: n, ..Default::default() },
+        SpellRepr::Full(s) => s,
+    }).collect())
+}
+
+/// Backwards-compat deserializer for `open_skills`. Old saves had a
+/// per-char map (`{ "BODY": [...], ... }`); new saves are a flat
+/// `Vec<OpenSkill>`. We accept either shape, flattening the map
+/// into the vec and stamping `parent_char` from the map key.
+fn deserialize_open_skills<'de, D>(d: D) -> Result<Vec<OpenSkill>, D::Error>
+where D: serde::Deserializer<'de> {
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OpenSkillsRepr {
+        Flat(Vec<OpenSkill>),
+        ByChar(BTreeMap<String, Vec<OpenSkill>>),
+    }
+    Ok(match OpenSkillsRepr::deserialize(d)? {
+        OpenSkillsRepr::Flat(v) => v,
+        OpenSkillsRepr::ByChar(m) => m.into_iter()
+            .flat_map(|(ch, mut v)| {
+                for s in v.iter_mut() {
+                    if s.parent_char.is_empty() { s.parent_char = ch.clone(); }
+                }
+                v.into_iter()
+            })
+            .collect(),
+    })
 }
 
 /// Hit-location names in d6-roll order: 6 Head, 5 R. Arm, 4 L. Arm,
@@ -246,9 +364,13 @@ impl Character {
         c.level = 1;
         for ch in Char::all() { c.characteristics.insert(ch.name().to_string(), 0); }
         for (_, attr) in ATTRIBUTES { c.attributes.insert((*attr).to_string(), 0); }
-        c.skills.insert("Spoken Language".into(), {
+        // Wiki rule: every character starts with 2 in their native
+        // tongue (Social Knowledge → Spoken Language) regardless of
+        // build. Stored under the canonical attribute key so the
+        // sheet renderer picks it up.
+        c.skills.insert("Social Knowledge".into(), {
             let mut m = BTreeMap::new();
-            m.insert("Native".into(), 2);
+            m.insert("Spoken Language".into(), 2);
             m
         });
         // Default hit locations: every body location starts unarmored.
@@ -258,6 +380,26 @@ impl Character {
         for loc in HIT_LOCATIONS {
             c.hit_locations.insert((*loc).to_string(), HitLocation::default());
         }
+        // Every character is always armed with their fists. Unarmed
+        // gets a free slot on the weapons table (and a 1-rank skill
+        // under Melee Combat) so the GM can resolve a punch without
+        // having to add the weapon manually for each new sheet.
+        c.skills.entry("Melee Combat".into()).or_default()
+            .entry("Unarmed".into()).or_insert(1);
+        c.weapons.push(Weapon {
+            name: "Unarmed".into(),
+            kind: WeaponKind::Melee,
+            skill_name: "Unarmed".into(),
+            two_handed: false,
+            init: 0,
+            off_mod: 0,
+            def_mod: 0,
+            shots_per_round: 0,
+            damage: 0,
+            hp: 0,
+            range_m: 0,
+            xp: 0,
+        });
         c.bp_current = c.bp_max();
         c.mf_current = c.mf_max();
         c
@@ -287,7 +429,31 @@ impl Character {
             "race"        => self.race = trim.to_string(),
             "sex"         => self.gender = trim.to_string(),
             "birthplace"  => self.birthplace = trim.to_string(),
-            "description" => self.description = trim.to_string(),
+            "description" => {
+                // Edit the first logical line only — preserve any
+                // continuation lines that already exist.
+                let rest: String = self.description.split_once('\n')
+                    .map(|(_, after)| after.to_string())
+                    .unwrap_or_default();
+                self.description = if rest.is_empty() {
+                    trim.to_string()
+                } else {
+                    format!("{}\n{}", trim, rest)
+                };
+            }
+            "description2" => {
+                // Edit the second logical line. Keep line 1 intact,
+                // and any line 3+ that may already exist.
+                let mut lines: Vec<String> = self.description.lines().map(|s| s.to_string()).collect();
+                while lines.len() < 2 { lines.push(String::new()); }
+                lines[1] = trim.to_string();
+                // Trim trailing empty lines so a freshly-blanked line
+                // 2 doesn't leave a dangling "\n" in the saved value.
+                while lines.last().map_or(false, |s| s.is_empty()) {
+                    lines.pop();
+                }
+                self.description = lines.join("\n");
+            }
             "clothing"    => self.clothing = trim.to_string(),
             "notes"       => self.notes = trim.to_string(),
             "age"     => self.age = parse_u(trim, "age")?,
@@ -325,6 +491,78 @@ impl Character {
                         "armor" => entry.armor = trim.to_string(),
                         "ap"    => entry.ap = parse_i(trim, "AP")?,
                         _ => return Err(format!("unknown hit field: {}", kind)),
+                    }
+                } else if let Some(rest) = other.strip_prefix("weapon/") {
+                    // weapon/<idx>/<field>
+                    let mut parts = rest.splitn(2, '/');
+                    let idx: usize = parts.next().ok_or("weapon id missing idx")?
+                        .parse().map_err(|_| "weapon idx not a number")?;
+                    let field = parts.next().ok_or("weapon id missing field")?;
+                    let w = self.weapons.get_mut(idx)
+                        .ok_or_else(|| format!("weapon idx {} out of range", idx))?;
+                    match field {
+                        "name"        => w.name = trim.to_string(),
+                        "skill"       => w.skill_name = trim.to_string(),
+                        "two_handed"  => {
+                            w.two_handed = matches!(trim.to_ascii_lowercase().as_str(),
+                                "y"|"yes"|"2h"|"true"|"t"|"1");
+                        }
+                        "init"        => w.init = parse_i(trim, "init")?,
+                        "off_mod"     => w.off_mod = parse_i(trim, "off_mod")?,
+                        "def_mod"     => w.def_mod = parse_i(trim, "def_mod")?,
+                        "shots"       => w.shots_per_round = trim.parse().map_err(|e| format!("bad shots: {}", e))?,
+                        "damage"      => w.damage = parse_i(trim, "damage")?,
+                        "range"       => w.range_m = parse_u(trim, "range")?,
+                        "hp"          => w.hp = parse_i(trim, "hp")?,
+                        "xp"          => w.xp = parse_i(trim, "xp")?,
+                        _ => return Err(format!("unknown weapon field: {}", field)),
+                    }
+                } else if let Some(rest) = other.strip_prefix("spell/") {
+                    // spell/<idx>/<field>
+                    let mut parts = rest.splitn(2, '/');
+                    let idx: usize = parts.next().ok_or("spell id missing idx")?
+                        .parse().map_err(|_| "spell idx not a number")?;
+                    let field = parts.next().ok_or("spell id missing field")?;
+                    let sp = self.spells.get_mut(idx)
+                        .ok_or_else(|| format!("spell idx {} out of range", idx))?;
+                    match field {
+                        "name"           => sp.name = trim.to_string(),
+                        "domain"         => sp.domain = trim.to_string(),
+                        "active_passive" => sp.active_passive = trim.to_string(),
+                        "dr"             => sp.dr = parse_i(trim, "DR")?,
+                        "cost"           => sp.cost = parse_i(trim, "cost")?,
+                        "casting_time"   => sp.casting_time = trim.to_string(),
+                        "distance"       => sp.distance = trim.to_string(),
+                        "duration"       => sp.duration = trim.to_string(),
+                        "area"           => sp.area = trim.to_string(),
+                        "cooldown"       => sp.cooldown = trim.to_string(),
+                        "effects"        => sp.effects = trim.to_string(),
+                        _ => return Err(format!("unknown spell field: {}", field)),
+                    }
+                } else if let Some(rest) = other.strip_prefix("slot/") {
+                    // slot/<idx>/<field>
+                    let mut parts = rest.splitn(2, '/');
+                    let idx: usize = parts.next().ok_or("slot id missing idx")?
+                        .parse().map_err(|_| "slot idx not a number")?;
+                    let field = parts.next().ok_or("slot id missing field")?;
+                    while self.open_skills.len() <= idx { self.open_skills.push(OpenSkill::default()); }
+                    let s = &mut self.open_skills[idx];
+                    match field {
+                        "char" => {
+                            // Accept B/M/S shortcuts as well as full names.
+                            let v = trim.to_ascii_uppercase();
+                            s.parent_char = match v.as_str() {
+                                "B" | "BODY"   => "BODY".into(),
+                                "M" | "MIND"   => "MIND".into(),
+                                "S" | "SPIRIT" => "SPIRIT".into(),
+                                ""             => String::new(),
+                                _ => return Err(format!("unknown char: {} (expected BODY/MIND/SPIRIT)", trim)),
+                            };
+                        }
+                        "attribute" => s.attribute = trim.to_string(),
+                        "name"      => s.name = trim.to_string(),
+                        "rank"      => s.rank = parse_i(trim, "rank")?,
+                        _ => return Err(format!("unknown slot field: {}", field)),
                     }
                 } else {
                     return Err(format!("unknown field id: {}", id));
@@ -414,7 +652,8 @@ mod tests {
         let c = Character::new_blank("Test");
         assert_eq!(c.size, 3.0);   // default 75 kg → SIZE 3
         assert_eq!(c.bp_max(), 6); // SIZE 3 * 2 + 0/3
-        assert_eq!(c.skill("Spoken Language", "Native"), 2);
+        // Wiki rule: native tongue starts at 2.
+        assert_eq!(c.skill("Social Knowledge", "Spoken Language"), 2);
     }
 
     #[test]
@@ -509,5 +748,67 @@ mod tests {
         assert_eq!(size_from_weight_kg(1600), 17.0);  // first +1/200 step
         assert_eq!(size_from_weight_kg(1799), 17.0);
         assert_eq!(size_from_weight_kg(1800), 18.0);
+    }
+
+    #[test]
+    fn old_save_with_map_open_skills_loads() {
+        // Earlier saves wrote `open_skills` as a per-char map. Make
+        // sure the deserializer accepts that shape and flattens to
+        // the new flat-vec form.
+        let json = r#"{
+            "name":"Test","player":"","is_pc":false,"race":"Human",
+            "gender":"","age":0,"height_cm":0,"weight_kg":75,
+            "birthplace":"","description":"","clothing":"",
+            "size":3.5,"level":1,
+            "characteristics":{},"attributes":{},"skills":{},
+            "bp_current":7,"mf_current":0,"conditions":[],"modifiers":[],
+            "hit_locations":{},"weapons":[],"spells":[],"equipment":[],
+            "money_sp":0,"open_skills":{},"notes":""
+        }"#;
+        let c: Character = serde_json::from_str(json)
+            .expect("old-format save should still deserialize");
+        assert_eq!(c.open_skills.len(), 0);
+    }
+
+    #[test]
+    fn old_map_open_skills_flatten_to_vec() {
+        let json = r#"{
+            "name":"T","player":"","is_pc":false,"race":"Human",
+            "gender":"","age":0,"height_cm":0,"weight_kg":75,
+            "birthplace":"","description":"","clothing":"",
+            "size":3.5,"level":1,
+            "characteristics":{},"attributes":{},"skills":{},
+            "bp_current":7,"mf_current":0,"conditions":[],"modifiers":[],
+            "hit_locations":{},"weapons":[],"spells":[],"equipment":[],
+            "money_sp":0,
+            "open_skills":{
+                "BODY":[{"attribute":"Athletics","name":"Singing","rank":3}],
+                "MIND":[{"attribute":"Awareness","name":"Folklore","rank":2}]
+            },
+            "notes":""
+        }"#;
+        let c: Character = serde_json::from_str(json).unwrap();
+        assert_eq!(c.open_skills.len(), 2);
+        // parent_char should be stamped from the map key during flatten.
+        assert!(c.open_skills.iter().any(|s| s.parent_char == "BODY" && s.name == "Singing"));
+        assert!(c.open_skills.iter().any(|s| s.parent_char == "MIND" && s.name == "Folklore"));
+    }
+
+    #[test]
+    fn old_save_with_string_spells_loads() {
+        let json = r#"{
+            "name":"T","player":"","is_pc":false,"race":"Human",
+            "gender":"","age":0,"height_cm":0,"weight_kg":75,
+            "birthplace":"","description":"","clothing":"",
+            "size":3.5,"level":1,
+            "characteristics":{},"attributes":{},"skills":{},
+            "bp_current":7,"mf_current":0,"conditions":[],"modifiers":[],
+            "hit_locations":{},"weapons":[],"spells":["Fireball","Heal"],"equipment":[],
+            "money_sp":0,"open_skills":[],"notes":""
+        }"#;
+        let c: Character = serde_json::from_str(json).unwrap();
+        assert_eq!(c.spells.len(), 2);
+        assert_eq!(c.spells[0].name, "Fireball");
+        assert_eq!(c.spells[1].name, "Heal");
     }
 }

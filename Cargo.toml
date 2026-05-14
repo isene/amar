@@ -1,6 +1,6 @@
 [package]
 name = "amar"
-version = "0.1.7"
+version = "0.1.34"
 edition = "2021"
 authors = ["Geir Isene <g@isene.com>"]
 description = "Amar RPG companion: NPC/encounter/town/weather forge, campaign tracker, lore, AI inspiration. Honors d6gaming.org."
@@ -9,21 +9,28 @@ repository = "https://github.com/isene/amar"
 
 [dependencies]
 crust = { version = "0.1", path = "../crust", package = "fe2o3-crust" }
+# Terminal image display (kitty / sixel / braille fallback) — used by
+# the Town relationship map: graphviz writes a PNG, glow paints it
+# inline in the right pane.
+glow = { version = "0.1", path = "../glow", package = "fe2o3-glow" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
+# HTTP client used by both the canon scraper (build-time) and the
+# main binary's portrait API calls (DALL-E 3 / Imagen). `json`
+# enables ureq's serde_json integration so we can decode responses
+# directly into Value.
+ureq = { version = "2", features = ["tls", "json"] }
 
 [dev-dependencies]
 
-# Scraper-only deps: pulled in by src/bin/scrape_canon.rs but compiled lazily —
-# main amar binary doesn't carry them at runtime.
+# Scraper-only dep — compiled lazily behind the `scraper` feature.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ureq = { version = "2", features = ["tls"], optional = true }
 regex = { version = "1", optional = true }
 
 [features]
 default = []
-scraper = ["ureq", "regex"]
+scraper = ["regex"]
 
 [[bin]]
 name = "amar"

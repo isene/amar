@@ -7,6 +7,7 @@
 //! the tree stays in sync with whatever the scraper produced.
 
 use crate::canon::{Canon, Entry};
+use crate::theme as t;
 
 pub const SETTING_DOCS: &[(&str, &str)] = &[
     ("Mythology",        include_str!("../data/lore/mythology.md")),
@@ -126,13 +127,13 @@ pub fn render_markdown(body: &str, max_width: usize) -> Vec<String> {
     for line in cooked.lines() {
         if let Some(rest) = line.strip_prefix("# ") {
             out.push(String::new());
-            out.push(style::bold(&style::fg(rest, 226)));
-            out.push(style::fg(&"-".repeat(rest.chars().count()), 244));
+            out.push(style::bold(&style::fg(rest, t::ACCENT)));
+            out.push(style::fg(&"-".repeat(rest.chars().count()), t::FG_DIM));
         } else if let Some(rest) = line.strip_prefix("## ") {
             out.push(String::new());
-            out.push(style::bold(&style::fg(rest, 117)));
+            out.push(style::bold(&style::fg(rest, t::STEEL)));
         } else if let Some(rest) = line.strip_prefix("### ") {
-            out.push(style::bold(&style::fg(rest, 250)));
+            out.push(style::bold(&style::fg(rest, t::FG)));
         } else if let Some(rest) = line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")) {
             out.push(format!("  • {}", rest));
         } else {
@@ -194,7 +195,7 @@ fn apply_inline_styles(s: &str) -> String {
                 buf.push(c2);
                 chars.next();
             }
-            if closed { out.push_str(&style::fg(&buf, 220)); }
+            if closed { out.push_str(&style::fg(&buf, t::AMBER)); }
             else { out.push('`'); out.push_str(&buf); }
         } else if c == '[' {
             let mut text = String::new();
@@ -212,7 +213,7 @@ fn apply_inline_styles(s: &str) -> String {
                     if c2 == ')' { break; }
                     if c2 == '\n' { break; }
                 }
-                out.push_str(&style::fg(&text, 117));
+                out.push_str(&style::fg(&text, t::STEEL));
             } else if closed {
                 out.push('[');
                 out.push_str(&text);
@@ -235,10 +236,10 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
     use crust::style;
     let mut out: Vec<String> = Vec::new();
     out.push(String::new());
-    out.push(style::bold(&style::fg(&entry.name, 226)));
-    out.push(style::fg(&"-".repeat(entry.name.chars().count()), 244));
+    out.push(style::bold(&style::fg(&entry.name, t::ACCENT)));
+    out.push(style::fg(&"-".repeat(entry.name.chars().count()), t::FG_DIM));
     if !entry.domains.is_empty() {
-        out.push(style::fg(&format!("Domains: {}", entry.domains.join(", ")), 117));
+        out.push(style::fg(&format!("Domains: {}", entry.domains.join(", ")), t::STEEL));
     }
     out.push(String::new());
 
@@ -252,7 +253,7 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
     for key in preferred_order {
         if let Some(v) = entry.fields.get(key) {
             out.push(format!("  {:<18} {}",
-                style::fg(&humanize(key), 245),
+                style::fg(&humanize(key), t::FG_MUTED),
                 v));
             shown.insert(key.to_string());
         }
@@ -260,19 +261,19 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
     for (k, v) in &entry.fields {
         if !shown.contains(k) && k != "description" && k != "display_name" && k != "back" && k != "category" {
             out.push(format!("  {:<18} {}",
-                style::fg(&humanize(k), 245),
+                style::fg(&humanize(k), t::FG_MUTED),
                 v));
         }
     }
 
     if let Some(desc) = entry.fields.get("description") {
         out.push(String::new());
-        out.push(style::fg("Description", 245).to_string());
+        out.push(style::fg("Description", t::FG_MUTED).to_string());
         out.push(desc.clone());
     }
 
     out.push(String::new());
-    out.push(style::fg(&format!("Source: {}", entry.url), 244));
+    out.push(style::fg(&format!("Source: {}", entry.url), t::FG_DIM));
     out
 }
 

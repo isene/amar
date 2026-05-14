@@ -19,9 +19,10 @@ dependencies = [
 
 [[package]]
 name = "amar"
-version = "0.1.7"
+version = "0.1.34"
 dependencies = [
  "fe2o3-crust",
+ "fe2o3-glow",
  "regex",
  "serde",
  "serde_json",
@@ -125,6 +126,14 @@ dependencies = [
  "crossterm",
  "libc",
  "unicode-width",
+]
+
+[[package]]
+name = "fe2o3-glow"
+version = "0.1.11"
+dependencies = [
+ "base64",
+ "libc",
 ]
 
 [[package]]
@@ -733,6 +742,8 @@ dependencies = [
  "once_cell",
  "rustls",
  "rustls-pki-types",
+ "serde",
+ "serde_json",
  "url",
  "webpki-roots 0.26.11",
 ]

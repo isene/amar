@@ -33,13 +33,35 @@ pub struct GlobalConfig {
     /// fixed-30-col layout.
     #[serde(default = "default_pane_width")]
     pub pane_width: u8,
+    /// Path to a file containing the OpenAI API key (one line). The
+    /// global default lives at `/home/.safe/openai.txt` per the
+    /// user's machine convention. Empty / missing → OpenAI image
+    /// generation is unavailable.
+    #[serde(default = "default_openai_key_path")]
+    pub openai_key_path: String,
+    /// Path to a file containing the Gemini API key. Empty / missing
+    /// → Gemini image generation is unavailable.
+    #[serde(default)]
+    pub gemini_key_path: String,
+    /// Which provider to hit when the user picks "API" on the portrait
+    /// menu. "openai" or "gemini". Defaults to "openai".
+    #[serde(default = "default_image_provider")]
+    pub image_provider: String,
 }
 
 fn default_pane_width() -> u8 { 3 }
+fn default_openai_key_path() -> String { "/home/.safe/openai.txt".into() }
+fn default_image_provider() -> String { "openai".into() }
 
 impl Default for GlobalConfig {
     fn default() -> Self {
-        Self { active_campaign: None, pane_width: default_pane_width() }
+        Self {
+            active_campaign: None,
+            pane_width: default_pane_width(),
+            openai_key_path: default_openai_key_path(),
+            gemini_key_path: String::new(),
+            image_provider: default_image_provider(),
+        }
     }
 }
 
@@ -57,6 +79,22 @@ impl GlobalConfig {
     }
 }
 
+/// Generic save-wrapper for forge artefacts. Keeps the user-given
+/// label, the unix timestamp the roll was kept at, the AI flavour
+/// (if `A` was pressed before save), and the artefact itself. The
+/// `id` is unique within its vector and lets the Campaign tab refer
+/// to an item across deletes / re-orders without depending on
+/// position.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Saved<T> {
+    pub id: u64,
+    pub name: String,
+    pub created_at: u64,
+    #[serde(default)]
+    pub flavour: Option<String>,
+    pub item: T,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Campaign {
     pub name: String,
@@ -64,6 +102,47 @@ pub struct Campaign {
     pub bortle: u8,
     pub pcs: Vec<Character>,
     pub npcs: Vec<Character>,
+    /// Forge artefacts persisted into the campaign. Every field is
+    /// `#[serde(default)]` so existing campaign.json files from
+    /// before the "saved generators" feature still load — empty
+    /// vectors fill in on first save.
+    #[serde(default)]
+    pub saved_encounters: Vec<Saved<crate::forge::encounter::Encounter>>,
+    #[serde(default)]
+    pub saved_towns: Vec<Saved<crate::forge::town::Town>>,
+    #[serde(default)]
+    pub saved_weather: Vec<Saved<crate::forge::WeatherDay>>,
+    #[serde(default)]
+    pub saved_npcs: Vec<Saved<Character>>,
+    /// Adventures imported into this campaign. Each one references an
+    /// on-disk directory (no copying) and indexes its narrative +
+    /// scene / floorplan / NPC-portrait assets.
+    #[serde(default)]
+    pub adventures: Vec<crate::adventure::Adventure>,
+    /// `id` of whichever adventure the GM is currently running. The
+    /// app uses this to render a "Active: <name> · §<section>" hint
+    /// in the status line so resuming next session is friction-free.
+    #[serde(default)]
+    pub active_adventure_id: Option<u64>,
+    /// Active combat HUD roster. Cleared via `c` in the Session tab,
+    /// otherwise persists between launches so a paused fight resumes
+    /// next session without re-keying participants.
+    #[serde(default)]
+    pub combatants: Vec<CombatRef>,
+    /// Index into `combatants` of whichever row the combat HUD's
+    /// cursor sits on. Persists so the GM lands exactly where they
+    /// left off.
+    #[serde(default)]
+    pub combat_idx: usize,
+}
+
+/// One participant in the combat HUD. Indexed against
+/// `Campaign.pcs` / `Campaign.npcs` (not by ID — neither roster
+/// uses stable IDs yet; we patch up on remove instead).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CombatRef {
+    Pc(usize),
+    Npc(usize),
 }
 
 impl Campaign {
@@ -73,6 +152,39 @@ impl Campaign {
         c.date = AmarDate::default();
         c.bortle = 4;
         c
+    }
+
+    /// Promote NPC-portrait assets on the indexed adventure into
+    /// stub `Character` rows on `self.npcs`. Idempotent: skips
+    /// portraits whose name OR absolute portrait path already
+    /// matches an existing NPC. Clears the adventure's
+    /// `npc_portraits` list so NPCs render at one place
+    /// (campaign-level) instead of duplicated under each adventure.
+    /// Returns the count of new NPCs created.
+    pub fn promote_adventure_portraits_to_npcs(&mut self, adv_idx: usize) -> usize {
+        let portraits: Vec<(String, String)> = {
+            let Some(adv) = self.adventures.get(adv_idx) else { return 0; };
+            adv.npc_portraits.iter()
+                .map(|p| (p.name.clone(),
+                          adv.absolute(&p.path).to_string_lossy().to_string()))
+                .collect()
+        };
+        let mut created = 0;
+        for (name, abs_path) in portraits {
+            let already = self.npcs.iter().any(|n|
+                n.name == name
+                || (!n.portrait_path.is_empty() && n.portrait_path == abs_path));
+            if already { continue; }
+            let mut ch = Character::new_blank(&name);
+            ch.is_pc = false;
+            ch.portrait_path = abs_path;
+            self.npcs.push(ch);
+            created += 1;
+        }
+        if let Some(adv) = self.adventures.get_mut(adv_idx) {
+            adv.npc_portraits.clear();
+        }
+        created
     }
 
     pub fn save(&self) -> std::io::Result<()> {
