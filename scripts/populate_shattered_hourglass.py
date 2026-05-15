@@ -529,7 +529,28 @@ def match_key(name: str) -> str | None:
     return None
 
 
+def amar_is_running() -> bool:
+    """amar holds the campaign in memory and writes it back on quit /
+    on certain ops, so if it's running while we modify campaign.json,
+    its in-memory (pre-populate) state will overwrite our changes on
+    the next save. Detect + warn."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["pgrep", "-af", "/release/amar"],
+            capture_output=True, text=True,
+        ).stdout
+    except FileNotFoundError:
+        return False
+    return any("/release/amar" in ln for ln in out.splitlines())
+
+
 def main():
+    if amar_is_running():
+        print("ERROR: amar appears to be running. Quit amar (q) first —")
+        print("       otherwise it'll overwrite this script's changes on")
+        print("       its next save (quit / promote / etc.).")
+        raise SystemExit(1)
     with open(CAMP_PATH) as f:
         camp = json.load(f)
 
