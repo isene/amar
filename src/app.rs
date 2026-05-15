@@ -1008,7 +1008,11 @@ impl App {
             crate::pc::WeaponKind::Melee   => "melee",
             crate::pc::WeaponKind::Missile => "missile",
         };
-        let name = self.footer.ask(&format!(" New {} weapon name: ", kind_name), "");
+        let Some(name) = self.footer.ask_or_cancel(
+            &format!(" New {} weapon name: ", kind_name), "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let name = name.trim().to_string();
         if name.is_empty() {
             self.status_msg("Cancelled.", t::WARN);
@@ -1017,7 +1021,11 @@ impl App {
         // Quick add — just ask for the weapon's name and skill (e.g.
         // "Sword", "Bow"). Every other field defaults to 0; the user
         // walks the editable rows on the sheet to fill them in.
-        let skill = self.footer.ask(" Weapon skill (e.g. Sword, Bow): ", "");
+        let Some(skill) = self.footer.ask_or_cancel(
+            " Weapon skill (e.g. Sword, Bow): ", "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let skill = skill.trim().to_string();
 
         if let Some(c) = self.campaign.as_mut() {
@@ -1246,13 +1254,20 @@ impl App {
             self.status_msg("Move the cursor onto an attribute or skill row first.", t::WARN);
             return;
         };
-        let name = self.footer.ask(&format!(" New skill under {} (name): ", attr), "");
+        let Some(name) = self.footer.ask_or_cancel(
+            &format!(" New skill under {} (name): ", attr), "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let name = name.trim().to_string();
         if name.is_empty() {
             self.status_msg("Cancelled.", t::WARN);
             return;
         }
-        let rank_str = self.footer.ask(" Initial rank [0]: ", "0");
+        let Some(rank_str) = self.footer.ask_or_cancel(" Initial rank [0]: ", "0") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let rank: i32 = rank_str.trim().parse().unwrap_or(0);
 
         // Find the active character (PC or NPC) and add the skill.
@@ -1334,7 +1349,10 @@ impl App {
         } else {
             format!("{}: ", field.label)
         };
-        let value = self.footer.ask(&prompt, &field.current);
+        let Some(value) = self.footer.ask_or_cancel(&prompt, &field.current) else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         // Resolve the cursor to either a PC or NPC, then commit.
         // PCs + NPCs share the Character struct so the set_field
         // codepath is identical — only the campaign vector differs.
@@ -1540,8 +1558,11 @@ impl App {
         let listing: String = npcs.iter().enumerate()
             .map(|(i, n)| format!("{}={}", i + 1, n.name))
             .collect::<Vec<_>>().join(", ");
-        let answer = self.footer.ask(
-            &format!(" Promote NPC # ({}): ", listing), "1");
+        let Some(answer) = self.footer.ask_or_cancel(
+            &format!(" Promote NPC # ({}): ", listing), "1") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let n: usize = match answer.trim().parse::<usize>() {
             Ok(n) if n >= 1 && n <= npcs.len() => n,
             _ => {
@@ -1559,8 +1580,11 @@ impl App {
     /// NPC, since recruiting an encounter NPC into the tracked-NPC
     /// list is the usual case; promotion to a playable PC is rarer.
     fn prompt_roster_and_promote(&mut self, character: crate::pc::Character, name: &str) {
-        let answer = self.footer.ask(
-            &format!(" Promote '{}' to (n)PC / (p)C [n]: ", name), "n");
+        let Some(answer) = self.footer.ask_or_cancel(
+            &format!(" Promote '{}' to (n)PC / (p)C [n]: ", name), "n") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let to_pc = matches!(answer.trim(), "p" | "P");
         self.promote_character(character, name, to_pc);
     }
@@ -1798,7 +1822,10 @@ impl App {
                 "Load a campaign first (Campaign tab → C / L).", t::WARN);
             return;
         }
-        let name = self.footer.ask(" New adventure name: ", "");
+        let Some(name) = self.footer.ask_or_cancel(" New adventure name: ", "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let name = name.trim().to_string();
         if name.is_empty() {
             self.status_msg("Cancelled.", t::WARN);
@@ -1809,9 +1836,12 @@ impl App {
         // override by typing any path; `~` expansion supported.
         let camp_name = self.campaign.as_ref().unwrap().name.clone();
         let default_root = format!("~/Main/G/AMAR/{}/{}", camp_name, name);
-        let root = self.footer.ask(
+        let Some(root) = self.footer.ask_or_cancel(
             &format!(" Root dir [{}]: ", default_root),
-            &default_root);
+            &default_root) else {
+            self.status_msg("Cancelled.", t::WARN);
+            return;
+        };
         let root = root.trim();
         let root = if root.is_empty() { &default_root } else { root };
         let root_path = std::path::PathBuf::from(shellexpand_simple(root));
@@ -2977,7 +3007,7 @@ impl App {
             Some((_, g)) => *g,
             None => return,
         };
-        self.forge_output = match gen {
+        let new_output = match gen {
             ForgeGen::WeatherToday  => self.forge_weather_today(),
             ForgeGen::WeatherMonth  => self.forge_weather_month(),
             ForgeGen::Names         => self.forge_names_prompt(),
@@ -2991,7 +3021,12 @@ impl App {
                 style::fg("  This is a Phase-3 generator (large data tables).", t::FG_MUTED).to_string(),
             ],
         };
-        self.right_pane.ix = 0;
+        // Empty Vec = the prompt was cancelled with ESC. Keep the
+        // previous forge_output so the screen doesn't blank out.
+        if !new_output.is_empty() {
+            self.forge_output = new_output;
+            self.right_pane.ix = 0;
+        }
     }
 
 
@@ -3118,9 +3153,16 @@ impl App {
 
         // Step 2: footer prompts now ask only for the small inputs
         // (number + count), so they fit on the status line cleanly.
-        let cat_str = self.footer.ask(" Category #: ", "0");
+        // ESC at any step cancels the whole flow.
+        let Some(cat_str) = self.footer.ask_or_cancel(" Category #: ", "0") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let cat: usize = cat_str.trim().parse().unwrap_or(0);
-        let n_str = self.footer.ask(" How many? ", "10");
+        let Some(n_str) = self.footer.ask_or_cancel(" How many? ", "10") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let n: usize = n_str.trim().parse().unwrap_or(10).clamp(1, 200);
 
         // Step 3: build the result. Caller assigns this back into
@@ -3169,14 +3211,23 @@ impl App {
         self.right_pane.ix = 0;
         self.right_pane.full_refresh();
 
-        // Step 2 — small footer prompts.
-        let idx_str = self.footer.ask(" Chartype #: ", "0");
+        // Step 2 — small footer prompts. ESC at any step cancels.
+        let Some(idx_str) = self.footer.ask_or_cancel(" Chartype #: ", "0") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let idx: usize = idx_str.trim().parse().unwrap_or(0);
         let cname: &str = crate::forge::data::CHARTYPES.get(idx)
             .map(|c| c.name).unwrap_or("Commoner");
-        let lvl_str = self.footer.ask(" Level (1-6): ", "3");
+        let Some(lvl_str) = self.footer.ask_or_cancel(" Level (1-6): ", "3") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let level: u8 = lvl_str.trim().parse().unwrap_or(3).clamp(1, 9);
-        let sex_str = self.footer.ask(" Sex (M/F or empty for random): ", "");
+        let Some(sex_str) = self.footer.ask_or_cancel(" Sex (M/F or empty for random): ", "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let sex = sex_str.trim();
         let sex = if sex.eq_ignore_ascii_case("m") { "M" }
                   else if sex.eq_ignore_ascii_case("f") { "F" }
@@ -3227,12 +3278,21 @@ impl App {
         self.right_pane.ix = 0;
         self.right_pane.full_refresh();
 
-        // Step 2 — small footer prompts.
-        let t_str = self.footer.ask(" Terrain # (0-7): ", "2");
+        // Step 2 — small footer prompts. ESC at any step cancels.
+        let Some(t_str) = self.footer.ask_or_cancel(" Terrain # (0-7): ", "2") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let t: usize = t_str.trim().parse().unwrap_or(2).clamp(0, 7);
-        let dn = self.footer.ask(" Day or night (d/n): ", "d");
+        let Some(dn) = self.footer.ask_or_cancel(" Day or night (d/n): ", "d") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let day = !dn.trim().eq_ignore_ascii_case("n");
-        let lm_str = self.footer.ask(" Level modifier (e.g. 0, +1, -1): ", "0");
+        let Some(lm_str) = self.footer.ask_or_cancel(" Level modifier (e.g. 0, +1, -1): ", "0") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let lm: i32 = lm_str.trim().parse().unwrap_or(0);
 
         // Step 3 — roll + format. The encounter is stashed on the App
@@ -3266,9 +3326,15 @@ impl App {
         self.right_pane.ix = 0;
         self.right_pane.full_refresh();
 
-        // Step 2 — small footer prompts.
-        let name = self.footer.ask(" Town name (blank = auto): ", "");
-        let size_str = self.footer.ask(" Target size (number of buildings): ", "15");
+        // Step 2 — small footer prompts. ESC at either step cancels.
+        let Some(name) = self.footer.ask_or_cancel(" Town name (blank = auto): ", "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
+        let Some(size_str) = self.footer.ask_or_cancel(" Target size (number of buildings): ", "15") else {
+            self.status_msg("Cancelled.", t::WARN);
+            return Vec::new();
+        };
         let size: u32 = size_str.trim().parse().unwrap_or(15).clamp(1, 500);
 
         // Step 3 — build + format. The Town is stashed on the App so
