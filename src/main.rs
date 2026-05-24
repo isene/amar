@@ -6,6 +6,7 @@ mod adventure;
 mod app;
 mod calendar;
 mod canon;
+mod combat;
 mod dice;
 mod forge;
 mod lore;

@@ -4,7 +4,7 @@
 
 **The Amar RPG companion. Written in Rust.**
 
-![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.1.34-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
+![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.1.36-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
 Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five-tab TUI: a Forge for NPCs / encounters / towns / weather, a persistent Campaign tracker with adventure import and scene images, a live Session HUD, browsable Lore from the canon wiki, and AI-assisted Inspire prompts. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
 
@@ -113,6 +113,8 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | G | Generate scene image for the cursor section |
 | E | End current session — writes banner + advances section pointer |
 | c | Rename file under cursor (pointer convention) |
+| t | Tag for combat: PC/NPC → binary toggle; saved encounter → tag next inner NPC (press 9 times for 9 rats) |
+| T | Untag: PC/NPC → remove if tagged; saved encounter → drop highest-indexed tagged NPC |
 
 ### Lore tab
 

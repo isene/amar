@@ -124,25 +124,31 @@ pub struct Campaign {
     /// in the status line so resuming next session is friction-free.
     #[serde(default)]
     pub active_adventure_id: Option<u64>,
-    /// Active combat HUD roster. Cleared via `c` in the Session tab,
-    /// otherwise persists between launches so a paused fight resumes
-    /// next session without re-keying participants.
+    /// Active fight on the Combat tab. `None` between fights; set
+    /// when `C` is pressed with a non-empty tag pool, scrubbed when
+    /// `C` is pressed on the Combat tab itself with `y` confirm.
     #[serde(default)]
-    pub combatants: Vec<CombatRef>,
-    /// Index into `combatants` of whichever row the combat HUD's
-    /// cursor sits on. Persists so the GM lands exactly where they
-    /// left off.
+    pub combat: Option<crate::combat::CombatState>,
+    /// Cross-source tag pool. Filled by `t` on any browsable row
+    /// (PC, NPC, encounter). Drained when `C` launches a combat;
+    /// persisted across sessions so a half-built roster survives a
+    /// quit.
     #[serde(default)]
-    pub combat_idx: usize,
+    pub tagged: crate::combat::TagPool,
 }
 
 /// One participant in the combat HUD. Indexed against
 /// `Campaign.pcs` / `Campaign.npcs` (not by ID — neither roster
 /// uses stable IDs yet; we patch up on remove instead).
+///
+/// `EncounterNpc` points into `saved_encounters[enc_idx].item.npcs[npc_idx]`
+/// so a rolled batch (e.g. nine giant rats) can be tagged per-instance
+/// without copying the stat blocks into the campaign NPC roster.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CombatRef {
     Pc(usize),
     Npc(usize),
+    EncounterNpc { enc_idx: usize, npc_idx: usize },
 }
 
 impl Campaign {

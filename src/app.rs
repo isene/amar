@@ -16,24 +16,28 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
-    Session,
     Forge,
     Campaign,
     Lore,
     Inspire,
+    /// Combat — populated by `C` from the cross-source tag pool +
+    /// active campaign PCs.
+    Combat,
 }
 
 impl Tab {
     fn name(self) -> &'static str {
         match self {
-            Tab::Session => "Session",
             Tab::Forge => "Forge",
             Tab::Campaign => "Campaign",
             Tab::Lore => "Lore",
             Tab::Inspire => "Inspire",
+            Tab::Combat => "Combat",
         }
     }
-    fn all() -> [Tab; 5] { [Tab::Inspire, Tab::Forge, Tab::Campaign, Tab::Session, Tab::Lore] }
+    fn all() -> [Tab; 5] {
+        [Tab::Inspire, Tab::Forge, Tab::Campaign, Tab::Combat, Tab::Lore]
+    }
     fn next(self) -> Tab {
         let all = Tab::all();
         let i = all.iter().position(|t| *t == self).unwrap_or(0);
@@ -68,6 +72,10 @@ pub enum ForgeGen {
 /// and PgUp/PgDown keys to the correct pane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Focus { Left, Right }
+
+/// Cardinal direction for grid-style navigation on the Combat tab.
+#[derive(Debug, Clone, Copy)]
+pub enum Dir { Left, Right, Up, Down }
 
 pub struct App {
     pub canon: Canon,
@@ -383,7 +391,7 @@ impl App {
                 "1" => { self.set_tab(Tab::Inspire); }
                 "2" => { self.set_tab(Tab::Forge); }
                 "3" => { self.set_tab(Tab::Campaign); }
-                "4" => { self.set_tab(Tab::Session); }
+                "4" => { self.set_tab(Tab::Combat); }
                 "5" => { self.set_tab(Tab::Lore); }
                 "C-RIGHT" => { self.set_tab(self.tab.next()); }
                 "C-LEFT"  => { self.set_tab(self.tab.prev()); }
@@ -401,19 +409,48 @@ impl App {
                 "w" => { self.cycle_width(false); }
                 "W" => { self.cycle_width(true); }
                 "?" => self.show_help(),
-                "C" => { self.campaign_create(); self.render_all(); }
-                "L" => { self.campaign_load(); self.render_all(); }
+                "C" => {
+                    // `C` is overloaded:
+                    //  - on the Combat tab, the per-tab handler runs
+                    //    (scrub prompt). Pass through.
+                    //  - elsewhere with a non-empty tag pool, launch
+                    //    a combat from the pool + all active PCs.
+                    //  - elsewhere with an empty tag pool, fall back
+                    //    to the legacy "create new campaign" path.
+                    if matches!(self.tab, Tab::Combat) {
+                        self.handle_tab_key("C");
+                        self.render_all();
+                    } else if self.campaign.as_ref().map(|c| !c.tagged.is_empty()).unwrap_or(false) {
+                        self.combat_launch_from_tags();
+                        self.render_all();
+                    } else {
+                        self.campaign_create();
+                        self.render_all();
+                    }
+                }
+                "L" => {
+                    // Combat tab uses `L` to cycle lighting; pass it
+                    // through. Other tabs treat it as Load Campaign.
+                    if matches!(self.tab, Tab::Combat) {
+                        self.handle_tab_key("L");
+                        self.render_all();
+                    } else {
+                        self.campaign_load();
+                        self.render_all();
+                    }
+                }
                 "X" => { self.campaign_delete(); self.render_all(); }
                 "r" => {
-                    // Forge uses `r` for the relations map of the
-                    // last-generated town. The focus side doesn't
-                    // matter — the right pane is where the graph
-                    // lands either way, so `r` works whether the
-                    // cursor is on the generator list (Left) or
-                    // already on the output (Right). Everywhere
-                    // else `r` is just a redraw shortcut.
+                    // Forge uses `r` for the last town's relations
+                    // map; Combat uses `r` for "next round". Pass
+                    // through to the per-tab handler so the Combat
+                    // tab's handler sees it. Other tabs treat `r`
+                    // as a redraw shortcut.
                     if matches!(self.tab, Tab::Forge) && self.forge_town.is_some() {
                         self.show_town_relations();
+                    } else if matches!(self.tab, Tab::Combat) {
+                        self.handle_tab_key("r");
+                        self.render_all();
                     } else {
                         self.render_all();
                     }
@@ -429,8 +466,13 @@ impl App {
                     self.rebuild_panes();
                     self.render_all();
                 }
-                "o" => { self.roll_status(false); self.render_all(); }
-                "O" => { self.roll_status(true);  self.render_all(); }
+                // Global O6 / combat-O6 used to be `o` / `O`, but the
+                // Combat tab needs `o` / `d` / `D` for Offensive /
+                // Defensive / Damage rolls on the selected card. Move
+                // them out of the way to `6` / `^` so the Combat tab's
+                // per-tab handler can take `o`.
+                "6" => { self.roll_status(false); self.render_all(); }
+                "^" => { self.roll_status(true);  self.render_all(); }
                 "A" => {
                     // Forge: hand the last-generated artefact (encounter
                     // for now; NPC / town / weather hooks slot in later)
@@ -611,150 +653,735 @@ impl App {
             Tab::Campaign => self.handle_campaign_key(key),
             Tab::Forge    => self.handle_forge_key(key),
             Tab::Inspire  => self.handle_inspire_key(key),
-            Tab::Session  => self.handle_session_key(key),
-            _ => {}
+            Tab::Combat   => self.handle_combat_key(key),
         }
     }
 
-    /// Combat-HUD key handler. Operates on `camp.combatants` /
-    /// `camp.combat_idx` + the bp_current / mf_current of the selected
-    /// PC or NPC. Persists every change via Campaign::save so the
-    /// fight survives a quit-relaunch mid-session.
-    fn handle_session_key(&mut self, key: &str) {
-        match key {
-            "j" | "DOWN" => {
-                if let Some(c) = self.campaign.as_mut() {
-                    if c.combat_idx + 1 < c.combatants.len() { c.combat_idx += 1; }
-                }
-            }
-            "k" | "UP" => {
-                if let Some(c) = self.campaign.as_mut() {
-                    if c.combat_idx > 0 { c.combat_idx -= 1; }
-                }
-            }
-            "+" => { self.combat_hp_delta(1); }
-            "-" => { self.combat_hp_delta(-1); }
-            "M" => { self.combat_mf_delta(1); }
-            "m" => { self.combat_mf_delta(-1); }
-            "A" => { self.combat_add_all_pcs(); }
-            "a" => { self.combat_add_by_name(); }
-            "d" => { self.combat_remove_selected(); }
-            "c" => { self.combat_clear(); }
-            "N" => { self.append_section_note(); }
-            "E" => { self.end_current_session(); }
-            _ => {}
-        }
-    }
 
-    fn combat_hp_delta(&mut self, delta: i32) {
+    // ------------------------------------------------------------------
+    // Combat tab — rich state machine on top of Campaign.combat / .tagged.
+    // Skeleton handlers wired in v0.x; full keybindings filled in across
+    // tasks #113–#118.
+    // ------------------------------------------------------------------
+
+    /// Launch a fresh combat from the tag pool + all active campaign
+    /// PCs. Confirms before scrubbing an in-progress combat. Drains
+    /// the tag pool, populates the CombatState, jumps to Combat tab.
+    fn combat_launch_from_tags(&mut self) {
+        if self.campaign.as_ref()
+            .map(|c| c.combat.is_some()).unwrap_or(false)
+        {
+            let ans = self.footer.ask(
+                " Combat in progress — replace with new fight? (y/N): ", "");
+            if !matches!(ans.trim(), "y" | "Y") { return; }
+        }
         let Some(c) = self.campaign.as_mut() else { return };
-        let Some(r) = c.combatants.get(c.combat_idx).copied() else { return };
-        let ch_opt = match r {
-            crate::store::CombatRef::Pc(i)  => c.pcs.get_mut(i),
-            crate::store::CombatRef::Npc(i) => c.npcs.get_mut(i),
-        };
-        if let Some(ch) = ch_opt {
-            let new = (ch.bp_current + delta).max(0).min(ch.bp_max());
-            ch.bp_current = new;
+        // Build participant list: tagged items first (in tag order),
+        // then any active PC not already present. Active PC = anything
+        // currently in c.pcs (no separate active flag yet).
+        let mut refs: Vec<crate::store::CombatRef> = c.tagged.refs.clone();
+        for i in 0..c.pcs.len() {
+            let r = crate::store::CombatRef::Pc(i);
+            if !refs.contains(&r) { refs.push(r); }
         }
-        let _ = c.save();
-    }
-
-    fn combat_mf_delta(&mut self, delta: i32) {
-        let Some(c) = self.campaign.as_mut() else { return };
-        let Some(r) = c.combatants.get(c.combat_idx).copied() else { return };
-        let ch_opt = match r {
-            crate::store::CombatRef::Pc(i)  => c.pcs.get_mut(i),
-            crate::store::CombatRef::Npc(i) => c.npcs.get_mut(i),
-        };
-        if let Some(ch) = ch_opt {
-            let new = (ch.mf_current + delta).max(0).min(ch.mf_max());
-            ch.mf_current = new;
-        }
-        let _ = c.save();
-    }
-
-    fn combat_add_all_pcs(&mut self) {
-        let n_pcs;
-        if let Some(c) = self.campaign.as_mut() {
-            n_pcs = c.pcs.len();
-            for i in 0..n_pcs {
-                let r = crate::store::CombatRef::Pc(i);
-                if !c.combatants.contains(&r) {
-                    c.combatants.push(r);
-                }
-            }
-            // Reset current_bp / mf to max if they're 0 (typically
-            // means stale state from a previous fight that ended).
-            for r in c.combatants.clone() {
-                if let crate::store::CombatRef::Pc(i) = r {
-                    if let Some(pc) = c.pcs.get_mut(i) {
-                        if pc.bp_current == 0 { pc.bp_current = pc.bp_max(); }
-                        if pc.mf_current == 0 { pc.mf_current = pc.mf_max(); }
-                    }
-                }
-            }
-            let _ = c.save();
-        } else {
+        if refs.is_empty() {
+            self.status_msg("Nothing to fight — tag at least one NPC.", t::WARN);
             return;
         }
+        let participants: Vec<crate::combat::Participant> = refs.into_iter()
+            .map(crate::combat::Participant::new)
+            .collect();
+        let mut cb = crate::combat::CombatState::new();
+        cb.participants = participants;
+        cb.selected = 0;
+        c.combat = Some(cb);
+        c.tagged.clear();
+        let n = c.combat.as_ref().map(|x| x.participants.len()).unwrap_or(0);
+        let _ = c.save();
+        self.status_msg(&format!("Combat launched — {} participants.", n), t::OK);
+        self.set_tab(Tab::Combat);
+    }
+
+    /// `t` on the Campaign tree.
+    ///
+    /// * PC / NPC row → binary toggle (was, remains).
+    /// * Saved-encounter row → tag the next untagged NPC inside the
+    ///   encounter (rats #1, #2, … in order). Cap at the encounter's
+    ///   rolled count.
+    /// * Anything else → status warn.
+    fn combat_tag_at_cursor(&mut self) {
+        let Some(camp) = self.campaign.as_ref() else { return };
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        let Some(node) = tree.get(self.camp_idx).map(|t| t.node.clone()) else {
+            self.status_msg("Nothing taggable here.", t::WARN);
+            return;
+        };
+        match node {
+            CampNode::Pc(i)  => self.tag_toggle_single(crate::store::CombatRef::Pc(i)),
+            CampNode::Npc(i) => self.tag_toggle_single(crate::store::CombatRef::Npc(i)),
+            CampNode::SavedForge(SavedKind::Encounter, idx) => {
+                self.tag_encounter_add(idx);
+            }
+            _ => self.status_msg(
+                "Nothing taggable here — move to a PC, NPC, or saved encounter.",
+                t::WARN),
+        }
+    }
+
+    /// `T` on the Campaign tree.
+    ///
+    /// * PC / NPC row → untag if tagged (no-op otherwise).
+    /// * Saved-encounter row → untag the highest currently-tagged NPC
+    ///   inside the encounter.
+    fn combat_untag_at_cursor(&mut self) {
+        let Some(camp) = self.campaign.as_ref() else { return };
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        let Some(node) = tree.get(self.camp_idx).map(|t| t.node.clone()) else { return };
+        match node {
+            CampNode::Pc(i)  => self.tag_remove_if_present(crate::store::CombatRef::Pc(i)),
+            CampNode::Npc(i) => self.tag_remove_if_present(crate::store::CombatRef::Npc(i)),
+            CampNode::SavedForge(SavedKind::Encounter, idx) => {
+                self.tag_encounter_remove(idx);
+            }
+            _ => {}
+        }
+    }
+
+    /// PC/NPC binary toggle helper. `t` semantics on unique rows.
+    fn tag_toggle_single(&mut self, r: crate::store::CombatRef) {
+        let (now_tagged, n) = {
+            let Some(c) = self.campaign.as_mut() else { return };
+            let added = c.tagged.toggle(r);
+            let n = c.tagged.len();
+            let _ = c.save();
+            (added, n)
+        };
+        let verb = if now_tagged { "Tagged" } else { "Untagged" };
+        self.status_msg(&format!("{} ({} in pool).", verb, n), t::OK);
+    }
+
+    /// PC/NPC `T` (untag-if-tagged). No-op if not currently tagged.
+    fn tag_remove_if_present(&mut self, r: crate::store::CombatRef) {
+        enum Outcome { Removed(usize), NotTagged(usize), NoCampaign }
+        let outcome = {
+            let Some(c) = self.campaign.as_mut() else { return };
+            if !c.tagged.refs.contains(&r) {
+                Outcome::NotTagged(c.tagged.len())
+            } else {
+                c.tagged.refs.retain(|x| *x != r);
+                let n = c.tagged.len();
+                let _ = c.save();
+                Outcome::Removed(n)
+            }
+        };
+        match outcome {
+            Outcome::Removed(n)    => self.status_msg(
+                &format!("Untagged ({} in pool).", n), t::OK),
+            Outcome::NotTagged(n)  => self.status_msg(
+                &format!("Not tagged ({} in pool).", n), t::WARN),
+            Outcome::NoCampaign    => {}
+        }
+    }
+
+    /// `t` on a saved-encounter row: add the lowest-indexed inner NPC
+    /// that isn't yet in the tag pool. Caps at the encounter's count.
+    fn tag_encounter_add(&mut self, enc_idx: usize) {
+        let (added_idx, total, pool_n, enc_name) = {
+            let Some(c) = self.campaign.as_mut() else { return };
+            let Some(saved) = c.saved_encounters.get(enc_idx) else { return };
+            let total = saved.item.npcs.len();
+            let name = saved.name.clone();
+            let mut chosen: Option<usize> = None;
+            for i in 0..total {
+                let r = crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx: i };
+                if !c.tagged.refs.contains(&r) { chosen = Some(i); break; }
+            }
+            let Some(i) = chosen else {
+                self.status_msg(
+                    &format!("All {} already tagged from {}.", total, name), t::WARN);
+                return;
+            };
+            c.tagged.refs.push(
+                crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx: i });
+            let pool_n = c.tagged.len();
+            let _ = c.save();
+            (i, total, pool_n, name)
+        };
+        let tagged_from_enc = self.encounter_tagged_count(enc_idx);
         self.status_msg(
-            &format!("Added all {} PCs to the fight.", n_pcs),
+            &format!("Tagged {} #{} ({}/{} from encounter, {} in pool).",
+                enc_name, added_idx + 1, tagged_from_enc, total, pool_n),
             t::OK);
     }
 
-    fn combat_add_by_name(&mut self) {
+    /// `T` on a saved-encounter row: remove the highest-indexed inner
+    /// NPC currently tagged from this encounter.
+    fn tag_encounter_remove(&mut self, enc_idx: usize) {
+        let (removed_idx, total, pool_n, enc_name) = {
+            let Some(c) = self.campaign.as_mut() else { return };
+            let Some(saved) = c.saved_encounters.get(enc_idx) else { return };
+            let total = saved.item.npcs.len();
+            let name = saved.name.clone();
+            let mut chosen: Option<usize> = None;
+            for i in (0..total).rev() {
+                let r = crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx: i };
+                if c.tagged.refs.contains(&r) { chosen = Some(i); break; }
+            }
+            let Some(i) = chosen else {
+                self.status_msg(
+                    &format!("None tagged from {}.", name), t::WARN);
+                return;
+            };
+            c.tagged.refs.retain(|r| !matches!(r,
+                crate::store::CombatRef::EncounterNpc { enc_idx: e, npc_idx: n }
+                    if *e == enc_idx && *n == i));
+            let pool_n = c.tagged.len();
+            let _ = c.save();
+            (i, total, pool_n, name)
+        };
+        let tagged_from_enc = self.encounter_tagged_count(enc_idx);
+        self.status_msg(
+            &format!("Untagged {} #{} ({}/{} from encounter, {} in pool).",
+                enc_name, removed_idx + 1, tagged_from_enc, total, pool_n),
+            t::OK);
+    }
+
+    /// Count tags currently pinned to a given saved encounter.
+    fn encounter_tagged_count(&self, enc_idx: usize) -> usize {
+        let Some(c) = self.campaign.as_ref() else { return 0 };
+        c.tagged.refs.iter().filter(|r| matches!(r,
+            crate::store::CombatRef::EncounterNpc { enc_idx: e, .. } if *e == enc_idx))
+            .count()
+    }
+
+    fn handle_combat_key(&mut self, key: &str) {
+        match key {
+            "LEFT"  | "h" => self.combat_move(Dir::Left),
+            "RIGHT" | "l" => self.combat_move(Dir::Right),
+            "UP"    | "k" => self.combat_move(Dir::Up),
+            "DOWN"  | "j" => self.combat_move(Dir::Down),
+            "i"          => self.combat_roll_init(false),
+            "I"          => self.combat_roll_init(true),
+            "o"          => self.combat_roll(crate::combat::RollKind::Off),
+            "d"          => self.combat_roll(crate::combat::RollKind::Def),
+            "D"          => self.combat_roll(crate::combat::RollKind::Dam),
+            "w"          => self.combat_cycle_weapon(),
+            "+"          => self.combat_bp_delta(1),
+            "-"          => self.combat_bp_delta(-1),
+            "M"          => self.combat_tab_mf_delta(1),
+            "F"          => self.combat_tab_mf_delta(-1),
+            "a"          => self.combat_tab_add_by_name(),
+            "x"          => self.combat_tab_remove_selected(),
+            "s"          => self.combat_status_menu(),
+            "m"          => self.combat_cycle_movement(),
+            "L"          => self.combat_cycle_lighting(),
+            "n"          => self.combat_toggle_non_attack(),
+            "E"          => self.combat_set_encumbrance(),
+            "r"          => self.combat_next_round(),
+            "C"          => self.combat_scrub_prompt(),
+            _ => {}
+        }
+    }
+
+    /// `+` / `-` change the selected participant's current BP. Lower
+    /// bound is `-bp_max` so the GM can drive a participant all the
+    /// way to the death threshold; further damage past that is
+    /// meaningless (already dead, dark-grey card), so we clamp there
+    /// to avoid accidental absurd negatives from key-mash.
+    fn combat_bp_delta(&mut self, delta: i32) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_ref() else { return };
+        let Some(p) = cb.participants.get(cb.selected) else { return };
+        let r = p.r;
+        let ch_opt: Option<&mut crate::pc::Character> = match r {
+            crate::store::CombatRef::Pc(i)  => c.pcs.get_mut(i),
+            crate::store::CombatRef::Npc(i) => c.npcs.get_mut(i),
+            crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx } =>
+                c.saved_encounters.get_mut(enc_idx)
+                    .and_then(|s| s.item.npcs.get_mut(npc_idx)),
+        };
+        if let Some(ch) = ch_opt {
+            let max = ch.bp_max();
+            ch.bp_current = (ch.bp_current + delta).clamp(-max, max);
+        }
+        let _ = c.save();
+    }
+
+    /// `M` / `F` change Mental Fortitude (spells / mental damage).
+    /// Capital M to add, F to subtract — keeps the case asymmetry of
+    /// the existing Session HUD (`M` up, `m` down) but `m` is taken by
+    /// Movement on this tab.
+    fn combat_tab_mf_delta(&mut self, delta: i32) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_ref() else { return };
+        let Some(p) = cb.participants.get(cb.selected) else { return };
+        let r = p.r;
+        let ch_opt: Option<&mut crate::pc::Character> = match r {
+            crate::store::CombatRef::Pc(i)  => c.pcs.get_mut(i),
+            crate::store::CombatRef::Npc(i) => c.npcs.get_mut(i),
+            crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx } =>
+                c.saved_encounters.get_mut(enc_idx)
+                    .and_then(|s| s.item.npcs.get_mut(npc_idx)),
+        };
+        if let Some(ch) = ch_opt {
+            let max = ch.mf_max();
+            ch.mf_current = (ch.mf_current + delta).clamp(0, max);
+        }
+        let _ = c.save();
+    }
+
+    /// `a` — name-substring picker over campaign PCs + NPCs. Adds
+    /// any match that isn't already in the participant list.
+    fn combat_tab_add_by_name(&mut self) {
         if self.campaign.is_none() { return; }
         let needle = self.footer.ask(" Add to combat — name substring: ", "");
         let needle = needle.trim().to_lowercase();
         if needle.is_empty() { return; }
         let mut added = 0;
         let Some(c) = self.campaign.as_mut() else { return };
+        let mut to_add: Vec<crate::store::CombatRef> = Vec::new();
         for i in 0..c.pcs.len() {
             if c.pcs[i].name.to_lowercase().contains(&needle) {
-                let r = crate::store::CombatRef::Pc(i);
-                if !c.combatants.contains(&r) {
-                    c.combatants.push(r);
-                    added += 1;
-                }
+                to_add.push(crate::store::CombatRef::Pc(i));
             }
         }
         for i in 0..c.npcs.len() {
             if c.npcs[i].name.to_lowercase().contains(&needle) {
-                let r = crate::store::CombatRef::Npc(i);
-                if !c.combatants.contains(&r) {
-                    c.combatants.push(r);
+                to_add.push(crate::store::CombatRef::Npc(i));
+            }
+        }
+        if let Some(cb) = c.combat.as_mut() {
+            for r in to_add {
+                let exists = cb.participants.iter().any(|p| p.r == r);
+                if !exists {
+                    cb.participants.push(crate::combat::Participant::new(r));
                     added += 1;
                 }
             }
         }
         let _ = c.save();
         self.status_msg(
-            &format!("Added {} combatant{}.", added,
-                if added == 1 { "" } else { "s" }),
+            &format!("Added {} combatant{}.", added, if added == 1 { "" } else { "s" }),
             if added > 0 { t::OK } else { t::WARN });
     }
 
-    fn combat_remove_selected(&mut self) {
+    /// `x` — remove selected participant with confirm. Cursor stays
+    /// on the same row index (clamped) so successive `x` presses
+    /// don't surprise the GM by jumping around.
+    fn combat_tab_remove_selected(&mut self) {
+        let ans = self.footer.ask(" Remove from combat? (y/N): ", "");
+        if !matches!(ans.trim(), "y" | "Y") { return; }
         let Some(c) = self.campaign.as_mut() else { return };
-        if c.combat_idx < c.combatants.len() {
-            c.combatants.remove(c.combat_idx);
-            if c.combat_idx > 0 && c.combat_idx >= c.combatants.len() {
-                c.combat_idx -= 1;
+        let Some(cb) = c.combat.as_mut() else { return };
+        if cb.selected < cb.participants.len() {
+            cb.participants.remove(cb.selected);
+            if cb.selected >= cb.participants.len() && cb.selected > 0 {
+                cb.selected -= 1;
             }
         }
         let _ = c.save();
     }
 
-    fn combat_clear(&mut self) {
-        let answer = self.footer.ask(" Clear combat HUD? (y/N): ", "");
-        if answer.trim() != "y" && answer.trim() != "Y" { return; }
+    /// `s` — manual-status menu. One keystroke toggles each entry.
+    /// `c` opens a free-form custom-status add (label, off, def,
+    /// rounds), `ESC` dismisses.
+    fn combat_status_menu(&mut self) {
+        loop {
+            // Render menu into footer; pop the value via getchr.
+            self.footer.set_text(
+                &style::fg(" Status — p:Partial  s:Stunned  u:Unaware  i:Immobile  c:custom  ESC", t::FG_DIM));
+            self.footer.full_refresh();
+            let Some(k) = Input::getchr(None) else { continue };
+            let toggle = match k.as_str() {
+                "p" => Some(crate::combat::ManualStatus::PartiallyUnaware),
+                "s" => Some(crate::combat::ManualStatus::Stunned),
+                "u" => Some(crate::combat::ManualStatus::Unaware),
+                "i" => Some(crate::combat::ManualStatus::Immobilized),
+                "c" => { self.combat_status_custom_add(); break; }
+                "ESC" | "q" => break,
+                _ => continue,
+            };
+            if let Some(s) = toggle {
+                let Some(c) = self.campaign.as_mut() else { break };
+                let Some(cb) = c.combat.as_mut() else { break };
+                let Some(p) = cb.participants.get_mut(cb.selected) else { break };
+                if let Some(pos) = p.manual_statuses.iter().position(|x| *x == s) {
+                    p.manual_statuses.remove(pos);
+                } else {
+                    p.manual_statuses.push(s);
+                }
+                let _ = c.save();
+            }
+            break;
+        }
+        self.render_footer();
+    }
+
+    /// Sub-prompt for `s` → `c`. Asks for label, off/def mod, rounds.
+    fn combat_status_custom_add(&mut self) {
+        let label = self.footer.ask(" Custom status — label: ", "");
+        if label.trim().is_empty() { return; }
+        let off: i32 = self.footer.ask(" Off mod (e.g. -2): ", "0").trim().parse().unwrap_or(0);
+        let def: i32 = self.footer.ask(" Def mod (e.g. -2): ", "0").trim().parse().unwrap_or(0);
+        let rounds: u32 = self.footer.ask(" Rounds (0 = permanent until removed): ", "3").trim().parse().unwrap_or(3);
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        let Some(p) = cb.participants.get_mut(cb.selected) else { return };
+        p.timed_statuses.push(crate::combat::TimedStatus {
+            label: label.trim().to_string(),
+            off, def, dam: 0,
+            rounds_left: if rounds == 0 { u32::MAX } else { rounds },
+        });
+        let _ = c.save();
+    }
+
+    fn combat_cycle_movement(&mut self) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        let Some(p) = cb.participants.get_mut(cb.selected) else { return };
+        p.movement = p.movement.next();
+        let _ = c.save();
+    }
+
+    fn combat_cycle_lighting(&mut self) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        cb.lighting = cb.lighting.next();
+        let _ = c.save();
+    }
+
+    fn combat_toggle_non_attack(&mut self) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        let Some(p) = cb.participants.get_mut(cb.selected) else { return };
+        p.non_attack = !p.non_attack;
+        let _ = c.save();
+    }
+
+    fn combat_set_encumbrance(&mut self) {
+        let ans = self.footer.ask(
+            " Encumbrance tier (0=none, 1=−1, 2=−3, 3=−5): ", "0");
+        let tier: u8 = ans.trim().parse().unwrap_or(0).min(3);
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        let Some(p) = cb.participants.get_mut(cb.selected) else { return };
+        p.encumbrance_tier = tier;
+        let _ = c.save();
+    }
+
+    /// `r` — advance to next round. Decrement every timed status,
+    /// remove the expired ones, clear per-turn movement + non-attack
+    /// flags, drop init results so the next `i` re-rolls.
+    fn combat_next_round(&mut self) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        cb.round = cb.round.saturating_add(1);
+        for p in cb.participants.iter_mut() {
+            // Tick timed statuses.
+            p.timed_statuses.retain_mut(|ts| {
+                if ts.rounds_left == u32::MAX { return true; }
+                if ts.rounds_left == 0 { return false; }
+                ts.rounds_left -= 1;
+                ts.rounds_left > 0
+            });
+            // Reset per-turn flags.
+            p.movement = crate::combat::Movement::None;
+            p.non_attack = false;
+            // Initiative is per-round; new round → re-roll required.
+            p.init = None;
+            p.init_noweapon = None;
+        }
+        let _ = c.save();
+    }
+
+    /// `i` rolls initiative for the selected; `I` rolls for everyone
+    /// who doesn't have one yet this round (idempotent — already-rolled
+    /// participants are skipped).
+    fn combat_roll_init(&mut self, all: bool) {
+        let mut rng = crate::dice::StdRng::from_time();
+        // Phase 1: gather what we need, immutable.
+        let Some(c) = self.campaign.as_ref() else { return };
+        let Some(cb) = c.combat.as_ref() else { return };
+        let round = cb.round;
+        let indices: Vec<usize> = if all {
+            (0..cb.participants.len()).filter(|i| cb.participants[*i].init.is_none()).collect()
+        } else {
+            vec![cb.selected]
+        };
+
+        // Resolve each index to (i, status_off, reaction, weapon_ini,
+        // weapon_name, name) so the write phase doesn't need to read
+        // back from the campaign.
+        struct Pending {
+            idx: usize,
+            status_off: i32,
+            reaction: i32,
+            weapon_ini: i32,
+            weapon_name: Option<String>,
+            name: String,
+        }
+        let mut pending: Vec<Pending> = Vec::with_capacity(indices.len());
+        for i in indices {
+            let Some(p) = cb.participants.get(i) else { continue };
+            let (so, _sd) = participant_status_off_def(c, cb, p);
+            let ch_opt = character_for_ref(c, &p.r);
+            let (reaction, weapon_ini, weapon_name) = match ch_opt {
+                Some(ch) => {
+                    let w = ch.weapons.get(p.selected_weapon);
+                    let wi = w.map(|w| w.init).unwrap_or(0);
+                    let wn = w.map(|w| w.name.clone());
+                    (ch.reaction(), wi, wn)
+                }
+                None => (0, 0, None),
+            };
+            pending.push(Pending {
+                idx: i, status_off: so, reaction, weapon_ini, weapon_name,
+                name: participant_name(c, p.r),
+            });
+        }
+
+        // Phase 2: apply mutations.
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        for pe in &pending {
+            let roll = crate::dice::o6(&mut rng);
+            let init_with = roll.total + pe.weapon_ini + pe.reaction + pe.status_off;
+            let init_no   = roll.total + pe.reaction + pe.status_off;
+            if let Some(p) = cb.participants.get_mut(pe.idx) {
+                p.init = Some(init_with);
+                p.init_noweapon = Some(init_no);
+            }
+            cb.push_log(crate::combat::RollEntry {
+                round,
+                name: pe.name.clone(),
+                weapon: pe.weapon_name.clone(),
+                kind: crate::combat::RollKind::Init,
+                o6: roll.total,
+                base: pe.weapon_ini + pe.reaction,
+                status_mod: pe.status_off,
+                total: init_with,
+                extra: format!("(no-weapon: {})", init_no),
+            });
+        }
+        let _ = c.save();
+    }
+
+    /// `o` / `d` / `D` — Offensive / Defensive / Damage roll for the
+    /// selected participant against the currently-selected weapon.
+    /// Auto-summed Status flows in for `o` and `d`; damage rolls
+    /// skip Status per the wiki rules.
+    fn combat_roll(&mut self, kind: crate::combat::RollKind) {
+        let mut rng = crate::dice::StdRng::from_time();
+        // Phase 1 — gather everything we need with an immutable borrow.
+        let (round, name, weapon_name, base, status_mod, can_attack) = {
+            let Some(c) = self.campaign.as_ref() else { return };
+            let Some(cb) = c.combat.as_ref() else { return };
+            let Some(p) = cb.participants.get(cb.selected) else { return };
+            let (so, sd) = participant_status_off_def(c, cb, p);
+            let Some(ch) = character_for_ref(c, &p.r) else { return };
+            // Fall back to the wiki's Unarmed weapon row if the
+            // participant has no weapon at the selected slot — that's
+            // the rule, and it also gives the roll log a meaningful
+            // [Unarmed] tag instead of an empty bracket.
+            let unarmed = unarmed_weapon();
+            let w_ref = ch.weapons.get(p.selected_weapon).unwrap_or(&unarmed);
+            let weapon_name = Some(w_ref.name.clone());
+            let (base, smod) = match kind {
+                crate::combat::RollKind::Off => (weapon_off_total(ch, w_ref), so),
+                crate::combat::RollKind::Def => (weapon_def_total(ch, w_ref), sd),
+                crate::combat::RollKind::Dam => (weapon_dam_total(ch, w_ref), 0),
+                _ => (0, 0),
+            };
+            let can_attack = !matches!(kind, crate::combat::RollKind::Off) || so != i32::MIN;
+            (cb.round, ch.name.clone(), weapon_name, base, smod, can_attack)
+        };
+        if !can_attack {
+            self.status_msg("Cannot attack — Status forbids it.", t::WARN);
+            return;
+        }
+        let roll = crate::dice::o6(&mut rng);
+        let total = roll.total + base + status_mod;
+        // Track any timed status we should auto-attach to the
+        // selected participant once the immutable borrow drops.
+        // Per-design: crit / fumble descriptions land as a TimedStatus
+        // with 0/0 modifiers so the card visibly tracks the effect;
+        // the GM edits the modifier values if the table effect
+        // warrants a numerical bonus / penalty.
+        let mut extra = String::new();
+        // Damage rolls also produce a hit-location d6 per the wiki
+        // (Hit Locations in Melee, optional rule). Mapping: d6 →
+        //   6 Head · 5 R. Arm · 4 L. Arm · 3 Body · 2 R. Leg · 1 L. Leg
+        // (matches the ordering in `pc::HIT_LOCATIONS`). The target's
+        // armor for that location is the GM's lookup — they can see
+        // it on the target card and subtract manually.
+        if matches!(kind, crate::combat::RollKind::Dam) {
+            use crate::dice::Rng;
+            let d = rng.d6();
+            let loc = hit_location_for_d6(d);
+            extra = format!("Loc: {}", loc);
+        }
+        // Crit / fumble effects from the wiki tables are a mix of
+        // one-shot ("Hit nearest friend") and multi-round
+        // ("Bleeding 1/rnd for 3"). Parsing the description text to
+        // tell them apart is fragile, so we don't auto-attach
+        // anything — the roll log line records what happened, and
+        // the GM uses `s` → `c` to add a tracked status manually
+        // if the effect actually has a duration.
+        if matches!(roll.outcome, crate::dice::Outcome::Critical) {
+            let tr = crate::dice::roll_critical(&mut rng);
+            let labels: Vec<String> = tr.hits.iter()
+                .map(|h| format!("{}/{}: {}", h.category_name, h.entry, h.description))
+                .collect();
+            extra = format!("Critical! {}", labels.join(" + "));
+        } else if matches!(roll.outcome, crate::dice::Outcome::Fumble) {
+            let tr = crate::dice::roll_fumble(&mut rng);
+            let labels: Vec<String> = tr.hits.iter()
+                .map(|h| format!("{}/{}: {}", h.category_name, h.entry, h.description))
+                .collect();
+            extra = format!("Fumble! {}", labels.join(" + "));
+        }
+        // Phase 2 — apply mutations.
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        cb.push_log(crate::combat::RollEntry {
+            round, name, weapon: weapon_name, kind,
+            o6: roll.total, base, status_mod, total, extra,
+        });
+        let _ = c.save();
+    }
+
+    /// `w` cycles selected_weapon for the active participant.
+    fn combat_cycle_weapon(&mut self) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(cb) = c.combat.as_mut() else { return };
+        let i = cb.selected;
+        let n_wpn = {
+            let Some(p) = cb.participants.get(i) else { return };
+            match p.r {
+                crate::store::CombatRef::Pc(idx)  => c.pcs.get(idx).map(|c| c.weapons.len()),
+                crate::store::CombatRef::Npc(idx) => c.npcs.get(idx).map(|c| c.weapons.len()),
+                crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx } =>
+                    c.saved_encounters.get(enc_idx)
+                        .and_then(|s| s.item.npcs.get(npc_idx))
+                        .map(|c| c.weapons.len()),
+            }.unwrap_or(0)
+        };
+        if n_wpn <= 1 { return; }
+        if let Some(p) = cb.participants.get_mut(i) {
+            p.selected_weapon = (p.selected_weapon + 1) % n_wpn;
+        }
+        let _ = c.save();
+    }
+
+    /// 4-arrow navigation across the 2-band grid (NPCs on top, PCs
+    /// on bottom). UP at the top of the PC band jumps to the bottom
+    /// row of the NPC band (column clamped to that row's actual
+    /// width); DOWN at the bottom of the NPC band jumps to the top
+    /// PC row. Same-band navigation just moves row/col within bounds.
+    fn combat_move(&mut self, dir: Dir) {
+        let body_w = self.body.w as usize;
+        let new_sel = {
+            let Some(c) = self.campaign.as_ref() else { return };
+            let Some(cb) = c.combat.as_ref() else { return };
+            let layout = compute_combat_layout(cb, body_w);
+            let Some((band, row, col)) = locate_in_layout(&layout, cb.selected) else { return };
+            match dir {
+                Dir::Left  => flat_in_layout(&layout, band, row, col.saturating_sub(1)),
+                Dir::Right => flat_in_layout(&layout, band, row, col + 1),
+                Dir::Up => {
+                    if row > 0 {
+                        flat_in_layout(&layout, band, row - 1, col)
+                    } else if band == 1 && layout.npc_rows() > 0 {
+                        flat_in_layout(&layout, 0, layout.npc_rows() - 1, col)
+                    } else { None }
+                }
+                Dir::Down => {
+                    let last_row = match band {
+                        0 => layout.npc_rows().saturating_sub(1),
+                        1 => layout.pc_rows().saturating_sub(1),
+                        _ => 0,
+                    };
+                    if row < last_row {
+                        flat_in_layout(&layout, band, row + 1, col)
+                    } else if band == 0 && layout.pc_rows() > 0 {
+                        flat_in_layout(&layout, 1, 0, col)
+                    } else { None }
+                }
+            }
+        };
+        if let Some(new) = new_sel {
+            let Some(c) = self.campaign.as_mut() else { return };
+            if let Some(cb) = c.combat.as_mut() {
+                cb.selected = new;
+                let _ = c.save();
+            }
+        }
+    }
+
+    /// `C` on the Combat tab → confirm-and-scrub. The matching launch
+    /// path lives on Campaign + other tabs (task #113).
+    fn combat_scrub_prompt(&mut self) {
+        if self.campaign.as_ref().and_then(|c| c.combat.as_ref()).is_none() {
+            self.status_msg("No combat to scrub.", t::WARN);
+            return;
+        }
+        let ans = self.footer.ask(" Scrub combat? (y/N): ", "");
+        if !matches!(ans.trim(), "y" | "Y") { return; }
         if let Some(c) = self.campaign.as_mut() {
-            c.combatants.clear();
-            c.combat_idx = 0;
+            c.combat = None;
+            c.tagged.clear();
             let _ = c.save();
         }
-        self.status_msg("Combat HUD cleared.", t::OK);
+        self.status_msg("Combat scrubbed.", t::OK);
+    }
+
+    /// Full-width Combat tab body: NPC card grid on top, PC card
+    /// grid on the bottom, detail strip for the selected card above
+    /// the footer. Designed for 10+ encounters + up to 8 PCs without
+    /// scrolling on a typical 200x60 terminal.
+    fn render_combat_body(&self) -> Vec<String> {
+        let Some(camp) = self.campaign.as_ref() else {
+            return vec!["  No campaign loaded.".into()];
+        };
+        let Some(cb) = camp.combat.as_ref() else {
+            let tag_n = camp.tagged.len();
+            let hint = if tag_n == 0 {
+                "  No combat in progress.\n\n  Tag encounters / NPCs / monsters with `t` from the\n  Campaign tab, then press `C` to launch combat.".to_string()
+            } else {
+                format!("  No combat in progress.\n\n  {} tagged. Press `C` to launch combat.", tag_n)
+            };
+            return vec![hint];
+        };
+
+        let body_w = self.body.w as usize;
+        let layout = compute_combat_layout(cb, body_w);
+        let card_w = COMBAT_CARD_W;
+
+        let mut out: Vec<String> = Vec::new();
+        out.push(style::bold(&style::fg(
+            &format!(" Round {} · Lighting: {} · NPCs: {} · PCs: {}",
+                cb.round, cb.lighting.label(),
+                layout.npc_indices.len(), layout.pc_indices.len()),
+            t::ACCENT)));
+        out.push(String::new());
+
+        // NPC band (top).
+        emit_combat_band(&mut out, camp, cb, &layout.npc_indices, layout.npc_cols, card_w);
+        if !layout.npc_indices.is_empty() && !layout.pc_indices.is_empty() {
+            // Separator between bands so the two groups read as
+            // distinct rosters.
+            out.push(style::fg(&"─".repeat(body_w.min(120)), t::FG_FAINT).to_string());
+            out.push(String::new());
+        }
+        // PC band (bottom).
+        emit_combat_band(&mut out, camp, cb, &layout.pc_indices, layout.pc_cols, card_w);
+
+        // Detail strip — full-width block above the footer.
+        out.push(String::new());
+        out.push(style::fg(&"━".repeat(body_w.min(120)), t::FG_FAINT).to_string());
+        let detail = build_combat_detail(camp, cb);
+        for l in detail.lines() { out.push(l.to_string()); }
+        out
     }
 
     fn handle_inspire_key(&mut self, key: &str) {
@@ -813,7 +1440,6 @@ impl App {
             "a" => { self.adventure_set_active(); return; }
             "R" => { self.adventure_rescan(); return; }
             "V" => { self.push_image_to_player(); return; }
-            "E" => { self.end_current_session(); return; }
             "G" => { self.generate_scene_image(); return; }
             "c" => { self.rename_under_cursor(); return; }
             "D" => { self.try_delete_under_cursor(); return; }
@@ -822,6 +1448,8 @@ impl App {
             "I" => { self.add_weapon(crate::pc::WeaponKind::Missile); return; }
             "S" => { self.add_spell();                                return; }
             "P" => { self.generate_portrait();                        return; }
+            "t" => { self.combat_tag_at_cursor(); return; }
+            "T" => { self.combat_untag_at_cursor(); return; }
             _ => {}
         }
         let Some(camp) = self.campaign.as_ref() else {
@@ -1466,7 +2094,20 @@ impl App {
                         c.active_adventure_id = None;
                     }
                 }
-                DeleteTarget::SavedForge(SavedKind::Encounter, i) => { c.saved_encounters.remove(i); }
+                DeleteTarget::SavedForge(SavedKind::Encounter, i) => {
+                    c.saved_encounters.remove(i);
+                    // Drop dangling tags for the removed encounter and
+                    // shift higher enc_idx down by one to stay aligned
+                    // with the new Vec layout.
+                    c.tagged.refs.retain(|r| !matches!(r,
+                        crate::store::CombatRef::EncounterNpc { enc_idx, .. }
+                            if *enc_idx == i));
+                    for r in c.tagged.refs.iter_mut() {
+                        if let crate::store::CombatRef::EncounterNpc { enc_idx, .. } = r {
+                            if *enc_idx > i { *enc_idx -= 1; }
+                        }
+                    }
+                }
                 DeleteTarget::SavedForge(SavedKind::Town,      i) => { c.saved_towns.remove(i); }
                 DeleteTarget::SavedForge(SavedKind::Weather,   i) => { c.saved_weather.remove(i); }
                 DeleteTarget::SavedForge(SavedKind::Npc,       i) => { c.saved_npcs.remove(i); }
@@ -2031,7 +2672,7 @@ impl App {
         if paths.is_empty() { return; }
         let cache = display.png_cache.clone();
         std::thread::spawn(move || {
-            glow::preconvert_images(&paths, pixel_w, pixel_h, &cache);
+            glow::preconvert_images(&paths, pixel_w, pixel_h, cell_w, cell_h, &cache, None);
         });
     }
 
@@ -2178,75 +2819,6 @@ impl App {
             }
             _ => None,
         }
-    }
-
-    /// "End the current session" — writes a marker line to
-    /// `session.log` and advances `current_section` to the next
-    /// section in document order. Asks for an optional one-line
-    /// session title so the log is searchable later.
-    fn end_current_session(&mut self) {
-        let (camp_name, adv_idx, current_sec) = {
-            let camp = match self.campaign.as_ref() {
-                Some(c) => c, None => {
-                    self.status_msg("No campaign loaded.", t::WARN);
-                    return;
-                }
-            };
-            let adv_idx = match camp.active_adventure_id {
-                Some(id) => camp.adventures.iter().position(|a| a.id == id),
-                None => None,
-            };
-            let Some(adv_idx) = adv_idx else {
-                self.status_msg(
-                    "No active adventure. Press a on one first.", t::WARN);
-                return;
-            };
-            let cur = camp.adventures.get(adv_idx)
-                .and_then(|a| a.current_section);
-            (camp.name.clone(), adv_idx, cur)
-        };
-        let title = self.footer.ask(" Session title (one-liner, ENTER for default): ", "");
-        let title = title.trim().to_string();
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs()).unwrap_or(0);
-        let (adv_name, current_heading, next_idx) = {
-            let camp = self.campaign.as_ref().unwrap();
-            let adv = &camp.adventures[adv_idx];
-            let cur_h = current_sec.and_then(|i| adv.sections.get(i))
-                .map(|s| s.heading.clone()).unwrap_or_default();
-            // "Next" = the section immediately after current_section
-            // in document order. If we were at the last, stay put.
-            let next = match current_sec {
-                Some(i) if i + 1 < adv.sections.len() => Some(i + 1),
-                _ => current_sec,
-            };
-            (adv.name.clone(), cur_h, next)
-        };
-        let label = if title.is_empty() {
-            format!("(closed at § {})", current_heading)
-        } else {
-            title.clone()
-        };
-        let log_path = crate::store::campaign_dir(&camp_name).join("session.log");
-        let banner = format!("\n===== SESSION END [{}] · {} · {} =====\n",
-            fmt_ts(now), adv_name, label);
-        let _ = std::fs::OpenOptions::new()
-            .create(true).append(true).open(&log_path)
-            .and_then(|mut f| std::io::Write::write_all(&mut f, banner.as_bytes()));
-        if let Some(c) = self.campaign.as_mut() {
-            if let Some(adv) = c.adventures.get_mut(adv_idx) {
-                adv.current_section = next_idx;
-            }
-            let _ = c.save();
-        }
-        let next_heading = self.campaign.as_ref()
-            .and_then(|c| c.adventures.get(adv_idx))
-            .and_then(|a| a.current_section.and_then(|i| a.sections.get(i)))
-            .map(|s| s.heading.clone()).unwrap_or_default();
-        self.status_msg(
-            &format!("Session closed. Next: {}", next_heading),
-            t::OK);
     }
 
     /// Resolve the cursor to an absolute image path, regardless of
@@ -2572,9 +3144,17 @@ impl App {
                 tab_strip.push_str(&style::fg(&label, t::FG_MUTED));
             }
         }
-        let line = format!(" {}    {}    {}",
+        // Cross-source combat-tag count — small chip, only shown
+        // when the pool isn't empty so the bar stays clean otherwise.
+        let tag_chip = self.campaign.as_ref()
+            .map(|c| c.tagged.len())
+            .filter(|n| *n > 0)
+            .map(|n| format!("[tagged:{}]  ", n))
+            .unwrap_or_default();
+        let line = format!(" {}    {}    {}{}",
             style::bold(&style::fg("amar", t::TAN)),
             tab_strip,
+            style::fg(&tag_chip, t::ACCENT),
             style::fg(&format!("{} | {}", camp_str, date_str), t::FG));
         // full_refresh (rather than say()'s diff-refresh) so the bar
         // survives a clear_screen() — kicked off by rebuild_panes when
@@ -2597,8 +3177,8 @@ impl App {
             return;
         }
         let lines = match self.tab {
-            Tab::Session  => self.render_session(),
             Tab::Inspire  => self.render_inspire(),
+            Tab::Combat   => self.render_combat_body(),
             _ => unreachable!(),
         };
         // Wipe the two-pane layout when switching to a single-pane tab.
@@ -2713,20 +3293,20 @@ impl App {
             return;
         }
         let hint = match self.tab {
-            Tab::Session  => " j/k:select  +/-:HP  M/m:MF up/down  a:add  A:add-all-PCs  d:remove  c:clear  N:note  E:end-session  o:skill  O:combat",
             Tab::Forge    => match self.focus {
                 Focus::Left  => " TAB:focus-output  j/k:list  ENTER:run  C-LEFT/RIGHT:tabs  ?:help",
                 Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
             },
             Tab::Campaign => match self.focus {
-                Focus::Left  => " TAB:focus  j/k/PgDn/PgUp:tree  l/h/SPACE:expand  V:player  N:note/new-adv  G:gen-img  c:rename  E:end-session  +:promote  I:import  a:active  R:rescan  D:delete  C-l:refresh  ?:help",
+                Focus::Left  => " TAB:focus  j/k/PgDn/PgUp:tree  l/h/SPACE:expand  V:player  N:note/new-adv  G:gen-img  c:rename  +:promote  I:import  a:active  R:rescan  D:delete  C-l:refresh  ?:help",
                 Focus::Right => " l/h:±1  j/k:±10  ENTER:edit  +:skill  M:melee  I:missile  S:spell  TAB:focus",
             },
             Tab::Lore     => match self.focus {
                 Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
                 Focus::Right => " TAB:focus-tree  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs  ?:help",
             },
-            Tab::Inspire  => " 1-5:tabs  C-LEFT/RIGHT:tabs  o:skill  O:combat  C:new-camp  L:load  ?:help  q:quit",
+            Tab::Inspire  => " 1-5:tabs  C-LEFT/RIGHT:tabs  6:O6-skill  ^:O6-combat  C:new-camp  L:load  ?:help  q:quit",
+            Tab::Combat   => " ←↑↓→ / hjkl:select  i/I:init  o/d/D:roll  r:round  s:status  w:weapon  +/-:BP  m:move  L:light  a:add  x:remove  C:scrub",
         };
         // Right-align the version. Pad with spaces between hint and version.
         let right = format!("amar v{} ", VERSION);
@@ -2738,112 +3318,6 @@ impl App {
         self.footer.full_refresh();
     }
 
-    // --- Tab body renderers ---
-
-    fn render_session(&self) -> Vec<String> {
-        const LBL: u8 = 245;
-        let mut out: Vec<String> = Vec::new();
-        out.push(String::new());
-        let Some(camp) = self.campaign.as_ref() else {
-            out.push(style::bold("  Session").to_string());
-            out.push(String::new());
-            out.push("  No campaign loaded. Press C to create one or L to load.".into());
-            return out;
-        };
-        // Header with active-adventure pointer so the GM keeps
-        // their place even without flipping tabs.
-        let mut header = format!("  Session — Combat HUD");
-        if let Some(id) = camp.active_adventure_id {
-            if let Some(adv) = camp.adventures.iter().find(|a| a.id == id) {
-                header.push_str(&format!("           {}", adv.name));
-                if let Some(s) = adv.current_section.and_then(|i| adv.sections.get(i)) {
-                    header.push_str(&format!(" § {}", s.heading));
-                }
-            }
-        }
-        out.push(style::bold(&style::fg(&header, t::ACCENT)).to_string());
-        out.push(String::new());
-
-        if camp.combatants.is_empty() {
-            out.push(style::fg("  Combat HUD empty.", t::FG_MUTED).to_string());
-            out.push(String::new());
-            out.push(style::fg("  A      add ALL PCs to the fight", LBL).to_string());
-            out.push(style::fg("  a      add one PC or NPC by name", LBL).to_string());
-            out.push(String::new());
-            out.push(style::fg("  Also useful:", t::FG_MUTED).to_string());
-            out.push(style::fg("  o      private skill O6 (roll, status line)", LBL).to_string());
-            out.push(style::fg("  O      private combat O6", LBL).to_string());
-            out.push(style::fg("  N      jot a session note onto the current section", LBL).to_string());
-            return out;
-        }
-
-        let cursor_idx = camp.combat_idx.min(camp.combatants.len().saturating_sub(1));
-        // Build the table. Pre-compute the widest name so the columns
-        // line up regardless of who's in the fight.
-        let name_w = camp.combatants.iter().filter_map(|r| {
-            let n = match r {
-                CombatRef::Pc(i)  => camp.pcs.get(*i).map(|c| c.name.as_str()),
-                CombatRef::Npc(i) => camp.npcs.get(*i).map(|c| c.name.as_str()),
-            }?;
-            Some(crust::display_width(n))
-        }).max().unwrap_or(8).max(8).min(20);
-
-        let mut emit_section = |out: &mut Vec<String>, label: &str, want_pc: bool| {
-            let mut emitted = false;
-            for (i, r) in camp.combatants.iter().enumerate() {
-                let is_pc = matches!(r, CombatRef::Pc(_));
-                if is_pc != want_pc { continue; }
-                if !emitted {
-                    out.push(style::fg(&format!("  {}", label), t::TAN).to_string());
-                    emitted = true;
-                }
-                let ch = match r {
-                    CombatRef::Pc(idx)  => camp.pcs.get(*idx),
-                    CombatRef::Npc(idx) => camp.npcs.get(*idx),
-                };
-                let Some(ch) = ch else {
-                    out.push(format!("  (missing roster entry)"));
-                    continue;
-                };
-                let bp_max = ch.bp_max();
-                let mf_max = ch.mf_max();
-                let bp_cur = ch.bp_current;
-                let mf_cur = ch.mf_current;
-                let bp_ok = bp_cur > 0;
-                let mf_ok = mf_cur > 0;
-                let status = if bp_cur <= 0 {
-                    style::fg("DOWN", t::ERR).to_string()
-                } else if (bp_cur as f32) / (bp_max.max(1) as f32) < 0.34 {
-                    style::fg("LOW", t::WARN).to_string()
-                } else {
-                    style::fg("ok", t::OK).to_string()
-                };
-                let cursor = if i == cursor_idx { style::fg("→", t::ACCENT).to_string() } else { " ".to_string() };
-                let bp_tick = if bp_ok { "\u{2713}" } else { "\u{2717}" };
-                let mf_tick = if mf_ok { "\u{2713}" } else { "\u{2717}" };
-                out.push(format!("  {} {:<width$}  BP {:>3}/{:<3} {}   MF {:>2}/{:<2} {}   DB {}  MD {}  React {}   {}",
-                    cursor,
-                    ch.name,
-                    bp_cur, bp_max, bp_tick,
-                    mf_cur, mf_max, mf_tick,
-                    ch.db(),
-                    ch.md(),
-                    ch.skill_total(crate::pc::Char::Mind, "Awareness", "Reaction Speed"),
-                    status,
-                    width = name_w));
-            }
-            if emitted {
-                out.push(String::new());
-            }
-        };
-
-        emit_section(&mut out, "Player characters", true);
-        emit_section(&mut out, "NPCs / Encounter", false);
-
-        out.push(style::fg("  j/k:select  +/-:HP  M/m:MF up/down  a:add  A:add all PCs  d:remove  c:clear", LBL).to_string());
-        out.push(style::fg("  N:note    o:skill O6    O:combat O6    E:end session", LBL).to_string());
-        out
-    }
 
     /// Fixed list of generators offered by the Forge tab. Ported one
     /// at a time from Amar-Tools. The "(soon)" entries are placeholders
@@ -3441,7 +3915,15 @@ impl App {
                 " "
             };
             let title = camp_node_title(camp, &item.node);
-            let row = format!("{} {}{} {}", cursor, indent, glyph, title);
+            // Tagged marker: `◆` for items currently in the combat
+            // tag pool. Keeps the GM oriented while building a roster
+            // across sources.
+            let tag_mark = match &item.node {
+                CampNode::Pc(idx)  if camp.tagged.contains(&crate::store::CombatRef::Pc(*idx))  => "◆ ",
+                CampNode::Npc(idx) if camp.tagged.contains(&crate::store::CombatRef::Npc(*idx)) => "◆ ",
+                _ => "",
+            };
+            let row = format!("{} {}{} {}{}", cursor, indent, glyph, tag_mark, title);
             let line = if i == self.camp_idx {
                 if tree_active {
                     style::bold(&style::fg(&row, t::ACCENT))
@@ -6368,8 +6850,24 @@ fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
                 SavedKind::Weather => ("\u{2600}",
                     camp.saved_weather.get(*idx).map(|s| s.name.as_str())),
             };
+            // Saved-encounter rows show "(N/M tagged)" when any of
+            // the encounter's NPCs are pinned to the combat tag pool —
+            // GMs need that visible while building a roster.
+            let suffix = match kind {
+                SavedKind::Encounter => {
+                    let total = camp.saved_encounters.get(*idx)
+                        .map(|s| s.item.npcs.len()).unwrap_or(0);
+                    let tagged = camp.tagged.refs.iter().filter(|r| matches!(r,
+                        crate::store::CombatRef::EncounterNpc { enc_idx, .. }
+                            if *enc_idx == *idx)).count();
+                    if tagged > 0 && total > 0 {
+                        format!("  ({}/{} tagged)", tagged, total)
+                    } else { String::new() }
+                }
+                _ => String::new(),
+            };
             match name {
-                Some(n) => format!("{}  {}", glyph, n),
+                Some(n) => format!("{}  {}{}", glyph, n, suffix),
                 None    => "(missing saved item)".to_string(),
             }
         }
@@ -6872,6 +7370,490 @@ fn claude_pipe(prompt: &str, input: &str) -> Result<String, String> {
         return Err(snippet.chars().take(80).collect());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+// =================================================================
+// Combat tab — card grid + detail pane helpers (task #114).
+// =================================================================
+
+/// Card width, in cells. 26-character cards fit 4-6 across on a
+/// typical 120-200 col terminal, which is what the GM workflow
+/// needs for 10+ encounters + up to 8 PCs.
+const COMBAT_CARD_W: usize = 26;
+
+/// 2-band grid layout — NPCs at top, PCs at bottom. Computed every
+/// render; cheap (just two `Vec<usize>` allocations).
+struct CombatLayout {
+    npc_indices: Vec<usize>,
+    pc_indices: Vec<usize>,
+    npc_cols: usize,
+    pc_cols: usize,
+}
+
+impl CombatLayout {
+    /// Number of rows actually used by a band. `(items + cols - 1)
+    /// / cols` with a guard against zero items.
+    fn npc_rows(&self) -> usize {
+        if self.npc_indices.is_empty() { 0 }
+        else { (self.npc_indices.len() + self.npc_cols - 1) / self.npc_cols }
+    }
+    fn pc_rows(&self) -> usize {
+        if self.pc_indices.is_empty() { 0 }
+        else { (self.pc_indices.len() + self.pc_cols - 1) / self.pc_cols }
+    }
+}
+
+/// Split participants into NPC + PC bands and pick a card-column
+/// count for each. Each band uses as many columns as fit, capped at
+/// the participant count.
+fn compute_combat_layout(cb: &crate::combat::CombatState, body_w: usize) -> CombatLayout {
+    let max_cols = (body_w / (COMBAT_CARD_W + 1)).max(1);
+    let mut npc_indices = Vec::new();
+    let mut pc_indices = Vec::new();
+    for (i, p) in cb.participants.iter().enumerate() {
+        match p.r {
+            crate::store::CombatRef::Pc(_) => pc_indices.push(i),
+            crate::store::CombatRef::Npc(_)
+            | crate::store::CombatRef::EncounterNpc { .. } => npc_indices.push(i),
+        }
+    }
+    let npc_cols = npc_indices.len().min(max_cols).max(1);
+    let pc_cols  = pc_indices.len().min(max_cols).max(1);
+    CombatLayout { npc_indices, pc_indices, npc_cols, pc_cols }
+}
+
+/// Locate a flat participant index in the 2-band grid as
+/// `(band, row, col)`. `band` is 0 for NPCs, 1 for PCs.
+fn locate_in_layout(layout: &CombatLayout, sel: usize) -> Option<(u8, usize, usize)> {
+    if let Some(pos) = layout.npc_indices.iter().position(|&i| i == sel) {
+        return Some((0, pos / layout.npc_cols, pos % layout.npc_cols));
+    }
+    if let Some(pos) = layout.pc_indices.iter().position(|&i| i == sel) {
+        return Some((1, pos / layout.pc_cols, pos % layout.pc_cols));
+    }
+    None
+}
+
+/// Convert a grid position back to a flat participant index,
+/// clamping the column to the actual width of the requested row
+/// (the last row may be partial).
+fn flat_in_layout(layout: &CombatLayout, band: u8, row: usize, col: usize) -> Option<usize> {
+    let (indices, cols) = match band {
+        0 => (&layout.npc_indices, layout.npc_cols),
+        1 => (&layout.pc_indices, layout.pc_cols),
+        _ => return None,
+    };
+    let row_start = row.checked_mul(cols)?;
+    if row_start >= indices.len() { return None; }
+    let row_end = (row_start + cols).min(indices.len());
+    let row_len = row_end - row_start;
+    let clamped_col = col.min(row_len.saturating_sub(1));
+    indices.get(row_start + clamped_col).copied()
+}
+
+/// Emit one card-grid band into `out`. Each card-row is 7 stacked
+/// lines stitched horizontally with single-space gutters.
+fn emit_combat_band(
+    out: &mut Vec<String>,
+    camp: &Campaign,
+    cb: &crate::combat::CombatState,
+    indices: &[usize],
+    cols: usize,
+    card_w: usize,
+) {
+    if indices.is_empty() { return; }
+    for chunk in indices.chunks(cols) {
+        let cards: Vec<Vec<String>> = chunk.iter().map(|&i| {
+            let p = &cb.participants[i];
+            build_combat_card(camp, cb, p, i == cb.selected, card_w)
+        }).collect();
+        let h = cards.iter().map(|c| c.len()).max().unwrap_or(0);
+        for line_idx in 0..h {
+            let mut row_buf = String::new();
+            for (ci, card) in cards.iter().enumerate() {
+                if ci > 0 { row_buf.push(' '); }
+                let cell = card.get(line_idx).map(String::as_str).unwrap_or("");
+                row_buf.push_str(cell);
+            }
+            out.push(row_buf);
+        }
+    }
+}
+
+/// Resolve a `CombatRef` to the live `Character` row on the Campaign.
+fn character_for_ref<'a>(camp: &'a Campaign, r: &crate::store::CombatRef)
+    -> Option<&'a crate::pc::Character>
+{
+    match r {
+        crate::store::CombatRef::Pc(i)  => camp.pcs.get(*i),
+        crate::store::CombatRef::Npc(i) => camp.npcs.get(*i),
+        crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx } =>
+            camp.saved_encounters.get(*enc_idx)
+                .and_then(|s| s.item.npcs.get(*npc_idx)),
+    }
+}
+
+/// Display name for a `CombatRef`. Used in roll-log entries so a
+/// row is readable without re-resolving the ref.
+fn participant_name(camp: &Campaign, r: crate::store::CombatRef) -> String {
+    character_for_ref(camp, &r).map(|c| c.name.clone()).unwrap_or_else(|| "?".to_string())
+}
+
+/// Identity helper — exists only to type-coerce the `&mut Campaign`
+/// the roll handlers hold into a `&Campaign` that the status
+/// snapshot function can borrow. Same memory; no copy.
+fn borrow_campaign_freeze(c: &Campaign) -> &Campaign { c }
+
+/// Wiki d6 → hit-location mapping (Combat § Hit Locations in Melee).
+/// `pc::HIT_LOCATIONS` is ordered [Head, R. Arm, L. Arm, Body, R. Leg,
+/// L. Leg]; the d6 mapping is the reverse — 6 = Head, 1 = L. Leg.
+fn hit_location_for_d6(d: u8) -> &'static str {
+    let idx = 6usize.saturating_sub(d as usize);
+    crate::pc::HIT_LOCATIONS.get(idx).copied().unwrap_or("Body")
+}
+
+/// Wiki Unarmed-row fallback. Used when the selected participant
+/// has no weapon at the chosen slot — the rules treat that as the
+/// Unarmed entry on the melee weapons table, NOT as "no attack".
+/// STR 0 / INI 1 / OFF −2 / DEF −4 / DAM −4.
+fn unarmed_weapon() -> crate::pc::Weapon {
+    crate::pc::Weapon {
+        name: "Unarmed".into(),
+        kind: crate::pc::WeaponKind::Melee,
+        skill_name: "Unarmed".into(),
+        two_handed: false,
+        init: 1,
+        off_mod: -2,
+        def_mod: -4,
+        shots_per_round: 0,
+        damage: -4,
+        hp: 0,
+        range_m: 0,
+        xp: 0,
+    }
+}
+
+/// Offensive total for a weapon: weapon.off_mod + skill_total.
+/// Melee weapons resolve under "Melee Combat", missile under
+/// "Missile Combat" (wiki rules).
+fn weapon_off_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
+    let attr = match w.kind {
+        crate::pc::WeaponKind::Melee   => "Melee Combat",
+        crate::pc::WeaponKind::Missile => "Missile Combat",
+    };
+    let skill = ch.skill_total(crate::pc::Char::Body, attr, &w.skill_name);
+    w.off_mod + skill
+}
+
+/// Defensive total: weapon.def_mod + skill_total + (Dodge / 5).
+fn weapon_def_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
+    let attr = match w.kind {
+        crate::pc::WeaponKind::Melee   => "Melee Combat",
+        crate::pc::WeaponKind::Missile => "Missile Combat",
+    };
+    let skill = ch.skill_total(crate::pc::Char::Body, attr, &w.skill_name);
+    let dodge = ch.skill_total(crate::pc::Char::Body, "Melee Combat", "Dodge");
+    w.def_mod + skill + dodge / 5
+}
+
+/// Damage total: weapon.damage + character damage bonus.
+fn weapon_dam_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
+    w.damage + ch.db()
+}
+
+/// Net status modifier in effect for a participant THIS instant.
+/// Sums every contributing source per the wiki rules: BP-threshold
+/// auto-statuses (Half/Quarter Action), Endurance drain by round
+/// count, manual statuses, timed statuses, encumbrance tier, global
+/// lighting, and per-turn movement. Returned tuple is (off, def);
+/// most rolls use one or the other but the breakdown is shared by
+/// both so the detail pane only needs one renderer.
+fn participant_status_off_def(
+    camp: &Campaign,
+    cb: &crate::combat::CombatState,
+    p: &crate::combat::Participant,
+) -> (i32, i32) {
+    let mut off = 0i32;
+    let mut def = 0i32;
+    if let Some(ch) = character_for_ref(camp, &p.r) {
+        let bp = ch.bp_current.max(0);
+        let bp_max = ch.bp_max().max(1);
+        // Quarter-Action takes precedence over Half-Action — the
+        // wiki rule is "down to 1/4", so once you're below 1/4 you
+        // get −4 not stacked −2 + −4.
+        if bp * 4 <= bp_max {
+            off -= 4; def -= 4;
+        } else if bp * 2 <= bp_max {
+            off -= 2; def -= 2;
+        }
+        // Endurance drain: −1 per `endurance` rounds.
+        let endurance = ch.skill_total(
+            crate::pc::Char::Body, "Endurance", "Endurance").max(0);
+        let drain = crate::combat::endurance_drain_tier(cb.round, endurance);
+        off -= drain; def -= drain;
+    }
+    // Encumbrance (already a tier on the participant).
+    let enc = crate::combat::encumbrance_modifier(p.encumbrance_tier);
+    off += enc; def += enc;
+    // Manual statuses. Unaware/Immobilized sentinel for "cannot
+    // attack" passes through as MIN — caller handles.
+    for s in &p.manual_statuses {
+        let (so, sd) = s.off_def();
+        if so == i32::MIN { off = i32::MIN; } else { off += so; }
+        def += sd;
+    }
+    // Timed statuses (crit / fumble effects).
+    for ts in &p.timed_statuses {
+        off += ts.off; def += ts.def;
+    }
+    // Lighting (global).
+    let (lo, ld) = cb.lighting.off_def();
+    off += lo; def += ld;
+    // Movement this turn.
+    let (mo, md) = p.movement.off_def();
+    if mo == i32::MIN { off = i32::MIN; } else { off += mo; }
+    def += md;
+    (off, def)
+}
+
+/// Render one participant card as a vector of 7 lines. Fixed
+/// width = `card_w` chars; padded so the grid stays aligned.
+fn build_combat_card(
+    camp: &Campaign,
+    cb: &crate::combat::CombatState,
+    p: &crate::combat::Participant,
+    selected: bool,
+    card_w: usize,
+) -> Vec<String> {
+    let ch = character_for_ref(camp, &p.r);
+    let name = ch.map(|c| c.name.as_str()).unwrap_or("?");
+    let (bp, bp_max, md) = ch.map(|c| (c.bp_current, c.bp_max(), c.md())).unwrap_or((0, 0, 0));
+    let weapon_name = ch
+        .and_then(|c| c.weapons.get(p.selected_weapon))
+        .map(|w| w.name.as_str())
+        .unwrap_or("Unarmed");
+    let (off_mod, _def_mod) = participant_status_off_def(camp, cb, p);
+    let init_str = match p.init {
+        Some(v) => format!("init {}", v),
+        None => "init —".to_string(),
+    };
+    let cursor = if selected { "▶" } else { " " };
+
+    // Inner width = card_w - 2 (for ┌ and ┐).
+    let iw = card_w.saturating_sub(2);
+    let pad = |s: &str| -> String {
+        let w = crust::display_width(s);
+        if w >= iw { s.chars().take(iw).collect() }
+        else { let mut t = s.to_string(); t.push_str(&" ".repeat(iw - w)); t }
+    };
+
+    // Status badge: show summed off mod when non-zero.
+    let badge = if off_mod == i32::MIN {
+        " ☓ cannot attack".to_string()
+    } else if off_mod != 0 {
+        format!(" Status {:+}", off_mod)
+    } else {
+        String::new()
+    };
+
+    let top  = format!("┌{}┐", "─".repeat(iw));
+    let bot  = format!("└{}┘", "─".repeat(iw));
+    let line_name = format!("│{}│", pad(&format!("{}{:<.20}", cursor, name)));
+    let line_bp   = format!("│{}│", pad(&format!(" BP {}/{}  MD {}", bp, bp_max, md)));
+    let line_init = format!("│{}│", pad(&format!(" {}", init_str)));
+    let line_wpn  = format!("│{}│", pad(&format!(" {:.20}", weapon_name)));
+    let line_st   = format!("│{}│", pad(&badge));
+
+    // 7-line card. BP-state tint takes precedence over the default
+    // colour, but `selected` still wins so the cursor remains
+    // visible on an incapacitated / dying / dead participant.
+    //   bp > 0           → default body fg
+    //   bp == 0          → incapacitated (mid grey, 244)
+    //   −bp_max < bp < 0 → bleeding / dying (faded red, 167)
+    //   bp ≤ −bp_max     → dead (dark grey, 238)
+    let state_color: Option<u8> = if bp > 0 {
+        None
+    } else if bp == 0 {
+        Some(244)
+    } else if bp > -bp_max {
+        Some(167)
+    } else {
+        Some(238)
+    };
+    let lines = vec![top, line_name, line_bp, line_init, line_wpn, line_st, bot];
+    let color = if selected { Some(t::ACCENT) } else { state_color };
+    match color {
+        Some(c) => lines.into_iter().map(|l| style::fg(&l, c).to_string()).collect(),
+        None    => lines,
+    }
+}
+
+/// Detail pane: full weapons list, status breakdown, recent rolls.
+fn build_combat_detail(camp: &Campaign, cb: &crate::combat::CombatState) -> String {
+    let Some(p) = cb.participants.get(cb.selected) else {
+        return String::new();
+    };
+    let Some(ch) = character_for_ref(camp, &p.r) else {
+        return "(participant character not found)".to_string();
+    };
+
+    let mut out: Vec<String> = Vec::new();
+    out.push(style::bold(&style::fg(
+        &format!(" {}", ch.name),
+        t::ACCENT,
+    )));
+    // Status badge appended to the top info line so the full
+    // breakdown block underneath can go away. Half/Quarter-Action
+    // BP thresholds get a one-char suffix (½ / ¼) — the −2 / −4 is
+    // already rolled into the Status total.
+    let (off_now, _def_now) = participant_status_off_def(camp, cb, p);
+    let bp_max = ch.bp_max().max(1);
+    let bp = ch.bp_current.max(0);
+    let action_glyph = if bp * 4 <= bp_max { " ¼" }
+        else if bp * 2 <= bp_max { " ½" }
+        else { "" };
+    let status_text = if off_now == i32::MIN {
+        " Status X".to_string()
+    } else {
+        format!(" Status {:+}{}", off_now, action_glyph)
+    };
+    out.push(style::fg(
+        &format!(" BP {}/{}   MD {}   Reaction {}   Endurance {}  {}",
+            ch.bp_current, ch.bp_max(), ch.md(),
+            ch.reaction(),
+            ch.skill_total(crate::pc::Char::Body, "Endurance", "Endurance"),
+            status_text),
+        t::FG_MUTED,
+    ).to_string());
+    out.push(String::new());
+
+    // Weapons block.
+    out.push(style::bold(" Weapons"));
+    if ch.weapons.is_empty() {
+        out.push(style::fg("   (none)", t::FG_MUTED).to_string());
+    } else {
+        for (i, w) in ch.weapons.iter().enumerate() {
+            let mark = if i == p.selected_weapon { " ▶ " } else { "   " };
+            let line = format!("{}{}  I:{} O:{} D:{} d:{}",
+                mark, w.name, w.init, w.off_mod, w.def_mod, w.damage);
+            if i == p.selected_weapon {
+                out.push(style::fg(&line, t::ACCENT).to_string());
+            } else {
+                out.push(line);
+            }
+        }
+    }
+    out.push(String::new());
+
+    // Armor per hit location — d6 maps  6 Head · 5 R.Arm · 4 L.Arm
+    // · 3 Body · 2 R.Leg · 1 L.Leg. Render in d6 order (6 → 1) so
+    // the row reads the same way the dice roll resolves.
+    let any_armor = crate::pc::HIT_LOCATIONS.iter()
+        .any(|loc| ch.hit_locations.get(*loc).map(|h| h.ap).unwrap_or(0) != 0);
+    if any_armor {
+        out.push(style::bold(" Armor"));
+        let mut chunks: Vec<String> = Vec::with_capacity(6);
+        // walk d6 6..=1 so we emit Head first.
+        for d in (1u8..=6).rev() {
+            let loc = hit_location_for_d6(d);
+            let ap = ch.hit_locations.get(loc).map(|h| h.ap).unwrap_or(0);
+            chunks.push(format!("{}:{} AP{}", d, loc, ap));
+        }
+        out.push(format!("   {}", chunks.join("  ")));
+        out.push(String::new());
+    }
+
+    // Active timed statuses are still worth a one-line note each
+    // (crit/fumble effects with a rounds countdown), but the rest
+    // of the status math is summarised on the top line above.
+    if !p.timed_statuses.is_empty() {
+        out.push(style::bold(" Active effects"));
+        for ts in &p.timed_statuses {
+            let r = if ts.rounds_left == u32::MAX { "perm".to_string() }
+                    else { format!("{} rnd", ts.rounds_left) };
+            out.push(format!("   {:<28} {:+}/{:+}  ({})",
+                ts.label, ts.off, ts.def, r));
+        }
+        out.push(String::new());
+    }
+
+    // Recent rolls. Each line is built from five colour-coded
+    // segments; the total column is aligned across all visible
+    // entries by padding the three preceding segments to the widest
+    // member of the batch. Display widths are computed without ANSI
+    // so the padding is visually correct.
+    out.push(style::bold(" Recent rolls"));
+    if cb.log.is_empty() {
+        out.push(style::fg("   (none yet)", t::FG_MUTED).to_string());
+    } else {
+        struct Parts {
+            r_plain: String, r_seg: String,
+            name_plain: String,
+            mid_plain: String, mid_seg: String,
+            breakdown_plain: String, breakdown_seg: String,
+            total_num: String,
+            extra: String,
+        }
+        let entries: Vec<&crate::combat::RollEntry> = cb.log.iter().rev().take(10).collect();
+        let parts: Vec<Parts> = entries.iter().map(|entry| {
+            let wpn = entry.weapon.as_deref().filter(|s| !s.is_empty()).unwrap_or("Unarmed");
+            let kind_label = match entry.kind {
+                crate::combat::RollKind::Init => "INI",
+                crate::combat::RollKind::Off  => "OFF",
+                crate::combat::RollKind::Def  => "DEF",
+                crate::combat::RollKind::Dam  => "DAM",
+            };
+            let breakdown_label = match entry.kind {
+                crate::combat::RollKind::Init => "Init",
+                crate::combat::RollKind::Off  => "Off",
+                crate::combat::RollKind::Def  => "Def",
+                crate::combat::RollKind::Dam  => "Dam",
+            };
+            let r_plain = format!(" R{}", entry.round);
+            let r_seg = style::fg(&r_plain, t::WARN).to_string();
+            let name_plain = format!(" {}", entry.name);
+            let mid_plain = format!(" {} [{}]", kind_label, wpn);
+            let mid_seg = style::fg(&mid_plain, t::FG_BRIGHT).to_string();
+            let breakdown_plain = format!(" O6={} {}={} S={:+} →",
+                entry.o6, breakdown_label, entry.base, entry.status_mod);
+            let breakdown_seg = style::fg(&breakdown_plain, t::FG_FAINT).to_string();
+            Parts {
+                r_plain, r_seg, name_plain, mid_plain, mid_seg,
+                breakdown_plain, breakdown_seg,
+                total_num: entry.total.to_string(),
+                extra: entry.extra.clone(),
+            }
+        }).collect();
+        let max_r     = parts.iter().map(|p| crust::display_width(&p.r_plain)).max().unwrap_or(0);
+        let max_name  = parts.iter().map(|p| crust::display_width(&p.name_plain)).max().unwrap_or(0);
+        let max_mid   = parts.iter().map(|p| crust::display_width(&p.mid_plain)).max().unwrap_or(0);
+        let max_brk   = parts.iter().map(|p| crust::display_width(&p.breakdown_plain)).max().unwrap_or(0);
+        // Right-justify total numbers: `-11` and `4` should end in
+        // the same column, so the negative sign extends LEFT of the
+        // single-digit numbers in the column.
+        let max_total = parts.iter().map(|p| p.total_num.len()).max().unwrap_or(0);
+        for p in &parts {
+            let r_pad    = " ".repeat(max_r.saturating_sub(crust::display_width(&p.r_plain)));
+            let name_pad = " ".repeat(max_name.saturating_sub(crust::display_width(&p.name_plain)));
+            let mid_pad  = " ".repeat(max_mid.saturating_sub(crust::display_width(&p.mid_plain)));
+            let brk_pad  = " ".repeat(max_brk.saturating_sub(crust::display_width(&p.breakdown_plain)));
+            let total_padded = format!("{:>w$}", p.total_num, w = max_total);
+            let total_text = if p.extra.is_empty() {
+                format!(" {}", total_padded)
+            } else {
+                format!(" {}   {}", total_padded, p.extra)
+            };
+            let total_seg = style::bold(&style::fg(&total_text, t::FG_BRIGHT));
+            out.push(format!("{}{}{}{}{}{}{}{}{}",
+                p.r_seg, r_pad,
+                p.name_plain, name_pad,
+                p.mid_seg, mid_pad,
+                p.breakdown_seg, brk_pad,
+                total_seg));
+        }
+    }
+
+    out.join("\n")
 }
 
 /// One-line description shown for an unexpanded canon category in the
