@@ -332,6 +332,185 @@ fn fumble_entry(cat: u8, entry: u8) -> TableHit {
     }
 }
 
+// ----------------------------------------------------- Skill Critical/Fumble
+// Combat has its own tables above (data/lore/combat.md). General, non-combat
+// skill rolls use the tables below (d6gaming.org/The_Character → Skill
+// Criticals and Fumbles). Same shape: roll category (1-6) then entry (1-6);
+// the recursive slot is Crit cat 6 / Fumble cat 1.
+
+const SKILL_CRIT_CATS: [&str; 6] = [
+    "Impression",
+    "Efficiency",
+    "Increased effect",
+    "Added effect",
+    "Special",
+    "Roll twice (no 6s) + 1 mark",
+];
+
+const SKILL_FUMBLE_CATS: [&str; 6] = [
+    "Roll twice (no 1s) - 1 mark",
+    "Setback",
+    "Unwanted effect",
+    "Personal cost",
+    "Added effect",
+    "Impression",
+];
+
+const SKILL_CRIT_TABLE: [[&str; 6]; 5] = [
+    // 1 - Impression
+    [
+        "Clean work, onlookers notice",
+        "Impressive: one ally +1 on next related roll",
+        "Very impressive: allies +1 on related rolls for D rounds",
+        "Inspiring: allies +3 on next related roll",
+        "Renowned: +3 reaction from those who hear of it",
+        "Legendary: lasting reputation boon (GM's discretion)",
+    ],
+    // 2 - Efficiency
+    [
+        "Brisk: task takes 3/4 the time",
+        "Quick: half the time",
+        "Swift: a quarter of the time",
+        "Frugal: uses half the materials",
+        "Effortless: no resources, or a free follow-up action",
+        "Instant: a fraction of the time and minimal resources",
+    ],
+    // 3 - Increased effect
+    [
+        "Solid: clearly beat the DR",
+        "Fine: one grade of quality better",
+        "Excellent: effective result raised by +O",
+        "Superior: markedly better (GM: one grade up)",
+        "Masterful: double the magnitude or quality",
+        "Flawless: best possible outcome",
+    ],
+    // 4 - Added effect
+    [
+        "Learn something useful: +1 on next related attempt",
+        "Spot an extra detail or opportunity (GM clue)",
+        "Also helps an ally or the next task: +3 there",
+        "Clear a secondary minor objective for free",
+        "Create a reusable advantage (shortcut, sample)",
+        "Windfall: an unexpected tangible bonus (GM's discretion)",
+    ],
+    // 5 - Special
+    [
+        "Insight: +1 to this skill until next session",
+        "Breakthrough: gain 1 experience mark",
+        "Reputation: witnesses remember you favorably",
+        "Keepsake: gain a useful by-product or token",
+        "Teaching moment: an ally also gains a mark",
+        "Epiphany: gain 1 mark and next attempt at +3",
+    ],
+];
+
+const SKILL_FUMBLE_TABLE: [[&str; 6]; 5] = [
+    // 2 - Setback  (cat 1 is the recursive one)
+    [
+        "Slow: task takes 1.5x the time",
+        "Clumsy start: lose next action or restart the step",
+        "Wasted effort: double the time",
+        "Lost ground: undo the last increment of progress",
+        "Stalled: start the task over from scratch",
+        "Dead end: this approach will not work, find another",
+    ],
+    // 3 - Unwanted effect
+    [
+        "Scuff: minor cosmetic damage to a tool or the work",
+        "Damage a tool or materials: -1 until repaired",
+        "Tool jammed: fix-roll DR 10 to recover",
+        "Ruin the materials: consumables spent for nothing",
+        "Break your tool: needs repair or replacement",
+        "Collateral mishap: damage something nearby (GM)",
+    ],
+    // 4 - Personal cost (only if the task could plausibly harm you)
+    [
+        "Off balance: -1 to actions next round",
+        "Strained: -1 to this skill until you rest",
+        "Tweaked: Status -3 until Medical Lore DR 8 or rest",
+        "Rattled: -3 to related actions for D rounds",
+        "Hurt: take D damage fitting the task",
+        "Badly hurt: take O damage, -3 to actions for the scene",
+    ],
+    // 5 - Added effect
+    [
+        "Your slip hinders an ally: they are at -1",
+        "It compounds: next related roll at -3",
+        "False confidence: you believe you succeeded",
+        "Waste a resource an ally was counting on",
+        "Create a hazard others must work around (GM)",
+        "Cascade: a second thing goes wrong",
+    ],
+    // 6 - Impression
+    [
+        "Awkward: it looks clumsy",
+        "Botched: onlookers snicker",
+        "You make a fool of yourself, laughter is heard",
+        "Bad showing: allies -1 to related rolls this round",
+        "Embarrassing: -3 reaction with witnesses",
+        "Humiliating: word spreads (lasting reputation ding)",
+    ],
+];
+
+/// Roll on the general-skill critical table. Same recursion as combat: cat 6
+/// rolls twice (subsequent 6s ignored) and adds an XP mark.
+pub fn roll_skill_critical(rng: &mut impl Rng) -> TableRoll {
+    let cat = rng.d6();
+    if cat == 6 {
+        let mut hits = Vec::with_capacity(2);
+        for _ in 0..2 {
+            let mut c = rng.d6();
+            while c == 6 { c = rng.d6(); }
+            let e = rng.d6();
+            hits.push(skill_crit_entry(c, e));
+        }
+        return TableRoll { recursive: true, hits };
+    }
+    let entry = rng.d6();
+    TableRoll { recursive: false, hits: vec![skill_crit_entry(cat, entry)] }
+}
+
+/// Roll on the general-skill fumble table. Cat 1 rolls twice (subsequent 1s
+/// ignored) and subtracts an XP mark.
+pub fn roll_skill_fumble(rng: &mut impl Rng) -> TableRoll {
+    let cat = rng.d6();
+    if cat == 1 {
+        let mut hits = Vec::with_capacity(2);
+        for _ in 0..2 {
+            let mut c = rng.d6();
+            while c == 1 { c = rng.d6(); }
+            let e = rng.d6();
+            hits.push(skill_fumble_entry(c, e));
+        }
+        return TableRoll { recursive: true, hits };
+    }
+    let entry = rng.d6();
+    TableRoll { recursive: false, hits: vec![skill_fumble_entry(cat, entry)] }
+}
+
+fn skill_crit_entry(cat: u8, entry: u8) -> TableHit {
+    let c = cat.clamp(1, 5);
+    let e = entry.clamp(1, 6);
+    TableHit {
+        category: cat,
+        category_name: SKILL_CRIT_CATS[(cat as usize - 1).min(5)],
+        entry: e,
+        description: SKILL_CRIT_TABLE[c as usize - 1][e as usize - 1].to_string(),
+    }
+}
+
+fn skill_fumble_entry(cat: u8, entry: u8) -> TableHit {
+    let c = cat.clamp(2, 6);
+    let e = entry.clamp(1, 6);
+    TableHit {
+        category: cat,
+        category_name: SKILL_FUMBLE_CATS[(cat as usize - 1).min(5)],
+        entry: e,
+        // SKILL_FUMBLE_TABLE is 0-indexed for cats 2-6.
+        description: SKILL_FUMBLE_TABLE[c as usize - 2][e as usize - 1].to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

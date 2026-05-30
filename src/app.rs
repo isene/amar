@@ -555,7 +555,10 @@ impl App {
         // Critical, Cat 1 on Fumble), surface that explicitly so
         // the GM sees why two sub-rolls follow.
         if matches!(r.outcome, dice::Outcome::Critical) {
-            let table = dice::roll_critical(&mut rng);
+            // Skill rolls use the general-skill table; combat rolls (the `^`
+            // binding) use the combat table.
+            let table = if combat { dice::roll_critical(&mut rng) }
+                        else { dice::roll_skill_critical(&mut rng) };
             if table.recursive {
                 parts.push(style::fg(
                     "→ 6 Roll twice (no 6s), +1 mark", t::AMBER).to_string());
@@ -567,7 +570,8 @@ impl App {
                     220).to_string());
             }
         } else if matches!(r.outcome, dice::Outcome::Fumble) {
-            let table = dice::roll_fumble(&mut rng);
+            let table = if combat { dice::roll_fumble(&mut rng) }
+                        else { dice::roll_skill_fumble(&mut rng) };
             if table.recursive {
                 parts.push(style::fg(
                     "→ 1 Roll twice (no 1s), -1 mark", t::WARN).to_string());
