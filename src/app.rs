@@ -1449,7 +1449,7 @@ impl App {
             "D" => { self.try_delete_under_cursor(); return; }
             "+" => { self.try_promote_under_cursor(); return; }
             "M" => { self.add_weapon(crate::pc::WeaponKind::Melee);   return; }
-            "I" => { self.add_weapon(crate::pc::WeaponKind::Missile); return; }
+            "m" => { self.add_weapon(crate::pc::WeaponKind::Missile); return; }
             "S" => { self.add_spell();                                return; }
             "P" => { self.generate_portrait();                        return; }
             "t" => { self.combat_tag_at_cursor(); return; }
@@ -5816,6 +5816,9 @@ impl App {
               N       On Adventures section header → scaffold a NEW adventure\n  \
                       (creates root dir, Scenes/Floorplans/NPCs subdirs,\n  \
                       skeleton .md). On a section row → append a session note.\n  \
+              M / m   Add a melee / missile weapon to the cursor PC\n  \
+                      (tree pane). On the PC sheet (right pane) it is\n  \
+                      M:melee, I:missile.\n  \
               a       Mark cursor adventure as ACTIVE (persists between sessions).\n  \
               R       Re-scan an adventure's on-disk root to pick up\n  \
                       newly-added scenes, NPC images, or .md edits.\n  \
