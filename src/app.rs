@@ -7,7 +7,7 @@
 
 use crate::canon::Canon;
 use crate::lore::{self, Node, Tree};
-use crate::store::{Campaign, CombatRef, GlobalConfig, list_campaigns};
+use crate::store::{Campaign, GlobalConfig, list_campaigns};
 use crate::theme as t;
 use crust::{Crust, Input, Pane};
 use crust::style;

@@ -126,7 +126,7 @@ fn cli_bootstrap(args: &[String]) -> Result<String, String> {
     }
 
     if let Some(name) = create_only.as_ref() {
-        let mut camp = store::Campaign::load(name)
+        let camp = store::Campaign::load(name)
             .unwrap_or_else(|_| store::Campaign::new(name));
         camp.save().map_err(|e| format!("save failed: {}", e))?;
         // Flip the global active-campaign pointer here too so a
