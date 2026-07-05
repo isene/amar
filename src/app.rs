@@ -1481,17 +1481,17 @@ impl App {
             "P" => { self.generate_portrait();                        return; }
             "t" => { self.combat_tag_at_cursor(); return; }
             "T" => { self.combat_untag_at_cursor(); return; }
-            // Right / l on an image asset (scene / floorplan / portrait)
-            // opens it in the desktop viewer via xdg-open, detached — like
-            // pointer. Non-asset nodes fall through to the tree-expand
-            // handler in the lower match.
+            // Right / l on a LEAF item that has an image (scene / floorplan /
+            // portrait asset, or a leaf section with an attached image) opens
+            // it in the desktop viewer via xdg-open, detached — like pointer.
+            // Expandable nodes fall through to the tree-expand handler below,
+            // so Right still expands sections that have children.
             "l" | "RIGHT" => {
-                let on_asset = self.campaign.as_ref().map(|c| {
+                let expandable = self.campaign.as_ref().map(|c| {
                     let tree = build_camp_tree(c, &self.camp_expanded);
-                    matches!(tree.get(self.camp_idx).map(|i| &i.node),
-                        Some(CampNode::AdventureAsset(..)))
+                    tree.get(self.camp_idx).map(|i| i.expandable).unwrap_or(false)
                 }).unwrap_or(false);
-                if on_asset {
+                if !expandable {
                     if let Some(path) = self.cursor_image_path() {
                         self.open_in_viewer(&path);
                         return;
@@ -4074,15 +4074,13 @@ impl App {
         };
         self.right_pane.set_text(&content.join("\n"));
         self.right_pane.full_refresh();
-        // Adventure-asset image overlay: stash from the match arm
-        // above, then act on it now that the immutable camp borrow
-        // is released and we can mutate self again.
-        self.pending_image = pending_img;
-        if let Some(path) = self.pending_image.take() {
-            self.overlay_image(&path);
-        } else if self.adv_image_shown {
-            // We had an image up but the new render doesn't want one
-            // — clear it so the new text shows through.
+        // Images NEVER overlay the text pane — they open on demand via Right
+        // (xdg-open → feh). Whatever a render arm may have proposed, drop it
+        // and make sure any prior overlay is torn down so the text is always
+        // readable.
+        let _ = pending_img;
+        self.pending_image = None;
+        if self.adv_image_shown {
             self.clear_overlay_image();
         }
     }
@@ -4404,7 +4402,6 @@ impl App {
             return (vec!["(section not found)".into()], None);
         };
         let body = crate::adventure::section_body(adv, sec_idx);
-        let img = sec.attached_images.first().map(|p| adv.absolute(p));
         let mut out: Vec<String> = vec![String::new()];
         out.push(style::bold(&style::fg(&sec.heading, t::ACCENT)).to_string());
         if camp.active_adventure_id == Some(adv.id) && adv.current_section == Some(sec_idx) {
@@ -4413,7 +4410,7 @@ impl App {
         if !sec.attached_images.is_empty() {
             let n = sec.attached_images.len();
             out.push(style::fg(
-                &format!("  📷 {} attached image{} (press j/k to dismiss + read)",
+                &format!("  📷 {} attached image{} (\u{2192} to open)",
                     n, if n == 1 { "" } else { "s" }),
                 t::AMBER).to_string());
         }
@@ -4446,7 +4443,10 @@ impl App {
                     n.text));
             }
         }
-        (out, img)
+        // No overlay: sections are text you read. The attached image opens
+        // on demand with Right (xdg-open) — overlaying it here just blocked
+        // the text.
+        (out, None)
     }
 
     /// Render an asset row. For images, returns the text scaffold +
