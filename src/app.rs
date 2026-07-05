@@ -1412,6 +1412,33 @@ impl App {
         }
     }
 
+    /// Open an asset in the desktop's default handler via `xdg-open`,
+    /// detached into its own session with `setsid` so the GUI viewer
+    /// (nsxiv, etc.) survives amar exiting. Mirrors pointer's open_file
+    /// (which uses libc::setsid in pre_exec); we shell out to setsid(1)
+    /// to avoid pulling in a libc dependency. Never hardcodes a viewer —
+    /// xdg-open routes through xdg-mime.
+    fn open_in_viewer(&mut self, path: &std::path::Path) {
+        if !path.exists() {
+            self.status_msg(&format!("Not found: {}", path.display()), t::ERR);
+            return;
+        }
+        let r = std::process::Command::new("setsid")
+            .arg("xdg-open")
+            .arg(path)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        match r {
+            Ok(_) => self.status_msg(
+                &format!("Opened {}",
+                    path.file_name().and_then(|n| n.to_str()).unwrap_or("file")),
+                t::OK),
+            Err(e) => self.status_msg(&format!("xdg-open failed: {}", e), t::ERR),
+        }
+    }
+
     fn handle_camp_tree_key(&mut self, key: &str) {
         // Universal "add a PC" / "add an adventure" — work even when
         // the cursor is on a section header or on the wrong section.
@@ -1454,6 +1481,23 @@ impl App {
             "P" => { self.generate_portrait();                        return; }
             "t" => { self.combat_tag_at_cursor(); return; }
             "T" => { self.combat_untag_at_cursor(); return; }
+            // Right / l on an image asset (scene / floorplan / portrait)
+            // opens it in the desktop viewer via xdg-open, detached — like
+            // pointer. Non-asset nodes fall through to the tree-expand
+            // handler in the lower match.
+            "l" | "RIGHT" => {
+                let on_asset = self.campaign.as_ref().map(|c| {
+                    let tree = build_camp_tree(c, &self.camp_expanded);
+                    matches!(tree.get(self.camp_idx).map(|i| &i.node),
+                        Some(CampNode::AdventureAsset(..)))
+                }).unwrap_or(false);
+                if on_asset {
+                    if let Some(path) = self.cursor_image_path() {
+                        self.open_in_viewer(&path);
+                        return;
+                    }
+                }
+            }
             _ => {}
         }
         let Some(camp) = self.campaign.as_ref() else {
@@ -3302,7 +3346,7 @@ impl App {
                 Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
             },
             Tab::Campaign => match self.focus {
-                Focus::Left  => " TAB:focus  j/k/PgDn/PgUp:tree  l/h/SPACE:expand  V:player  N:note/new-adv  G:gen-img  c:rename  +:promote  I:import  a:active  R:rescan  D:delete  C-l:refresh  ?:help",
+                Focus::Left  => " TAB:focus  j/k/PgDn/PgUp:tree  l/h/SPACE:expand  →:open-img  V:player  N:note/new-adv  G:gen-img  c:rename  +:promote  I:import  a:active  R:rescan  D:delete  C-l:refresh  ?:help",
                 Focus::Right => " l/h:±1  j/k:±10  ENTER:edit  +:skill  M:melee  I:missile  S:spell  TAB:focus",
             },
             Tab::Lore     => match self.focus {
