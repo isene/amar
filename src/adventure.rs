@@ -255,8 +255,18 @@ fn best_section_for(adv: &Adventure, img_name: &str) -> Option<usize> {
             }
         }
     }
+    // Common words are useless as match keys: they appear in unrelated
+    // headings and hijack an image onto the wrong section. e.g. the scene
+    // "The Hourglass" has no heading containing "hourglass", so without
+    // this it falls through to "the" and lands on the first "The …"
+    // section ("The Hook"). Drop stopwords so such images stay unattached
+    // (browsable as plain scene assets) instead of mis-attaching.
+    const STOP: &[&str] = &[
+        "the", "and", "for", "with", "from", "into", "onto", "over",
+        "that", "this", "your", "you", "are", "was", "not", "all",
+    ];
     let mut tokens: Vec<&str> = img_lower.split(|c: char| !c.is_alphanumeric())
-        .filter(|s| !s.is_empty() && s.len() >= 3)
+        .filter(|s| !s.is_empty() && s.len() >= 3 && !STOP.contains(s))
         .collect();
     tokens.sort_by_key(|s| std::cmp::Reverse(s.len()));
     for key in tokens {
