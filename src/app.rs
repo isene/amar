@@ -159,6 +159,10 @@ pub struct App {
     /// Cached list of editable fields for the currently-rendered PC
     /// sheet. Refreshed on every render_campaign_panes() call.
     pub edits: Vec<EditableField>,
+    /// Selected day on the Calendar section. `None` = "the campaign's
+    /// current date"; set once the GM moves the day cursor (TAB to the
+    /// calendar, then arrows).
+    pub cal_cursor: Option<crate::calendar::AmarDate>,
 }
 
 /// One editable position on a rendered PC sheet. The cursor moves
@@ -365,6 +369,7 @@ impl App {
             pane_width,
             sheet_idx: 0,
             edits: Vec::new(),
+            cal_cursor: None,
         }
     }
 
@@ -1469,6 +1474,7 @@ impl App {
                 return;
             }
             "a" => { self.adventure_set_active(); return; }
+            "Y" => { self.adventure_set_appearance(); return; }
             "R" => { self.adventure_rescan(); return; }
             "V" => { self.push_image_to_player(); return; }
             "G" => { self.generate_scene_image(); return; }
@@ -1600,7 +1606,36 @@ impl App {
         }
     }
 
+    /// True when the tree cursor sits on the Calendar section.
+    fn on_calendar_section(&self) -> bool {
+        let Some(camp) = self.campaign.as_ref() else { return false; };
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        matches!(tree.get(self.camp_idx).map(|i| &i.node),
+            Some(CampNode::Section(CampSection::Calendar)))
+    }
+
     fn handle_camp_content_key(&mut self, key: &str) {
+        // Calendar day cursor: with the Calendar section focused (TAB from the
+        // tree), arrows move the selected day instead of scrolling the pane.
+        if self.on_calendar_section() {
+            let today = self.campaign.as_ref().map(|c| c.date).unwrap_or_default();
+            let cur = self.cal_cursor.unwrap_or(today);
+            let step = match key {
+                "h" | "LEFT"  => Some(-1i64),
+                "l" | "RIGHT" => Some(1),
+                "k" | "UP"    => Some(-7),
+                "j" | "DOWN"  => Some(7),
+                "PgUP"        => Some(-28),
+                "PgDOWN" | " " | "SPACE" => Some(28),
+                "g" | "HOME" => { self.cal_cursor = Some(today); self.render_all(); return; }
+                _ => None,
+            };
+            if let Some(s) = step {
+                self.cal_cursor = Some(cur.advance(s));
+                self.render_all();
+                return;
+            }
+        }
         // Navigation:
         //   l / RIGHT  → next field (+1)
         //   h / LEFT   → prev field (-1)
@@ -2622,6 +2657,48 @@ impl App {
                 self.status_msg(&format!("Active adventure: '{}'", name), t::OK);
             }
         }
+    }
+
+    /// `Y` — set the adventure's calendar colour + in-world date span.
+    /// Guided: pick a colour from the palette, then type a start and end
+    /// date (e.g. "Gwendyll 1" / "Gwendyll 7"; blank keeps the current).
+    fn adventure_set_appearance(&mut self) {
+        let Some(adv_idx) = self.cursor_adventure_idx() else {
+            self.status_msg("Move cursor onto an adventure first.", t::WARN);
+            return;
+        };
+        // 1. Colour picker (footer menu; pop via getchr).
+        let chosen: Option<u8> = loop {
+            let menu = ADV_PALETTE.iter().enumerate()
+                .map(|(i, (n, c))| style::fg(&format!("{}:{}", i + 1, n), *c).to_string())
+                .collect::<Vec<_>>().join("  ");
+            self.footer.set_text(&format!(" Colour — {}  0:none  ESC:cancel", menu));
+            self.footer.full_refresh();
+            let Some(k) = Input::getchr(None) else { continue };
+            match k.as_str() {
+                "ESC" | "q" => { self.render_all(); return; }
+                "0" => break None,
+                d if d.len() == 1 && d.as_bytes()[0].is_ascii_digit() => {
+                    let i = d.parse::<usize>().unwrap_or(0);
+                    if i >= 1 && i <= ADV_PALETTE.len() { break Some(ADV_PALETTE[i - 1].1); }
+                }
+                _ => {}
+            }
+        };
+        // 2. Dates (blank keeps whatever's there).
+        let year = self.campaign.as_ref().map(|c| c.date.year).unwrap_or(354);
+        let start_s = self.footer.ask(" Start (e.g. 'Gwendyll 1', blank=keep): ", "");
+        let end_s   = self.footer.ask(" End   (e.g. 'Gwendyll 7', blank=keep): ", "");
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(a) = c.adventures.get_mut(adv_idx) {
+                a.color = chosen;
+                if !start_s.trim().is_empty() { a.start = parse_amar_date(&start_s, year); }
+                if !end_s.trim().is_empty()   { a.end   = parse_amar_date(&end_s, year); }
+                let _ = c.save();
+            }
+        }
+        self.status_msg("Adventure colour / schedule updated.", t::OK);
+        self.render_all();
     }
 
     /// Re-walk the on-disk root for the adventure under the cursor.
@@ -3982,6 +4059,13 @@ impl App {
                 match &item.node {
                     CampNode::Section(_) => style::fg(&row, t::STEEL),
                     CampNode::Placeholder { .. } => style::fg(&row, t::FG_MUTED),
+                    // Adventure rows wear their own colour (set with `Y`), so a
+                    // colour-coded adventure stands out in the tree.
+                    CampNode::Adventure(idx) =>
+                        match camp.adventures.get(*idx).and_then(|a| a.color) {
+                            Some(cc) => style::fg(&row, cc),
+                            None => row,
+                        },
                     _ => row,
                 }
             };
@@ -4129,6 +4213,97 @@ impl App {
         self.adv_image_shown = false;
     }
 
+    /// Full-year calendar: 13 uniform 4×7 months, adventure spans colour-
+    /// coded, a movable day cursor, and the selected day's detail below.
+    /// Every Amar month starts on Recolar (28 = 4×7), so the grid needs no
+    /// weekday offset — a clean uniform block.
+    fn render_calendar(&self, camp: &Campaign) -> Vec<String> {
+        use crate::calendar::{MONTHS, DAYS, AmarDate};
+        let cursor = self.cal_cursor.unwrap_or(camp.date);
+        let today = camp.date;
+        let year = cursor.year;
+
+        let lin = |d: AmarDate| d.year as i64 * 364 + d.day_of_year as i64;
+        // Colour of the first adventure whose [start,end] covers `d`.
+        let color_for = |d: AmarDate| -> Option<u8> {
+            for a in &camp.adventures {
+                if let (Some(s), Some(e)) = (a.start, a.end) {
+                    if lin(d) >= lin(s) && lin(d) <= lin(e) {
+                        return Some(a.color.unwrap_or(t::ACCENT));
+                    }
+                }
+            }
+            None
+        };
+
+        // One mini-month → 6 display-lines, each exactly 21 cols wide.
+        let mini = |m: u32| -> Vec<String> {
+            let mut v = Vec::with_capacity(6);
+            v.push(style::bold(&style::fg(&format!(" {:<20}", MONTHS[(m - 1) as usize]), t::STEEL)).to_string());
+            let hdr: String = DAYS.iter().map(|d| format!(" {:>2}", &d[0..2])).collect();
+            v.push(style::fg(&hdr, t::FG_DIM).to_string());
+            for w in 0..4u32 {
+                let mut line = String::new();
+                for dcol in 0..7u32 {
+                    let dom = w * 7 + dcol + 1;
+                    let date = AmarDate::from_ymd(year, m, dom);
+                    let cell = format!(" {:>2}", dom);
+                    let styled = if date == cursor {
+                        style::reverse(&style::fg(&cell, color_for(date).unwrap_or(252)))
+                    } else if date == today {
+                        style::bold(&style::fg(&cell, color_for(date).unwrap_or(t::ACCENT)))
+                    } else {
+                        match color_for(date) {
+                            Some(c) => style::fg(&cell, c),
+                            None => style::fg(&cell, t::FG_DIM),
+                        }
+                    };
+                    line.push_str(&styled);
+                }
+                v.push(line);
+            }
+            v
+        };
+
+        let mm_w = 21usize;
+        let gap = 3usize;
+        let pane_w = (self.right_pane.w as usize).max(mm_w);
+        let cols = ((pane_w + gap) / (mm_w + gap)).clamp(1, 13);
+
+        let mut out: Vec<String> = Vec::new();
+        out.push(style::bold(&style::fg(&format!(" Calendar — Year {}", year), t::ACCENT)).to_string());
+        out.push(String::new());
+
+        let months: Vec<u32> = (1..=13u32).collect();
+        for chunk in months.chunks(cols) {
+            let minis: Vec<Vec<String>> = chunk.iter().map(|&m| mini(m)).collect();
+            for row in 0..6 {
+                let mut line = String::new();
+                for (ci, mm) in minis.iter().enumerate() {
+                    if ci > 0 { line.push_str(&" ".repeat(gap)); }
+                    line.push_str(&mm[row]);
+                }
+                out.push(line);
+            }
+            out.push(String::new());
+        }
+
+        // Selected-day detail + which adventures run that day.
+        out.push(style::fg("  ── selected day ──", t::FG_MUTED).to_string());
+        out.push(style::bold(&style::fg(&format!("  {}", cursor.fmt_long()), t::ACCENT)).to_string());
+        let active: Vec<String> = camp.adventures.iter().filter(|a| {
+            matches!((a.start, a.end), (Some(s), Some(e)) if lin(cursor) >= lin(s) && lin(cursor) <= lin(e))
+        }).map(|a| style::fg(&a.name, a.color.unwrap_or(t::FG_MUTED)).to_string()).collect();
+        if active.is_empty() {
+            out.push(style::fg("  (no adventure scheduled this day)", t::FG_DIM).to_string());
+        } else {
+            out.push(format!("  {}", active.join(&style::fg(", ", t::FG_DIM))));
+        }
+        out.push(String::new());
+        out.push(style::fg("  TAB to the calendar, then \u{2190}/\u{2192} \u{00b1}1 day \u{00b7} \u{2191}/\u{2193} \u{00b1}week \u{00b7} PgUp/PgDn \u{00b1}month.", t::FG_DIM).to_string());
+        out
+    }
+
     fn render_camp_section(&self, camp: &Campaign, sec: CampSection) -> Vec<String> {
         const LBL: u8 = 245;
         let mut out = vec![String::new()];
@@ -4190,12 +4365,7 @@ impl App {
                 out.push("  Land in v0.4.0 alongside the Forge → Town generator.".into());
             }
             CampSection::Calendar => {
-                out.push(style::bold(&style::fg("Calendar", t::ACCENT)));
-                out.push(String::new());
-                out.push(field_row(LBL, "Today", &camp.date.fmt_header()));
-                out.push(field_row(LBL, "Bortle", &camp.bortle.to_string()));
-                out.push(String::new());
-                out.push(style::fg("  Calendar advance + weather hookup land in v0.5.0.", LBL).to_string());
+                out.extend(self.render_calendar(camp));
             }
             CampSection::Factions => {
                 out.push(style::bold(&style::fg("Factions", t::ACCENT)));
@@ -6804,6 +6974,28 @@ fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
 }
 
 /// Title shown in the left pane for one tree node.
+/// Adventure colour palette shown by the `Y` picker: (name, xterm-256).
+/// Light blue first — the natural default for the request.
+const ADV_PALETTE: &[(&str, u8)] = &[
+    ("Light blue", 117), ("Green", 78), ("Amber", 214), ("Red", 203),
+    ("Purple", 141), ("Cyan", 87), ("Pink", 211), ("Orange", 208),
+];
+
+/// Parse a loose Amar date like "Gwendyll 1" or "4 1" (month name-or-number
+/// + day-of-month) into an AmarDate in `year`. None if it doesn't parse.
+fn parse_amar_date(input: &str, year: u32) -> Option<crate::calendar::AmarDate> {
+    let toks: Vec<&str> = input.split_whitespace().collect();
+    if toks.len() < 2 { return None; }
+    let month = toks[0].parse::<u32>().ok().or_else(|| {
+        let l = toks[0].to_lowercase();
+        crate::calendar::MONTHS.iter()
+            .position(|m| m.to_lowercase().starts_with(&l))
+            .map(|i| i as u32 + 1)
+    })?;
+    let day = toks[1].parse::<u32>().ok()?;
+    Some(crate::calendar::AmarDate::from_ymd(year, month, day))
+}
+
 fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
     match node {
         CampNode::Section(sec) => match sec {

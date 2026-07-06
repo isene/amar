@@ -46,6 +46,16 @@ pub struct Adventure {
     /// the campaign rather than scattering in side files.
     #[serde(default)]
     pub notes: String,
+    /// In-world schedule + colour. `start`/`end` (inclusive) place the
+    /// adventure on the year calendar; `color` is an xterm-256 index used
+    /// both for the calendar span and the Campaign left-pane row. All
+    /// serde-default so existing campaign.json files load unchanged.
+    #[serde(default)]
+    pub color: Option<u8>,
+    #[serde(default)]
+    pub start: Option<crate::calendar::AmarDate>,
+    #[serde(default)]
+    pub end: Option<crate::calendar::AmarDate>,
 }
 
 /// One parsed heading from the narrative markdown. Level 2 (##) is
@@ -145,6 +155,9 @@ pub fn import_from_dir(root: &Path, next_id: u64) -> Result<Adventure, String> {
         npc_portraits: scan_assets(root, &["NPCs", "npcs", "Portraits", "portraits"], IMAGE_EXTS),
         npc_docs: scan_npc_docs(root),
         notes: String::new(),
+        color: None,
+        start: None,
+        end: None,
     };
     adv.rescan_sections();
     attach_scene_images(&mut adv);
