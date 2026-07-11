@@ -46,7 +46,7 @@ pub struct SpecialDay {
 pub const SPECIAL_DAYS: &[SpecialDay] = &[
     // ── Elemental gods — their days fall at the quarters of the year ──
     SpecialDay { month: 1,  day: 1,  god: "Walmaer",      color: 19,  text: 231, domain: "Water" },
-    SpecialDay { month: 4,  day: 8,  god: "Alesia",       color: 88,  text: 231, domain: "Earth" },
+    SpecialDay { month: 4,  day: 8,  god: "Alesia",       color: 94,  text: 231, domain: "Earth" },
     SpecialDay { month: 7,  day: 15, god: "Ikalio",       color: 208, text: 16,  domain: "Fire" },
     SpecialDay { month: 10, day: 22, god: "Shalissa",     color: 117, text: 16,  domain: "Wind" },
     SpecialDay { month: 13, day: 28, god: "Ielina",       color: 189, text: 16,  domain: "Moon & Timekeeping" },
