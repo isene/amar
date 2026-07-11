@@ -4238,10 +4238,9 @@ impl App {
 
         // One mini-month → 6 display-lines, each exactly 21 cols wide.
         let mini = |m: u32| -> Vec<String> {
-            let god = crate::calendar::god_for_month(m);
             let mut v = Vec::with_capacity(6);
-            // Month name in the god's colour.
-            v.push(style::bold(&style::fg(&format!(" {:<20}", MONTHS[(m - 1) as usize]), god.color)).to_string());
+            // Month name in the month-god's colour.
+            v.push(style::bold(&style::fg(&format!(" {:<20}", MONTHS[(m - 1) as usize]), crate::calendar::month_color(m))).to_string());
             let hdr: String = DAYS.iter().map(|d| format!(" {:>2}", &d[0..2])).collect();
             v.push(style::fg(&hdr, t::FG_DIM).to_string());
             for w in 0..4u32 {
@@ -4252,9 +4251,9 @@ impl App {
                     let cell = format!(" {:>2}", dom);
                     let styled = if date == cursor {
                         style::reverse(&style::fg(&cell, color_for(date).unwrap_or(252)))
-                    } else if dom == god.holy_day {
-                        // The god's holy day: cell background in the god's colour.
-                        style::fb(&cell, god.text, god.color)
+                    } else if let Some(sp) = crate::calendar::special_day(m, dom) {
+                        // A god's holy day: cell background in the god's colour.
+                        style::fb(&cell, sp.text, sp.color)
                     } else if date == today {
                         style::bold(&style::fg(&cell, color_for(date).unwrap_or(t::ACCENT)))
                     } else {
@@ -4297,13 +4296,12 @@ impl App {
         out.push(style::fg("  ── selected day ──", t::FG_MUTED).to_string());
         out.push(style::bold(&style::fg(&format!("  {}", cursor.fmt_long()), t::ACCENT)).to_string());
         // Holy day: the god, what it presides over, and the day's effect.
-        if let Some(g) = cursor.holy_god() {
+        if let Some(sp) = cursor.special_day() {
             out.push(style::bold(&style::fg(
-                &format!("  \u{2726} Holy day of {} \u{2014} {}",
-                    MONTHS[(cursor.month() - 1) as usize], g.domain),
-                g.color)).to_string());
+                &format!("  \u{2726} Holy day of {} \u{2014} {}", sp.god, sp.domain),
+                sp.color)).to_string());
             out.push(style::fg(
-                &format!("    Followers gain the god's blessing: Initiates +3, Priests +6 to {} this day.", g.power),
+                &format!("    Followers gain the god's blessing: Initiates +3, Priests +6 to {} this day.", sp.power),
                 t::FG_MUTED).to_string());
             out.push(style::fg(
                 "    (Priests keep +3 for the five days before and after.)", t::FG_DIM).to_string());

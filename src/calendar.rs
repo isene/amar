@@ -16,43 +16,59 @@ pub const DAYS: [&str; 7] = [
 pub const DAYS_PER_MONTH: u32 = 28;
 pub const DAYS_PER_YEAR: u32 = 364;
 
-/// One god per month (the month is named after it). Colours are read from the
-/// Amar "Gods of Amar" wheel/graph (d6gaming.org/File:Wheel.jpg,
-/// File:GodsOfAmar.png); the holy day (day-of-month) + domain + granted power
-/// come from the Mythology wiki (Overview of the Gods and their Worshipping).
-pub struct God {
-    /// xterm-256 colour — the month name AND the holy-day cell background.
+/// Colour for each month name (index = month - 1), matching that month-god's
+/// colour on the Gods-of-Amar wheel/graph (d6gaming.org).
+pub const MONTH_COLORS: [u8; 13] = [
+    231, 254, 34, 200, 99, 202, 250, 130, 179, 220, 214, 244, 240,
+];
+
+/// The colour of month `m` (1-13) — its god's colour.
+pub fn month_color(m: u32) -> u8 {
+    MONTH_COLORS[(m.clamp(1, 13) - 1) as usize]
+}
+
+/// A holy / special day: a specific date honouring a god. Colours from the
+/// Gods-of-Amar wheel/graph; dates, domains and effects from the Mythology
+/// wiki (Overview of the Gods and their Worshipping).
+pub struct SpecialDay {
+    pub month: u32, // 1-13
+    pub day: u32,   // 1-28
+    pub god: &'static str,
+    /// xterm-256 colour for the day's background.
     pub color: u8,
-    /// Contrasting foreground for the (coloured) holy-day cell.
+    /// Contrasting foreground on that background.
     pub text: u8,
-    /// Day-of-month of this god's holy day.
-    pub holy_day: u32,
-    /// What the god presides over.
     pub domain: &'static str,
-    /// The skill / power the god grants its followers (bonus on the holy day).
+    /// The power/skill the god grants its followers on this day.
     pub power: &'static str,
 }
 
-/// Indexed by month - 1. Order matches [`MONTHS`].
-pub const GODS: [God; 13] = [
-    God { color: 231, text: 16,  holy_day: 9,  domain: "Good Deeds",            power: "Melee Defense" },   // Cal Amae
-    God { color: 254, text: 16,  holy_day: 2,  domain: "Creation & Art",        power: "Life Magick" },     // Elesi
-    God { color: 34,  text: 231, holy_day: 4,  domain: "Nature",                power: "Missile Weapons" }, // Anashina
-    God { color: 200, text: 16,  holy_day: 12, domain: "Queen of the Gods",     power: "Social Skills" },   // Gwendyll
-    God { color: 99,  text: 231, holy_day: 13, domain: "King of the Gods",      power: "Leadership" },      // MacGillan
-    God { color: 202, text: 231, holy_day: 10, domain: "Entertainment",         power: "Music & Dance" },   // Juba
-    God { color: 250, text: 16,  holy_day: 11, domain: "War",                   power: "Melee Skills" },    // Taroc
-    God { color: 130, text: 231, holy_day: 5,  domain: "Strength",              power: "Strength" },        // Man Peggon
-    God { color: 179, text: 16,  holy_day: 1,  domain: "Inner Strength",        power: "Endurance" },       // Maleko
-    God { color: 220, text: 16,  holy_day: 7,  domain: "Knowledge & Wisdom",    power: "Learning" },        // Fal Munir
-    God { color: 214, text: 16,  holy_day: 3,  domain: "Judgement",             power: "Awareness" },       // Moltan
-    God { color: 244, text: 16,  holy_day: 8,  domain: "Death & Reincarnation", power: "Black Magick" },    // Kraagh
-    God { color: 240, text: 231, holy_day: 6,  domain: "Evil Deeds",            power: "Black Magick" },    // Mestronorpha
+pub const SPECIAL_DAYS: &[SpecialDay] = &[
+    // ── The thirteen month-gods (each month is named after one) ──
+    SpecialDay { month: 1,  day: 9,  god: "Cal Amae",     color: 231, text: 16,  domain: "Good Deeds",            power: "Melee Defense" },
+    SpecialDay { month: 2,  day: 2,  god: "Elesi",        color: 254, text: 16,  domain: "Creation & Art",        power: "Life Magick" },
+    SpecialDay { month: 3,  day: 4,  god: "Anashina",     color: 34,  text: 231, domain: "Nature",                power: "Missile Weapons" },
+    SpecialDay { month: 4,  day: 12, god: "Gwendyll",     color: 200, text: 16,  domain: "Queen of the Gods",     power: "Social Skills" },
+    SpecialDay { month: 5,  day: 13, god: "MacGillan",    color: 99,  text: 231, domain: "King of the Gods",      power: "Leadership" },
+    SpecialDay { month: 6,  day: 10, god: "Juba",         color: 202, text: 231, domain: "Entertainment",         power: "Music & Dance" },
+    SpecialDay { month: 7,  day: 11, god: "Taroc",        color: 250, text: 16,  domain: "War",                   power: "Melee Skills" },
+    SpecialDay { month: 8,  day: 5,  god: "Man Peggon",   color: 130, text: 231, domain: "Strength",              power: "Strength" },
+    SpecialDay { month: 9,  day: 1,  god: "Maleko",       color: 179, text: 16,  domain: "Inner Strength",        power: "Endurance" },
+    SpecialDay { month: 10, day: 7,  god: "Fal Munir",    color: 220, text: 16,  domain: "Knowledge & Wisdom",    power: "Learning" },
+    SpecialDay { month: 11, day: 3,  god: "Moltan",       color: 214, text: 16,  domain: "Judgement",             power: "Awareness" },
+    SpecialDay { month: 12, day: 8,  god: "Kraagh",       color: 244, text: 16,  domain: "Death & Reincarnation", power: "Black Magick" },
+    SpecialDay { month: 13, day: 6,  god: "Mestronorpha", color: 240, text: 231, domain: "Evil Deeds",            power: "Black Magick" },
+    // ── The five elemental gods (their days fall at the quarters of the year) ──
+    SpecialDay { month: 1,  day: 1,  god: "Walmaer",      color: 19,  text: 231, domain: "Water & Seas",          power: "Water Magick" },
+    SpecialDay { month: 4,  day: 8,  god: "Alesia",       color: 88,  text: 231, domain: "Earth",                 power: "Earth & Protection Magick" },
+    SpecialDay { month: 7,  day: 15, god: "Ikalio",       color: 208, text: 16,  domain: "Fire & Sun",            power: "Fire Magick" },
+    SpecialDay { month: 10, day: 22, god: "Shalissa",     color: 117, text: 16,  domain: "Wind & Freedom",        power: "Air Magick" },
+    SpecialDay { month: 13, day: 28, god: "Ielina",       color: 189, text: 16,  domain: "Moon & Time",           power: "Perception Magick" },
 ];
 
-/// The god of the given month (1-13).
-pub fn god_for_month(month: u32) -> &'static God {
-    &GODS[(month.clamp(1, 13) - 1) as usize]
+/// The special day on a given date (month 1-13, day 1-28), if any.
+pub fn special_day(month: u32, day: u32) -> Option<&'static SpecialDay> {
+    SPECIAL_DAYS.iter().find(|s| s.month == month && s.day == day)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -86,10 +102,9 @@ impl AmarDate {
 
     pub fn day_name(&self) -> &'static str { DAYS[(self.day_of_week() - 1) as usize] }
 
-    /// The god whose holy day falls on this exact date, if any.
-    pub fn holy_god(&self) -> Option<&'static God> {
-        let g = &GODS[(self.month() - 1) as usize];
-        if self.day_of_month() == g.holy_day { Some(g) } else { None }
+    /// The special (holy) day falling on this exact date, if any.
+    pub fn special_day(&self) -> Option<&'static SpecialDay> {
+        special_day(self.month(), self.day_of_month())
     }
 
     pub fn advance(&self, days: i64) -> Self {
