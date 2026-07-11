@@ -16,6 +16,45 @@ pub const DAYS: [&str; 7] = [
 pub const DAYS_PER_MONTH: u32 = 28;
 pub const DAYS_PER_YEAR: u32 = 364;
 
+/// One god per month (the month is named after it). Colours are read from the
+/// Amar "Gods of Amar" wheel/graph (d6gaming.org/File:Wheel.jpg,
+/// File:GodsOfAmar.png); the holy day (day-of-month) + domain + granted power
+/// come from the Mythology wiki (Overview of the Gods and their Worshipping).
+pub struct God {
+    /// xterm-256 colour — the month name AND the holy-day cell background.
+    pub color: u8,
+    /// Contrasting foreground for the (coloured) holy-day cell.
+    pub text: u8,
+    /// Day-of-month of this god's holy day.
+    pub holy_day: u32,
+    /// What the god presides over.
+    pub domain: &'static str,
+    /// The skill / power the god grants its followers (bonus on the holy day).
+    pub power: &'static str,
+}
+
+/// Indexed by month - 1. Order matches [`MONTHS`].
+pub const GODS: [God; 13] = [
+    God { color: 231, text: 16,  holy_day: 9,  domain: "Good Deeds",            power: "Melee Defense" },   // Cal Amae
+    God { color: 254, text: 16,  holy_day: 2,  domain: "Creation & Art",        power: "Life Magick" },     // Elesi
+    God { color: 34,  text: 231, holy_day: 4,  domain: "Nature",                power: "Missile Weapons" }, // Anashina
+    God { color: 200, text: 16,  holy_day: 12, domain: "Queen of the Gods",     power: "Social Skills" },   // Gwendyll
+    God { color: 99,  text: 231, holy_day: 13, domain: "King of the Gods",      power: "Leadership" },      // MacGillan
+    God { color: 202, text: 231, holy_day: 10, domain: "Entertainment",         power: "Music & Dance" },   // Juba
+    God { color: 250, text: 16,  holy_day: 11, domain: "War",                   power: "Melee Skills" },    // Taroc
+    God { color: 130, text: 231, holy_day: 5,  domain: "Strength",              power: "Strength" },        // Man Peggon
+    God { color: 179, text: 16,  holy_day: 1,  domain: "Inner Strength",        power: "Endurance" },       // Maleko
+    God { color: 220, text: 16,  holy_day: 7,  domain: "Knowledge & Wisdom",    power: "Learning" },        // Fal Munir
+    God { color: 214, text: 16,  holy_day: 3,  domain: "Judgement",             power: "Awareness" },       // Moltan
+    God { color: 244, text: 16,  holy_day: 8,  domain: "Death & Reincarnation", power: "Black Magick" },    // Kraagh
+    God { color: 240, text: 231, holy_day: 6,  domain: "Evil Deeds",            power: "Black Magick" },    // Mestronorpha
+];
+
+/// The god of the given month (1-13).
+pub fn god_for_month(month: u32) -> &'static God {
+    &GODS[(month.clamp(1, 13) - 1) as usize]
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AmarDate {
     pub year: u32,
@@ -46,6 +85,12 @@ impl AmarDate {
     pub fn week_name(&self) -> &'static str { WEEKS[(self.week_of_month() - 1) as usize] }
 
     pub fn day_name(&self) -> &'static str { DAYS[(self.day_of_week() - 1) as usize] }
+
+    /// The god whose holy day falls on this exact date, if any.
+    pub fn holy_god(&self) -> Option<&'static God> {
+        let g = &GODS[(self.month() - 1) as usize];
+        if self.day_of_month() == g.holy_day { Some(g) } else { None }
+    }
 
     pub fn advance(&self, days: i64) -> Self {
         let total = self.year as i64 * DAYS_PER_YEAR as i64 + self.day_of_year as i64 + days;

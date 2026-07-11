@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "amar"
-version = "0.1.41"
+version = "0.1.42"
 dependencies = [
  "fe2o3-crust",
  "fe2o3-glow",
