@@ -28,8 +28,10 @@ pub fn month_color(m: u32) -> u8 {
 }
 
 /// A holy / special day: a specific date honouring a god. Colours from the
-/// Gods-of-Amar wheel/graph; dates, domains and effects from the Mythology
-/// wiki (Overview of the Gods and their Worshipping).
+/// Gods-of-Amar wheel/graph; dates + domains from the Mythology wiki table
+/// (Overview of the Gods and their Worshipping). Holy-day effect (all gods):
+/// Initiates +3, Priests +6 to the god's powers on the day; Priests +3 for the
+/// five days before and after.
 pub struct SpecialDay {
     pub month: u32, // 1-13
     pub day: u32,   // 1-28
@@ -39,31 +41,43 @@ pub struct SpecialDay {
     /// Contrasting foreground on that background.
     pub text: u8,
     pub domain: &'static str,
-    /// The power/skill the god grants its followers on this day.
-    pub power: &'static str,
 }
 
 pub const SPECIAL_DAYS: &[SpecialDay] = &[
+    // ── Elemental gods — their days fall at the quarters of the year ──
+    SpecialDay { month: 1,  day: 1,  god: "Walmaer",      color: 19,  text: 231, domain: "Water" },
+    SpecialDay { month: 4,  day: 8,  god: "Alesia",       color: 88,  text: 231, domain: "Earth" },
+    SpecialDay { month: 7,  day: 15, god: "Ikalio",       color: 208, text: 16,  domain: "Fire" },
+    SpecialDay { month: 10, day: 22, god: "Shalissa",     color: 117, text: 16,  domain: "Wind" },
+    SpecialDay { month: 13, day: 28, god: "Ielina",       color: 189, text: 16,  domain: "Moon & Timekeeping" },
     // ── The thirteen month-gods (each month is named after one) ──
-    SpecialDay { month: 1,  day: 9,  god: "Cal Amae",     color: 231, text: 16,  domain: "Good Deeds",            power: "Melee Defense" },
-    SpecialDay { month: 2,  day: 2,  god: "Elesi",        color: 254, text: 16,  domain: "Creation & Art",        power: "Life Magick" },
-    SpecialDay { month: 3,  day: 4,  god: "Anashina",     color: 34,  text: 231, domain: "Nature",                power: "Missile Weapons" },
-    SpecialDay { month: 4,  day: 12, god: "Gwendyll",     color: 200, text: 16,  domain: "Queen of the Gods",     power: "Social Skills" },
-    SpecialDay { month: 5,  day: 13, god: "MacGillan",    color: 99,  text: 231, domain: "King of the Gods",      power: "Leadership" },
-    SpecialDay { month: 6,  day: 10, god: "Juba",         color: 202, text: 231, domain: "Entertainment",         power: "Music & Dance" },
-    SpecialDay { month: 7,  day: 11, god: "Taroc",        color: 250, text: 16,  domain: "War",                   power: "Melee Skills" },
-    SpecialDay { month: 8,  day: 5,  god: "Man Peggon",   color: 130, text: 231, domain: "Strength",              power: "Strength" },
-    SpecialDay { month: 9,  day: 1,  god: "Maleko",       color: 179, text: 16,  domain: "Inner Strength",        power: "Endurance" },
-    SpecialDay { month: 10, day: 7,  god: "Fal Munir",    color: 220, text: 16,  domain: "Knowledge & Wisdom",    power: "Learning" },
-    SpecialDay { month: 11, day: 3,  god: "Moltan",       color: 214, text: 16,  domain: "Judgement",             power: "Awareness" },
-    SpecialDay { month: 12, day: 8,  god: "Kraagh",       color: 244, text: 16,  domain: "Death & Reincarnation", power: "Black Magick" },
-    SpecialDay { month: 13, day: 6,  god: "Mestronorpha", color: 240, text: 231, domain: "Evil Deeds",            power: "Black Magick" },
-    // ── The five elemental gods (their days fall at the quarters of the year) ──
-    SpecialDay { month: 1,  day: 1,  god: "Walmaer",      color: 19,  text: 231, domain: "Water & Seas",          power: "Water Magick" },
-    SpecialDay { month: 4,  day: 8,  god: "Alesia",       color: 88,  text: 231, domain: "Earth",                 power: "Earth & Protection Magick" },
-    SpecialDay { month: 7,  day: 15, god: "Ikalio",       color: 208, text: 16,  domain: "Fire & Sun",            power: "Fire Magick" },
-    SpecialDay { month: 10, day: 22, god: "Shalissa",     color: 117, text: 16,  domain: "Wind & Freedom",        power: "Air Magick" },
-    SpecialDay { month: 13, day: 28, god: "Ielina",       color: 189, text: 16,  domain: "Moon & Time",           power: "Perception Magick" },
+    SpecialDay { month: 1,  day: 9,  god: "Cal Amae",     color: 231, text: 16,  domain: "Good Deeds" },
+    SpecialDay { month: 2,  day: 2,  god: "Elesi",        color: 254, text: 16,  domain: "Creation & Art" },
+    SpecialDay { month: 3,  day: 4,  god: "Anashina",     color: 34,  text: 231, domain: "Nature" },
+    SpecialDay { month: 4,  day: 12, god: "Gwendyll",     color: 200, text: 16,  domain: "Queen of the Gods" },
+    SpecialDay { month: 5,  day: 13, god: "MacGillan",    color: 99,  text: 231, domain: "King of the Gods" },
+    SpecialDay { month: 6,  day: 10, god: "Juba",         color: 202, text: 231, domain: "Entertainment" },
+    SpecialDay { month: 7,  day: 11, god: "Taroc",        color: 250, text: 16,  domain: "War" },
+    SpecialDay { month: 8,  day: 4,  god: "Man Peggon",   color: 130, text: 231, domain: "Strength" },
+    SpecialDay { month: 9,  day: 1,  god: "Maleko",       color: 179, text: 16,  domain: "Inner Strength" },
+    SpecialDay { month: 10, day: 7,  god: "Fal Munir",    color: 220, text: 16,  domain: "Knowledge & Wisdom" },
+    SpecialDay { month: 11, day: 3,  god: "Moltan",       color: 214, text: 16,  domain: "Judgement" },
+    SpecialDay { month: 12, day: 8,  god: "Kraagh",       color: 244, text: 16,  domain: "Death & Reincarnation" },
+    SpecialDay { month: 13, day: 6,  god: "Mestronorpha", color: 240, text: 231, domain: "Evil Deeds" },
+    // ── Magick gods — the trio share the month of Anashina ──
+    SpecialDay { month: 3,  day: 15, god: "Ish Nakil",    color: 141, text: 231, domain: "Innate Magick" },
+    SpecialDay { month: 3,  day: 18, god: "Fenimaal",     color: 215, text: 16,  domain: "Willpower Magick" },
+    SpecialDay { month: 3,  day: 21, god: "Fionella",     color: 42,  text: 16,  domain: "Natural Magick" },
+    // ── Lesser gods (children of the month-gods) + Asteria & Parkoan ──
+    SpecialDay { month: 7,  day: 1,  god: "Recolar",      color: 180, text: 16,  domain: "Sports & Competition" },
+    SpecialDay { month: 7,  day: 14, god: "Mailatroz",    color: 137, text: 231, domain: "Trading" },
+    SpecialDay { month: 6,  day: 1,  god: "Ztenasie",     color: 124, text: 231, domain: "Wine & Food" },
+    SpecialDay { month: 6,  day: 28, god: "Elaari",       color: 218, text: 16,  domain: "Passion & Arts" },
+    SpecialDay { month: 13, day: 1,  god: "Tsankili",     color: 109, text: 16,  domain: "Thievery & Treachery" },
+    SpecialDay { month: 11, day: 2,  god: "Fooradur",     color: 136, text: 16,  domain: "Diplomacy" },
+    SpecialDay { month: 2,  day: 1,  god: "Liandra",      color: 229, text: 16,  domain: "Hope & Dreams" },
+    SpecialDay { month: 1,  day: 2,  god: "Asteria",      color: 159, text: 16,  domain: "Ice" },
+    SpecialDay { month: 7,  day: 16, god: "Parkoan",      color: 166, text: 231, domain: "Lava" },
 ];
 
 /// The special day on a given date (month 1-13, day 1-28), if any.

@@ -4301,7 +4301,7 @@ impl App {
                 &format!("  \u{2726} Holy day of {} \u{2014} {}", sp.god, sp.domain),
                 sp.color)).to_string());
             out.push(style::fg(
-                &format!("    Followers gain the god's blessing: Initiates +3, Priests +6 to {} this day.", sp.power),
+                "    Followers gain the god's blessing: Initiates +3, Priests +6 to its powers this day.",
                 t::FG_MUTED).to_string());
             out.push(style::fg(
                 "    (Priests keep +3 for the five days before and after.)", t::FG_DIM).to_string());
