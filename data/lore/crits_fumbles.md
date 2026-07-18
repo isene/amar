@@ -1,11 +1,36 @@
 # Criticals & Fumbles
 
-Double 6 on an attack roll (any time during the open-ended roll) = critical.
-Double 1 = fumble. Roll 1D for the category, then 1D for the specific result.
-If a result is inapplicable, pick the one above (criticals) or below (fumbles).
+Double 6 on any roll (any time during the open-ended roll) = critical.
+Double 1 = fumble. A critical is always a success (within reason); a
+fumble is always a failure. Critical attack vs critical defence: the hit
+only lands if attack > defence.
 
-A critical is always a success (within reason); a fumble is always a failure.
-Critical attack vs critical defence: the hit only lands if attack > defence.
+For ANY skill roll (Reaction Speed, Swim, Alertness, ...) use the simple
+one-roll tables below. Combat and spell casting have their own two-level
+tables: roll 1D for the category, then 1D for the specific result. If a
+result is inapplicable, pick the one above (criticals) or below (fumbles).
+
+## Any Skill Roll — Criticals
+
+| Roll | Result |
+|---|---|
+| 1 | Cool — it looks effortless; onlookers are impressed |
+| 2 | Fast — done in half the time |
+| 3 | Frugal — costs nothing extra: no fatigue, no wear on gear |
+| 4 | Better — the result is one grade better than asked |
+| 5 | Inspired — +3 on your next related roll |
+| 6 | Perfect — one grade better AND add one experience mark |
+
+## Any Skill Roll — Fumbles
+
+| Roll | Result |
+|---|---|
+| 1 | Slow — takes double time before the failure shows |
+| 2 | Drop — drop or damage what you are holding or using |
+| 3 | Strain — -1 on all rolls until you rest |
+| 4 | Worse — the situation gets one grade worse (GM's discretion) |
+| 5 | Exposed — the failure invites danger at the worst moment (GM) |
+| 6 | Botched — as 4, and subtract one experience mark |
 
 ## Criticals (melee / generic)
 
@@ -151,4 +176,81 @@ Critical attack vs critical defence: the hit only lands if attack > defence.
 | | 5 | Botched it, giggles are heard |
 | | 6 | Awkward looking |
 
-D = one die roll. O = open-ended roll. Status = current Off/Def totals.
+## Magick Criticals
+
+Double 6 when casting an incantation: the casting succeeds, roll below.
+
+| Cat | Roll | Result |
+|---|---|---|
+| 1 Impression | 1 | Looks really cool |
+| | 2 | Impressive, adjacent friends get +1 next round |
+| | 3 | Very impressive, adjacent friends get +1 next D/2 rounds |
+| | 4 | Fearsome, foe rolls on fear table with +9 |
+| | 5 | Awesome, foe rolls on fear table with +6 |
+| | 6 | Wild, foe rolls on fear table with +3 |
+| 2 Side effect | 1 | Gain 1 experience mark in MA |
+| | 2 | Gain 1 experience mark in the Magic Path Lore |
+| | 3 | Gain 1 experience mark in Learning |
+| | 4 | MA spent for the casting is 1 less |
+| | 5 | May cast an additional incantation this round (if Casting Time is one round) |
+| | 6 | Active incantation becomes passive for the duration |
+| 3 Increased effect | 1 | Incantation weight is 1 better |
+| | 2 | Area of effect 1 better |
+| | 3 | Range is 1 better |
+| | 4 | Duration is 1 better |
+| | 5 | Incantation Effect is 1 better |
+| | 6 | Add 1 to all incantation characteristics |
+| 4 Effect boost | 1 | Incantation weight is D levels better |
+| | 2 | Area of effect D levels better |
+| | 3 | Range is D levels better |
+| | 4 | Duration is D levels better |
+| | 5 | Incantation Effect is D levels better |
+| | 6 | Add D to both Range and Duration |
+| 5 Special | 1 | Warps into another similar incantation (GM) |
+| | 2 | Warps into a similar but better incantation (GM) |
+| | 3 | Disregard the target's Magic Defense |
+| | 4 | Double ALL incantation characteristics |
+| | 5 | Effect D/2 better and disregard the target's MD |
+| | 6 | Effect D better and disregard the target's MD |
+| 6 | | Roll twice (ignore further 6s), add one experience mark |
+
+## Magick Fumbles
+
+Double 1 when casting: the casting fails. Roll below, adding current MA
+to the open-ended roll.
+
+| Cat | Roll | Result |
+|---|---|---|
+| 1 | | Roll twice (ignore further 1s), subtract one experience mark |
+| 2 Special | 1 | Unconscious for D hours, lose 1 MA permanently |
+| | 2 | Unconscious for D minutes |
+| | 3 | Sleep deprivation for D days due to pain, -4 Status |
+| | 4 | Affects wrong target in the worst possible way |
+| | 5 | Affects self (unless supposed to) |
+| | 6 | You speak backwards for D days (including incantations) |
+| 3 Unwanted effect | 1 | Amnesia — cannot cast incantations for D hours |
+| | 2 | Everybody within 10 m becomes hostile towards you |
+| | 3 | Incantation has the complete opposite effect (GM) |
+| | 4 | Dizzy — fall and let go what you hold |
+| | 5 | Dehydrated, -D Status until you drink D litres |
+| | 6 | Pain, -3 Status until Medical Lore 7 |
+| 4 Stun effect | 1 | Shocked, -(O+3) Status for one minute |
+| | 2 | Reeling, -O Status for O rounds |
+| | 3 | Staggered, -D Status for D rounds |
+| | 4 | Stunned, -3 Status for 3 rounds |
+| | 5 | Confused, -3 Status next round |
+| | 6 | Off balance, -1 Status next round |
+| 5 Added effect | 1 | Very drained, -3 MA until well rested (min 1) |
+| | 2 | Very fatigued, -3 Endurance until well rested (min 1) |
+| | 3 | Very tired, -3 Strength until well rested (min 1) |
+| | 4 | Drained, -1 MA until well rested (min 1) |
+| | 5 | Fatigued, -1 Endurance until well rested (min 1) |
+| | 6 | Tired, -1 Strength until well rested (min 1) |
+| 6 Impression | 1 | Terrible for morale, friends -1 all rolls next D rounds |
+| | 2 | Very bad for morale, friends -1 all rolls rest of round |
+| | 3 | Bad for morale, friends -1 attack rest of round |
+| | 4 | You make a fool of yourself, laughter is heard |
+| | 5 | Botched it, giggles are heard |
+| | 6 | Awkward looking |
+
+D = one die roll. O = open-ended roll. Status = current Off/Def totals. MA = Magical Aptitude.

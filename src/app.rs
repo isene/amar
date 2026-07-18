@@ -3503,6 +3503,15 @@ impl App {
                 if !self.world_expanded.iter().any(|e| e == wsec) {
                     self.world_expanded.push(wsec.to_string());
                 }
+                // NPC hits also need their region group open.
+                if let WorldNode::Npc(i) = wnode {
+                    if let Some(n) = self.world.npcs.get(i) {
+                        let key = format!("region:{}", n.region);
+                        if !self.world_expanded.iter().any(|e| *e == key) {
+                            self.world_expanded.push(key);
+                        }
+                    }
+                }
                 self.set_tab(Tab::World);
                 let tree = self.build_world_tree();
                 if let Some(idx) = tree.iter().position(|x| *x == wnode) {
@@ -3559,8 +3568,11 @@ impl App {
             }
             for region in self.world_regions() {
                 out.push(WorldNode::Region(region.clone()));
-                for (i, n) in self.world.npcs.iter().enumerate() {
-                    if n.region == region { out.push(WorldNode::Npc(i)); }
+                let key = format!("region:{}", region);
+                if self.world_expanded.iter().any(|e| *e == key) {
+                    for (i, n) in self.world.npcs.iter().enumerate() {
+                        if n.region == region { out.push(WorldNode::Npc(i)); }
+                    }
                 }
             }
         }
@@ -3605,8 +3617,13 @@ impl App {
                     .map(|l| if l.kind.is_empty() { l.name.clone() }
                          else { format!("{}  ({})", l.name, truncate_or_pad(&l.kind, 22).trim_end().to_string()) })
                     .unwrap_or_default()),
-                WorldNode::Region(r) => (1,
-                    if r.is_empty() { "Any region".to_string() } else { r.clone() }),
+                WorldNode::Region(r) => (1, {
+                    let label = if r.is_empty() { "Any region" } else { r.as_str() };
+                    let count = self.world.npcs.iter().filter(|n| &n.region == r).count();
+                    let open = self.world_expanded.iter()
+                        .any(|e| *e == format!("region:{}", r));
+                    format!("{} {} ({})", if open { "-" } else { "+" }, label, count)
+                }),
                 WorldNode::Npc(i) => (2, self.world.npcs.get(*i)
                     .map(|n| n.name.clone()).unwrap_or_default()),
                 WorldNode::Empty(m) => (1, m.to_string()),
@@ -3747,6 +3764,10 @@ impl App {
                 match tree.get(self.world_idx) {
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
                     Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
+                    Some(WorldNode::Region(r)) => {
+                        let key = format!("region:{}", r);
+                        toggle(self, &key);
+                    }
                     _ => {}
                 }
             }
@@ -3755,9 +3776,15 @@ impl App {
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
                     Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
                     Some(WorldNode::Loc(_)) | Some(WorldNode::Empty(_)) => self.world_idx = 0,
-                    Some(WorldNode::Region(_)) => {
-                        self.world_idx = tree.iter()
-                            .position(|x| matches!(x, WorldNode::SecNpc)).unwrap_or(0);
+                    Some(WorldNode::Region(r)) => {
+                        // Expanded region collapses; collapsed jumps up.
+                        let key = format!("region:{}", r);
+                        if self.world_expanded.iter().any(|e| *e == key) {
+                            toggle(self, &key);
+                        } else {
+                            self.world_idx = tree.iter()
+                                .position(|x| matches!(x, WorldNode::SecNpc)).unwrap_or(0);
+                        }
                     }
                     Some(WorldNode::Npc(_)) => {
                         // Jump to the NPC's region header.
@@ -3783,6 +3810,10 @@ impl App {
                     }
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
                     Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
+                    Some(WorldNode::Region(r)) => {
+                        let key = format!("region:{}", r);
+                        toggle(self, &key);
+                    }
                     _ => {}
                 }
             }
@@ -7163,7 +7194,8 @@ impl App {
               j / k          Down / up (Down/Up walk this help line-by-line)\n  \
               ?              This help\n\n  \
             WORLD (tab 1)\n  \
-              NPCs are grouped by kingdom region (\u{201c}Any region\u{201d} = unassigned)\n  \
+              NPCs are grouped by kingdom region (\u{201c}Any region\u{201d} = unassigned);\n  \
+              regions fold like a hyperlist \u{2014} l/ENTER opens, h collapses\n  \
               C-\u{2191}/C-\u{2193}      Move the cursor location / NPC up or down (NPCs\n  \
                              move within their region; order saved to world.json)\n  \
               ENTER          Edit a location's description\n  \
