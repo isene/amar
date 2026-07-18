@@ -190,13 +190,8 @@ fn weather_step(
         if month == 13 && rng.d6() <= 3 { weather += 4; }      // Mestronorpha
         if weather > 20 { weather = 40 - weather; }
     }
-    // Fixed feast-day weather:
-    if month == 1  && day_of_month == 1  { weather = 11; }     // Walmaer day
-    if month == 7  && day_of_month == 15 { weather = 1; }      // Ikalio day
-    if month == 13 && day_of_month == 28 { weather = 1; }      // Ielina day
-    if month == 6  && day_of_month == 10 {                     // Ielina day Juba
-        weather = (rng.d6() as i32 % 5) + 1;
-    }
+    // (Elemental holy-day weather is applied at the end, driven by the
+    // calendar's holy-day table so the two can never drift apart.)
     if month == 6 { wind_dir = ((wind_dir + (oroll(rng) + oroll(rng) - 7) / 3) % 8 + 8) % 8; }
     if rng.d6() <= 3 {
         wind_dir = ((wind_dir + (oroll(rng) + oroll(rng) - 7) / 3) % 8 + 8) % 8;
@@ -209,7 +204,19 @@ fn weather_step(
     }
     if wind_str < 0 { wind_str = 0; }
     if wind_str > 3 { wind_str = 3; }
-    if month == 10 && day_of_month == 21 { wind_str = 3; }     // Shalissa day
+    // Elemental holy days bend the sky to the god's element. Dates come
+    // straight from the calendar's holy-day table (special_day), so weather
+    // and the calendar always agree — no more day-21-vs-22 drift.
+    if let Some(sp) = crate::calendar::special_day(month, day_of_month) {
+        match sp.god {
+            "Walmaer"  => weather = 15,                     // Water → steady rain
+            "Ikalio"   => weather = 1,                      // Fire → clear & sunny
+            "Shalissa" => { weather = 2; wind_str = 3; }    // Wind → clear but very windy
+            "Alesia"   => weather = 8,                      // Earth → heavy, overcast
+            "Ielina"   => { weather = 2; wind_str = 0; }    // Moon → clear & calm
+            _ => {}
+        }
+    }
     if weather < 1 { weather = 1; }
     let special = special_for(month, day_of_month);
     (weather, wind_dir, wind_str, special)
@@ -240,7 +247,7 @@ fn special_for(month: u32, day_of_month: u32) -> &'static str {
         (8, 4)  => "Man Peggon",
         (9, 1)  => "Maleko",
         (10, 7) => "Fal Munir",
-        (10, 21)=> "Shalissa",
+        (10, 22)=> "Shalissa",
         (11, 3) => "Moltan",
         (12, 8) => "Kraagh",
         (13, 28)=> "Mestronorpha (Ielina day)",
@@ -371,11 +378,21 @@ mod tests {
     }
 
     #[test]
-    fn weather_walmaer_day_is_fixed() {
-        // Walmaer day (1 Cal Amae) has fixed weather index 11.
-        let start = AmarDate::from_ymd(354, 1, 1);
-        let days = generate_weather(start, 1);
-        assert_eq!(days[0].weather, 11);
+    fn elemental_holy_days_bend_the_weather() {
+        // Walmaer day (1 Cal Amae) — Water god → steady rain.
+        let w = &generate_weather(AmarDate::from_ymd(354, 1, 1), 1)[0];
+        assert_eq!(w.weather, 15, "Walmaer day should rain");
+        assert_eq!(w.special, "Walmaer (king's day)");
+
+        // Ikalio day (15 Taroc) — Fire god → clear & sunny.
+        let f = &generate_weather(AmarDate::from_ymd(354, 7, 15), 1)[0];
+        assert_eq!(f.weather, 1, "Ikalio day should be sunny");
+
+        // Shalissa day (22 Fal Munir) — Wind god → very windy. Its date
+        // now comes from the calendar table (day 22), not the old day 21.
+        let s = &generate_weather(AmarDate::from_ymd(354, 10, 22), 1)[0];
+        assert_eq!(s.wind_str, 3, "Shalissa day should be very windy");
+        assert_eq!(s.special, "Shalissa");
     }
 
     #[test]

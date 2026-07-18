@@ -588,10 +588,16 @@ fn seed_flavor(c: &mut Character, t: &Chartype, rng: &mut impl Rng) {
 ///     can show initiative even at zero rank.
 ///   • Alertness (Awareness) ≥ 0       — likewise for combat awareness.
 fn ensure_essential_skills(c: &mut Character) {
+    // The short-form spec: every NPC always carries the stealth /
+    // awareness quartet (Move Quietly, Hide, Reaction Speed, Alertness)
+    // with at least rank 1, so the encounter block can state them and
+    // the GM can roll surprise without improvising numbers.
     let bumps: &[(&str, &str, i32)] = &[
         ("Social Knowledge", "Spoken Language", 2),
-        ("Awareness",        "Reaction Speed",  0),
-        ("Awareness",        "Alertness",       0),
+        ("Awareness",        "Reaction Speed",  1),
+        ("Awareness",        "Alertness",       1),
+        ("Athletics",        "Move Quietly",    1),
+        ("Athletics",        "Hide",            1),
     ];
     for (attr, skill, floor) in bumps {
         let entry = c.skills.entry((*attr).into()).or_default();

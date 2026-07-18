@@ -110,10 +110,10 @@ pub enum WeaponKind {
 /// `pc.skills["Melee Combat"][skill_name]` (or "Missile Combat") so
 /// weapon-skill bookkeeping flows through the normal skill system.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)] // sparse weapon JSON (name + damage, say) loads fine
 pub struct Weapon {
     pub name: String,
     pub kind: WeaponKind,
-    #[serde(default)]
     pub skill_name: String,
     pub two_handed: bool,
     pub init: i32,
@@ -186,12 +186,23 @@ pub fn bp_for_location(total_bp: i32, loc: &str) -> i32 {
     ((total_bp as f32 * factor).ceil()) as i32
 }
 
+// Container-level serde(default): a sparse "short form" JSON — name, level,
+// a few skills, weapons — deserializes cleanly, with every omitted field
+// defaulted. Campaign::load then runs `normalize()` on each character so
+// the sparse import becomes a fully-working sheet. This is the companion
+// Claude Code session's injection format (see CLAUDE.md, data contract).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Character {
     // Identity
     pub name: String,
     pub player: String,
     pub is_pc: bool,
+    /// Inactive PCs sit out of the campaign: dimmed on the roster and
+    /// skipped when a combat pulls in "all PCs". Toggled with `a` on
+    /// the PC row. Defaults to true so existing sheets stay active.
+    #[serde(default = "default_active")]
+    pub active: bool,
     pub race: String,
     pub gender: String,
     pub age: u32,
@@ -304,6 +315,8 @@ pub const HIT_LOCATIONS: &[&str] = &[
     "Head", "R. Arm", "L. Arm", "Body", "R. Leg", "L. Leg",
 ];
 
+fn default_active() -> bool { true }
+
 fn parse_u(s: &str, label: &str) -> Result<u32, String> {
     s.parse::<u32>().map_err(|e| format!("bad {}: {}", label, e))
 }
@@ -353,8 +366,48 @@ pub fn size_from_weight_kg(kg: u32) -> f32 {
 }
 
 impl Character {
+    /// Fill in everything a sparse (companion-injected) character omits,
+    /// so a short-form JSON — name, level, a few skills, weapons — loads
+    /// into a fully-working sheet. Idempotent: a complete character passes
+    /// through untouched. `size == 0` marks a fresh sparse import (no real
+    /// character has SIZE 0); only then are weight/SIZE/BP/MF/active
+    /// seeded, so a saved character's wound state is never "healed" by a
+    /// reload. Called on every character by `Campaign::load`.
+    pub fn normalize(&mut self) {
+        let fresh = self.size <= 0.0;
+        if self.race.trim().is_empty() { self.race = "Human".into(); }
+        if self.level == 0 { self.level = 1; }
+        // Universal baselines — native tongue, fists, hit locations.
+        self.skills.entry("Social Knowledge".into()).or_default()
+            .entry("Spoken Language".into()).or_insert(2);
+        self.skills.entry("Melee Combat".into()).or_default()
+            .entry("Unarmed".into()).or_insert(1);
+        if !self.weapons.iter().any(|w| w.name == "Unarmed") {
+            let mut fists = Weapon::default();
+            fists.name = "Unarmed".into();
+            fists.skill_name = "Unarmed".into();
+            self.weapons.insert(0, fists);
+        }
+        // A weapon without a governing skill uses its own name (the same
+        // rule the sheet editor applies).
+        for w in self.weapons.iter_mut() {
+            if w.skill_name.trim().is_empty() { w.skill_name = w.name.clone(); }
+        }
+        for loc in HIT_LOCATIONS {
+            self.hit_locations.entry((*loc).to_string()).or_default();
+        }
+        if fresh {
+            if self.weight_kg == 0 { self.weight_kg = 70; }
+            self.size = size_from_weight_kg(self.weight_kg);
+            self.active = true;
+            self.bp_current = self.bp_max();
+            self.mf_current = self.mf_max().max(1);
+        }
+    }
+
     pub fn new_blank(name: &str) -> Self {
         let mut c = Character::default();
+        c.active = true; // derived Default is false; every new sheet starts active
         c.name = name.to_string();
         c.race = "Human".into();
         // 70 kg → SIZE 3.0 in the half-size table — lean adult human,
@@ -498,24 +551,58 @@ impl Character {
                     let idx: usize = parts.next().ok_or("weapon id missing idx")?
                         .parse().map_err(|_| "weapon idx not a number")?;
                     let field = parts.next().ok_or("weapon id missing field")?;
-                    let w = self.weapons.get_mut(idx)
-                        .ok_or_else(|| format!("weapon idx {} out of range", idx))?;
-                    match field {
-                        "name"        => w.name = trim.to_string(),
-                        "skill"       => w.skill_name = trim.to_string(),
-                        "two_handed"  => {
-                            w.two_handed = matches!(trim.to_ascii_lowercase().as_str(),
-                                "y"|"yes"|"2h"|"true"|"t"|"1");
+                    // "skillrank" sets the CHARACTER's skill rank for this
+                    // weapon's governing skill (a number folded into OFF/DEF),
+                    // not a field on the weapon itself — so it writes into
+                    // self.skills. Handled first to avoid holding a mutable
+                    // borrow of self.weapons while touching self.skills.
+                    if field == "skillrank" {
+                        let rank = parse_i(trim, "skill rank")?;
+                        let (attr, skill_name) = {
+                            let w = self.weapons.get(idx)
+                                .ok_or_else(|| format!("weapon idx {} out of range", idx))?;
+                            let attr = match w.kind {
+                                WeaponKind::Melee   => "Melee Combat",
+                                WeaponKind::Missile => "Missile Combat",
+                            };
+                            // The governing skill defaults to the weapon's own
+                            // name when unset (a "Trident" uses "Trident").
+                            let sn = if w.skill_name.trim().is_empty() {
+                                w.name.clone()
+                            } else {
+                                w.skill_name.clone()
+                            };
+                            (attr, sn)
+                        };
+                        if skill_name.trim().is_empty() {
+                            return Err("weapon has no name to hang a skill on".into());
                         }
-                        "init"        => w.init = parse_i(trim, "init")?,
-                        "off_mod"     => w.off_mod = parse_i(trim, "off_mod")?,
-                        "def_mod"     => w.def_mod = parse_i(trim, "def_mod")?,
-                        "shots"       => w.shots_per_round = trim.parse().map_err(|e| format!("bad shots: {}", e))?,
-                        "damage"      => w.damage = parse_i(trim, "damage")?,
-                        "range"       => w.range_m = parse_u(trim, "range")?,
-                        "hp"          => w.hp = parse_i(trim, "hp")?,
-                        "xp"          => w.xp = parse_i(trim, "xp")?,
-                        _ => return Err(format!("unknown weapon field: {}", field)),
+                        // Keep the weapon linked to that skill name.
+                        if let Some(w) = self.weapons.get_mut(idx) {
+                            if w.skill_name.trim().is_empty() { w.skill_name = skill_name.clone(); }
+                        }
+                        self.skills.entry(attr.to_string()).or_default()
+                            .insert(skill_name, rank);
+                    } else {
+                        let w = self.weapons.get_mut(idx)
+                            .ok_or_else(|| format!("weapon idx {} out of range", idx))?;
+                        match field {
+                            "name"        => w.name = trim.to_string(),
+                            "skill"       => w.skill_name = trim.to_string(),
+                            "two_handed"  => {
+                                w.two_handed = matches!(trim.to_ascii_lowercase().as_str(),
+                                    "y"|"yes"|"2h"|"true"|"t"|"1");
+                            }
+                            "init"        => w.init = parse_i(trim, "init")?,
+                            "off_mod"     => w.off_mod = parse_i(trim, "off_mod")?,
+                            "def_mod"     => w.def_mod = parse_i(trim, "def_mod")?,
+                            "shots"       => w.shots_per_round = trim.parse().map_err(|e| format!("bad shots: {}", e))?,
+                            "damage"      => w.damage = parse_i(trim, "damage")?,
+                            "range"       => w.range_m = parse_u(trim, "range")?,
+                            "hp"          => w.hp = parse_i(trim, "hp")?,
+                            "xp"          => w.xp = parse_i(trim, "xp")?,
+                            _ => return Err(format!("unknown weapon field: {}", field)),
+                        }
                     }
                 } else if let Some(rest) = other.strip_prefix("spell/") {
                     // spell/<idx>/<field>
@@ -664,6 +751,33 @@ mod tests {
         c.skills.entry("Strength".into()).or_default().insert("Carrying".into(), 4);
         // Wiki example: BODY 2 + Strength 3 + Carrying 4 = 9.
         assert_eq!(c.skill_total(Char::Body, "Strength", "Carrying"), 9);
+    }
+
+    #[test]
+    fn weapon_skillrank_field_sets_character_skill_rank() {
+        let mut c = Character::new_blank("Test");
+        // A trident: governing skill defaults to the weapon name.
+        c.weapons.push(Weapon {
+            name: "Trident".into(), kind: WeaponKind::Melee,
+            skill_name: "Trident".into(), two_handed: false,
+            init: 0, off_mod: 0, def_mod: 0, shots_per_round: 0,
+            damage: 0, hp: 7, range_m: 0, xp: 0,
+        });
+        let idx = c.weapons.len() - 1; // after the free Unarmed slot
+        // The Skill column edits the RANK (a number), not the name.
+        c.set_field(&format!("weapon/{}/skillrank", idx), "5").unwrap();
+        assert_eq!(c.skill("Melee Combat", "Trident"), 5);
+        // A missing skill_name falls back to the weapon name.
+        c.weapons.push(Weapon {
+            name: "Short Bow".into(), kind: WeaponKind::Missile,
+            skill_name: String::new(), two_handed: true,
+            init: 0, off_mod: 0, def_mod: 0, shots_per_round: 1,
+            damage: 0, hp: 0, range_m: 30, xp: 0,
+        });
+        let bow = c.weapons.len() - 1;
+        c.set_field(&format!("weapon/{}/skillrank", bow), "3").unwrap();
+        assert_eq!(c.skill("Missile Combat", "Short Bow"), 3);
+        assert_eq!(c.weapons[bow].skill_name, "Short Bow"); // linked back
     }
 
     #[test]

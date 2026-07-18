@@ -16,6 +16,9 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
+    /// The shared world: locations + the major NPCs that exist across
+    /// every campaign. Campaigns are time-boxed lenses onto this.
+    World,
     Forge,
     Campaign,
     Lore,
@@ -28,6 +31,7 @@ pub enum Tab {
 impl Tab {
     fn name(self) -> &'static str {
         match self {
+            Tab::World => "World",
             Tab::Forge => "Forge",
             Tab::Campaign => "Campaign",
             Tab::Lore => "Lore",
@@ -35,8 +39,12 @@ impl Tab {
             Tab::Combat => "Combat",
         }
     }
-    fn all() -> [Tab; 5] {
-        [Tab::Inspire, Tab::Forge, Tab::Campaign, Tab::Combat, Tab::Lore]
+    // Inspire + Forge still exist as code paths but are no longer tabs:
+    // the GM runs a companion Claude Code session in a sibling glass
+    // window instead, which injects into campaign.json directly (amar
+    // picks the edits up live via the mtime watch in run()).
+    fn all() -> [Tab; 4] {
+        [Tab::World, Tab::Campaign, Tab::Combat, Tab::Lore]
     }
     fn next(self) -> Tab {
         let all = Tab::all();
@@ -163,6 +171,20 @@ pub struct App {
     /// current date"; set once the GM moves the day cursor (TAB to the
     /// calendar, then arrows).
     pub cal_cursor: Option<crate::calendar::AmarDate>,
+    /// Last seen mtime of the active campaign.json. A companion Claude
+    /// Code session edits the file while amar runs; every keypress
+    /// stat()s it (no polling — zero idle cost) and reloads on change,
+    /// so external injections appear live. Updated after our own saves
+    /// too, so they don't trigger a spurious reload.
+    pub camp_disk_mtime: Option<std::time::SystemTime>,
+    /// The shared world (locations + major NPCs), browsed on the World
+    /// tab. Same live-reload contract as the campaign: world.json is
+    /// stat()ed per keypress and reloaded on external change.
+    pub world: crate::store::World,
+    pub world_disk_mtime: Option<std::time::SystemTime>,
+    /// World-tab tree cursor + expanded-section keys ("Locations"/"NPCs").
+    pub world_idx: usize,
+    pub world_expanded: Vec<String>,
 }
 
 /// One editable position on a rendered PC sheet. The cursor moves
@@ -204,16 +226,28 @@ impl CampSection {
             CampSection::SavedForge => "Forge log",
         }
     }
-    fn all() -> [CampSection; 7] {
-        [CampSection::Pcs, CampSection::Adventures, CampSection::Npcs,
-         CampSection::Locations, CampSection::Calendar, CampSection::Factions,
-         CampSection::SavedForge]
+    fn all() -> [CampSection; 6] {
+        // Calendar first: it's the campaign diary / day tracker, the front
+        // door the GM lands on when opening a campaign. Locations moved
+        // to the shared World tab in v0.2.0.
+        [CampSection::Calendar, CampSection::Pcs, CampSection::Adventures,
+         CampSection::Npcs, CampSection::Factions, CampSection::SavedForge]
     }
 }
 
 /// One row in the Campaign tree. Either a section header (expandable)
+/// One row in the World tab's tree.
+#[derive(Debug, Clone, PartialEq)]
+enum WorldNode {
+    SecLoc,
+    SecNpc,
+    Loc(usize),
+    Npc(usize),
+    Empty(&'static str),
+}
+
 /// or a leaf belonging to a section.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum CampNode {
     Section(CampSection),
     Pc(usize),
@@ -255,6 +289,7 @@ enum DeleteTarget {
     Pc(usize),
     Npc(usize),
     Adventure(usize),
+    Location(usize),
     SavedForge(SavedKind, usize),
 }
 
@@ -302,7 +337,11 @@ impl App {
                 for i in 0..n {
                     moved += c.promote_adventure_portraits_to_npcs(i);
                 }
-                if moved > 0 { let _ = c.save(); }
+                // Keep a week of weather ahead of the current day at all
+                // times (cheap once it already exists).
+                let before = c.forecast.len();
+                c.ensure_forecast(7);
+                if moved > 0 || c.forecast.len() != before { let _ = c.save(); }
                 c
             });
         let (cols, rows) = Crust::terminal_size();
@@ -370,12 +409,65 @@ impl App {
             sheet_idx: 0,
             edits: Vec::new(),
             cal_cursor: None,
+            camp_disk_mtime: None,
+            world: crate::store::World::load(),
+            world_disk_mtime: None,
+            world_idx: 0,
+            world_expanded: vec!["Locations".to_string()],
         }
+    }
+
+    /// mtime of the active campaign's campaign.json (one stat()).
+    fn campaign_file_mtime(&self) -> Option<std::time::SystemTime> {
+        let name = self.campaign.as_ref().map(|c| c.name.clone())?;
+        std::fs::metadata(crate::store::campaign_dir(&name).join("campaign.json"))
+            .and_then(|m| m.modified()).ok()
+    }
+
+    /// Reload the campaign from disk when a companion session (Claude
+    /// Code in a sibling window) has written campaign.json since we
+    /// last saw it. Runs on every keypress — a single stat() when
+    /// nothing changed. UI state (tab, tree cursor, expansion) is kept;
+    /// the render path clamps any index that no longer fits.
+    fn maybe_reload_external(&mut self) {
+        // World first — cheap and independent of the campaign.
+        let wdisk = self.world_file_mtime();
+        if wdisk.is_some() && self.world_disk_mtime.is_some() && wdisk != self.world_disk_mtime {
+            self.world = crate::store::World::load();
+            self.world_disk_mtime = wdisk;
+            self.status_msg("World reloaded (edited externally).", t::OK);
+            self.render_all();
+        }
+        let disk = self.campaign_file_mtime();
+        if disk.is_none() || self.camp_disk_mtime.is_none() { return; }
+        if disk == self.camp_disk_mtime { return; }
+        let Some(name) = self.campaign.as_ref().map(|c| c.name.clone()) else { return };
+        match Campaign::load(&name) {
+            Ok(mut c) => {
+                c.ensure_forecast(7); // an external date-advance keeps its weather
+                self.campaign = Some(c);
+                self.camp_disk_mtime = disk;
+                self.status_msg("Campaign reloaded (edited externally).", t::OK);
+                self.render_all();
+            }
+            Err(e) => {
+                // Mid-write / partial file: keep our copy, try again on
+                // the next keypress (mtime stays stale so we re-enter).
+                self.status_msg(&format!("External edit unreadable: {}", e), t::WARN);
+            }
+        }
+    }
+
+    fn world_file_mtime(&self) -> Option<std::time::SystemTime> {
+        std::fs::metadata(crate::store::world_path())
+            .and_then(|m| m.modified()).ok()
     }
 
     pub fn run(&mut self) {
         Crust::clear_screen();
         self.render_all();
+        self.camp_disk_mtime = self.campaign_file_mtime();
+        self.world_disk_mtime = self.world_file_mtime();
         // Warm up glow's PNG cache for the active campaign's adventure
         // images so the first ENTER on a scene / floorplan / NPC
         // portrait lands instantly. Background thread — no blocking.
@@ -387,17 +479,28 @@ impl App {
             // key's handler may set a new status; that one shows
             // until the user's *next* keypress.
             self.status = None;
+            // Pick up campaign.json edits from the companion session
+            // BEFORE dispatching, so this key acts on fresh data.
+            self.maybe_reload_external();
             match key.as_str() {
                 "q" | "Q" => {
                     if let Some(ref c) = self.campaign { let _ = c.save(); }
                     let _ = self.config.save();
                     break;
                 }
-                "1" => { self.set_tab(Tab::Inspire); }
-                "2" => { self.set_tab(Tab::Forge); }
-                "3" => { self.set_tab(Tab::Campaign); }
-                "4" => { self.set_tab(Tab::Combat); }
-                "5" => { self.set_tab(Tab::Lore); }
+                "1" => { self.set_tab(Tab::World); }
+                "2" => { self.set_tab(Tab::Campaign); }
+                "3" => { self.set_tab(Tab::Combat); }
+                "4" => { self.set_tab(Tab::Lore); }
+                // O6 rolls into the status line: o = skill roll, O = combat
+                // roll. Not on the Combat tab, where o rolls OFF for the
+                // selected combatant. `6` / `^` remain as aliases.
+                "o" if !matches!(self.tab, Tab::Combat) => {
+                    self.roll_status(false); self.render_all();
+                }
+                "O" if !matches!(self.tab, Tab::Combat) => {
+                    self.roll_status(true); self.render_all();
+                }
                 "C-RIGHT" => { self.set_tab(self.tab.next()); }
                 "C-LEFT"  => { self.set_tab(self.tab.prev()); }
                 "TAB" => {
@@ -513,6 +616,11 @@ impl App {
                     self.render_all();
                 }
             }
+            // Absorb our own saves: whatever the key handler wrote is
+            // now the baseline, so only EXTERNAL writes trigger the
+            // reload above. One stat() per keypress per file.
+            self.camp_disk_mtime = self.campaign_file_mtime();
+            self.world_disk_mtime = self.world_file_mtime();
         }
         Crust::clear_screen();
     }
@@ -653,13 +761,14 @@ impl App {
     }
 
     fn tab_has_two_panes(&self) -> bool {
-        matches!(self.tab, Tab::Lore | Tab::Campaign | Tab::Forge)
+        matches!(self.tab, Tab::World | Tab::Lore | Tab::Campaign | Tab::Forge)
     }
 
     fn handle_tab_key(&mut self, key: &str) {
         match self.tab {
             Tab::Lore     => self.handle_lore_key(key),
             Tab::Campaign => self.handle_campaign_key(key),
+            Tab::World    => self.handle_world_key(key),
             Tab::Forge    => self.handle_forge_key(key),
             Tab::Inspire  => self.handle_inspire_key(key),
             Tab::Combat   => self.handle_combat_key(key),
@@ -686,10 +795,11 @@ impl App {
         }
         let Some(c) = self.campaign.as_mut() else { return };
         // Build participant list: tagged items first (in tag order),
-        // then any active PC not already present. Active PC = anything
-        // currently in c.pcs (no separate active flag yet).
+        // then every ACTIVE PC not already present. PCs toggled
+        // inactive (`a` on the roster row) sit the fight out.
         let mut refs: Vec<crate::store::CombatRef> = c.tagged.refs.clone();
         for i in 0..c.pcs.len() {
+            if !c.pcs[i].active { continue; }
             let r = crate::store::CombatRef::Pc(i);
             if !refs.contains(&r) { refs.push(r); }
         }
@@ -1409,6 +1519,9 @@ impl App {
             "S-UP"    => { self.right_pane.lineup();   return; }
             "S-RIGHT" => { self.right_pane.pagedown(); return; }
             "S-LEFT"  => { self.right_pane.pageup();   return; }
+            // `/` — jump to the closest matching name (PC, NPC, adventure,
+            // section, asset, saved encounter/town, …), from either pane.
+            "/" => { self.campaign_search(); return; }
             _ => {}
         }
         match self.focus {
@@ -1452,7 +1565,16 @@ impl App {
         // doesn't need to TAB into the right pane just to add their
         // first weapon or generate a portrait.
         match key {
-            "n" => { self.pc_new(); return; }
+            "n" => {
+                // On the Locations section (or a location row): add a
+                // location. Everywhere else: add a PC, as before.
+                if self.cursor_in_locations() {
+                    self.location_new();
+                } else {
+                    self.pc_new();
+                }
+                return;
+            }
             "I" => { self.adventure_import(); return; }
             "N" => {
                 // On the Campaign tree, N has two meanings depending
@@ -1473,12 +1595,55 @@ impl App {
                 }
                 return;
             }
-            "a" => { self.adventure_set_active(); return; }
+            "a" => {
+                // On a PC row: toggle the PC active/inactive (inactive PCs
+                // are dimmed and sit out of combats). Elsewhere: mark the
+                // cursor adventure as ACTIVE, as before.
+                if let Some(i) = self.cursor_pc_idx() {
+                    self.pc_toggle_active(i);
+                } else {
+                    self.adventure_set_active();
+                }
+                return;
+            }
             "Y" => { self.adventure_set_appearance(); return; }
             "R" => { self.adventure_rescan(); return; }
+            "e" => {
+                // Edit the cursor's adventure in scribe (works from the
+                // adventure header or any of its child nodes).
+                if let Some(idx) = self.cursor_adventure_idx() {
+                    self.open_adventure_in_scribe(idx);
+                }
+                return;
+            }
             "V" => { self.push_image_to_player(); return; }
             "G" => { self.generate_scene_image(); return; }
-            "c" => { self.rename_under_cursor(); return; }
+            "c" => {
+                // On a saved encounter: pull the whole encounter + the
+                // active PCs straight into a combat. On a location:
+                // rename it. Elsewhere: rename the asset under the
+                // cursor, as before.
+                if let Some(enc_idx) = self.cursor_encounter_idx() {
+                    self.combat_from_encounter(enc_idx);
+                } else if let Some(loc_idx) = self.cursor_location_idx() {
+                    let current = self.campaign.as_ref()
+                        .and_then(|c| c.locations.get(loc_idx))
+                        .map(|l| l.name.clone()).unwrap_or_default();
+                    if let Some(name) = self.footer.ask_or_cancel(" Location name: ", &current) {
+                        let name = name.trim().to_string();
+                        if !name.is_empty() {
+                            if let Some(c) = self.campaign.as_mut() {
+                                if let Some(l) = c.locations.get_mut(loc_idx) { l.name = name; }
+                                let _ = c.save();
+                            }
+                        }
+                    }
+                    self.render_all();
+                } else {
+                    self.rename_under_cursor();
+                }
+                return;
+            }
             "D" => { self.try_delete_under_cursor(); return; }
             "+" => { self.try_promote_under_cursor(); return; }
             "M" => { self.add_weapon(crate::pc::WeaponKind::Melee);   return; }
@@ -1567,6 +1732,12 @@ impl App {
                         CampNode::AdventureSection(adv_idx, sec_idx) => {
                             self.adventure_jump_to_section(*adv_idx, *sec_idx);
                         }
+                        CampNode::Adventure(adv_idx) => {
+                            self.open_adventure_in_scribe(*adv_idx);
+                        }
+                        CampNode::Location(idx) => {
+                            self.location_edit_description(*idx);
+                        }
                         other => {
                             if let Some(k) = self.expand_key_for_node(other, camp) {
                                 if let Some(pos) = self.camp_expanded.iter().position(|e| e == &k) {
@@ -1614,6 +1785,63 @@ impl App {
             Some(CampNode::Section(CampSection::Calendar)))
     }
 
+    /// `n` on the calendar — append a diary line to `date` (footer prompt).
+    fn diary_add(&mut self, date: crate::calendar::AmarDate) {
+        let line = self.footer.ask(&format!(" Diary — {}: ", date.fmt_header()), "");
+        let line = line.trim().to_string();
+        if line.is_empty() {
+            self.status_msg("Cancelled (empty diary line).", t::WARN);
+            self.render_all();
+            return;
+        }
+        if let Some(c) = self.campaign.as_mut() {
+            c.add_diary(date, &line);
+            let _ = c.save();
+        }
+        self.status_msg(&format!("Diary noted for {}.", date.fmt_header()), t::OK);
+        self.render_all();
+    }
+
+    /// `.` on the calendar — move the campaign's current day forward one day,
+    /// keep the cursor on it, extend the week-ahead weather, and save.
+    fn advance_current_day(&mut self) {
+        if let Some(c) = self.campaign.as_mut() {
+            c.date = c.date.advance(1);
+            c.ensure_forecast(7);
+            let _ = c.save();
+            let now = c.date;
+            self.cal_cursor = Some(now);
+            self.status_msg(&format!("Current day → {}.", now.fmt_header()), t::OK);
+        }
+        self.render_all();
+    }
+
+    /// `,` on the calendar — step the current day BACK one day (undo an
+    /// over-eager `.`); the un-played day loses its history underline.
+    fn retreat_current_day(&mut self) {
+        if let Some(c) = self.campaign.as_mut() {
+            c.date = c.date.advance(-1);
+            let _ = c.save();
+            let now = c.date;
+            self.cal_cursor = Some(now);
+            self.status_msg(&format!("Current day ← {}.", now.fmt_header()), t::OK);
+        }
+        self.render_all();
+    }
+
+    /// `T` on the calendar — jump the campaign's current day to the selected
+    /// day (handy after skipping days of downtime), refresh weather, save.
+    fn set_current_day(&mut self, date: crate::calendar::AmarDate) {
+        if let Some(c) = self.campaign.as_mut() {
+            c.date = date;
+            c.ensure_forecast(7);
+            let _ = c.save();
+            self.cal_cursor = Some(date);
+            self.status_msg(&format!("Current day set to {}.", date.fmt_header()), t::OK);
+        }
+        self.render_all();
+    }
+
     fn handle_camp_content_key(&mut self, key: &str) {
         // Calendar day cursor: with the Calendar section focused (TAB from the
         // tree), arrows move the selected day instead of scrolling the pane.
@@ -1635,6 +1863,32 @@ impl App {
                 self.render_all();
                 return;
             }
+            match key {
+                "n" => { self.diary_add(cur); return; }
+                "." | ">" => { self.advance_current_day(); return; }
+                "," | "<" => { self.retreat_current_day(); return; }
+                "T" => { self.set_current_day(cur); return; }
+                _ => {}
+            }
+        }
+        // Edit an adventure in scribe from the CONTENT pane too (the tree
+        // pane has the same bindings). `e` works on any adventure node;
+        // ENTER edits when the cursor is on the adventure header or a section
+        // (on a PC/NPC, ENTER still edits the focused field, below).
+        match key {
+            "e" => {
+                if let Some(i) = self.cursor_adventure_idx() {
+                    self.open_adventure_in_scribe(i);
+                    return;
+                }
+            }
+            "ENTER" => {
+                if let Some(i) = self.cursor_scribe_adventure() {
+                    self.open_adventure_in_scribe(i);
+                    return;
+                }
+            }
+            _ => {}
         }
         // Navigation:
         //   l / RIGHT  → next field (+1)
@@ -1729,22 +1983,16 @@ impl App {
             self.status_msg("Cancelled.", t::WARN);
             return;
         }
-        // Quick add — just ask for the weapon's name and skill (e.g.
-        // "Sword", "Bow"). Every other field defaults to 0; the user
-        // walks the editable rows on the sheet to fill them in.
-        let Some(skill) = self.footer.ask_or_cancel(
-            " Weapon skill (e.g. Sword, Bow): ", "") else {
-            self.status_msg("Cancelled.", t::WARN);
-            return;
-        };
-        let skill = skill.trim().to_string();
-
+        // Quick add — just the weapon's name. The governing skill
+        // defaults to that name (a "Trident" uses the "Trident" skill);
+        // set its rank right in the row's Skill column. Every other
+        // field defaults to 0; walk the editable row to fill them in.
         if let Some(c) = self.campaign.as_mut() {
             if let Some(ch) = Self::cursor_character_mut(c, cursor) {
                 ch.weapons.push(crate::pc::Weapon {
                     name: name.clone(),
                     kind: kind.clone(),
-                    skill_name: skill,
+                    skill_name: name.clone(),
                     two_handed: false,
                     init: 0,
                     off_mod: 0,
@@ -2147,6 +2395,10 @@ impl App {
                 (format!("adventure '{}' (on-disk files left intact)", n),
                  DeleteTarget::Adventure(idx))
             }
+            CampNode::Location(idx) => {
+                let n = camp.locations.get(idx).map(|l| l.name.clone()).unwrap_or_default();
+                (format!("location '{}'", n), DeleteTarget::Location(idx))
+            }
             CampNode::SavedForge(kind, idx) => {
                 let display = saved_forge_display_name(camp, kind, idx);
                 let kind_word = match kind {
@@ -2169,6 +2421,7 @@ impl App {
         if let Some(c) = self.campaign.as_mut() {
             match kind {
                 DeleteTarget::Pc(i)  => { c.pcs.remove(i); }
+                DeleteTarget::Location(i) => { c.locations.remove(i); }
                 DeleteTarget::Npc(i) => { c.npcs.remove(i); }
                 DeleteTarget::Adventure(i) => {
                     let removed_id = c.adventures.get(i).map(|a| a.id);
@@ -2517,6 +2770,11 @@ impl App {
                     if let Some(old) = c.adventures.get(adv_idx) {
                         new_adv.current_section = old.current_section;
                         new_adv.notes = old.notes.clone();
+                        // Preserve the calendar placement so a rescan never
+                        // erases an adventure's span/colour from the history.
+                        new_adv.start = old.start;
+                        new_adv.end = old.end;
+                        new_adv.color = old.color;
                         for new_sec in new_adv.sections.iter_mut() {
                             if let Some(old_sec) = old.sections.iter()
                                 .find(|s| s.heading == new_sec.heading)
@@ -2727,6 +2985,11 @@ impl App {
                     if let Some(old) = c.adventures.get(adv_idx) {
                         new_adv.current_section = old.current_section;
                         new_adv.notes = old.notes.clone();
+                        // Preserve the calendar placement so a rescan never
+                        // erases an adventure's span/colour from the history.
+                        new_adv.start = old.start;
+                        new_adv.end = old.end;
+                        new_adv.color = old.color;
                         for new_sec in new_adv.sections.iter_mut() {
                             if let Some(old_sec) = old.sections.iter()
                                 .find(|s| s.heading == new_sec.heading)
@@ -2980,6 +3243,11 @@ impl App {
                 if p.portrait_path.is_empty() { return None; }
                 Some(std::path::PathBuf::from(&p.portrait_path))
             }
+            CampNode::Location(i) => {
+                let l = camp.locations.get(i)?;
+                if l.image.is_empty() { return None; }
+                Some(std::path::PathBuf::from(&l.image))
+            }
             _ => None,
         }
     }
@@ -3115,6 +3383,545 @@ impl App {
             CampNode::AdventureGroup(i, _) => Some(i),
             CampNode::AdventureSection(i, _) => Some(i),
             CampNode::AdventureAsset(i, _, _) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// `/` — search every named thing in the campaign (PCs, NPCs,
+    /// adventures, their sections + assets, saved encounters — including
+    /// the NPCs inside them — towns, saved NPCs) and jump the tree cursor
+    /// to the closest match, expanding the path down to it.
+    fn campaign_search(&mut self) {
+        let Some(q_raw) = self.footer.ask_or_cancel(" Search: ", "") else {
+            self.status_msg("Cancelled.", t::WARN);
+            self.render_all();
+            return;
+        };
+        let q = q_raw.trim().to_lowercase();
+        if q.is_empty() {
+            self.status_msg("Cancelled.", t::WARN);
+            self.render_all();
+            return;
+        }
+        struct Hit { score: usize, label: String, keys: Vec<String>, node: CampNode }
+        let mut best: Option<Hit> = None;
+        {
+            let Some(camp) = self.campaign.as_ref() else { return };
+            let mut consider = |name: &str, keys: Vec<String>, node: CampNode| {
+                let Some(score) = name_match_score(&q, name) else { return };
+                if best.as_ref().map(|b| score < b.score).unwrap_or(true) {
+                    best = Some(Hit { score, label: name.to_string(), keys, node });
+                }
+            };
+            for (i, p) in camp.pcs.iter().enumerate() {
+                consider(&p.name, vec!["PCs".into()], CampNode::Pc(i));
+            }
+            for (i, n) in camp.npcs.iter().enumerate() {
+                consider(&n.name, vec!["NPCs".into()], CampNode::Npc(i));
+            }
+            for (i, a) in camp.adventures.iter().enumerate() {
+                let advkey = format!("adv:{}", a.id);
+                consider(&a.name, vec!["Adventures".into()], CampNode::Adventure(i));
+                let seckey = format!("adv:{}:{:?}", a.id, AdventureGroupKind::Sections);
+                for (si, sec) in a.sections.iter().enumerate() {
+                    let mut keys = vec!["Adventures".into(), advkey.clone(), seckey.clone()];
+                    // A ### heading hides under its parent ## — expand it too.
+                    if sec.level > 2 {
+                        if let Some(pi) = a.sections[..si].iter()
+                            .rposition(|s| s.level < sec.level)
+                        {
+                            keys.push(format!("advsec:{}:{}", a.id, a.sections[pi].line_start));
+                        }
+                    }
+                    consider(&sec.heading, keys, CampNode::AdventureSection(i, si));
+                }
+                let groups: [(AdventureGroupKind, AdventureAssetKind, &Vec<crate::adventure::AdventureAsset>); 4] = [
+                    (AdventureGroupKind::Scenes,       AdventureAssetKind::Scene,       &a.scenes),
+                    (AdventureGroupKind::Floorplans,   AdventureAssetKind::Floorplan,   &a.floorplans),
+                    (AdventureGroupKind::NpcPortraits, AdventureAssetKind::NpcPortrait, &a.npc_portraits),
+                    (AdventureGroupKind::NpcDocs,      AdventureAssetKind::NpcDoc,      &a.npc_docs),
+                ];
+                for (grp, kind, list) in groups {
+                    let grpkey = format!("adv:{}:{:?}", a.id, grp);
+                    for (ai, asset) in list.iter().enumerate() {
+                        consider(&asset.name,
+                            vec!["Adventures".into(), advkey.clone(), grpkey.clone()],
+                            CampNode::AdventureAsset(i, kind, ai));
+                    }
+                }
+            }
+            for (i, l) in camp.locations.iter().enumerate() {
+                consider(&l.name, vec!["Locations".into()], CampNode::Location(i));
+            }
+            for (i, s) in camp.saved_encounters.iter().enumerate() {
+                let node = CampNode::SavedForge(SavedKind::Encounter, i);
+                consider(&s.name, vec!["Forge log".into()], node.clone());
+                // An encounter NPC's name lands on its encounter row.
+                for n in s.item.npcs.iter() {
+                    consider(&n.name, vec!["Forge log".into()], node.clone());
+                }
+            }
+            for (i, s) in camp.saved_towns.iter().enumerate() {
+                consider(&s.name, vec!["Forge log".into()],
+                    CampNode::SavedForge(SavedKind::Town, i));
+            }
+            for (i, s) in camp.saved_npcs.iter().enumerate() {
+                consider(&s.name, vec!["Forge log".into()],
+                    CampNode::SavedForge(SavedKind::Npc, i));
+                consider(&s.item.name, vec!["Forge log".into()],
+                    CampNode::SavedForge(SavedKind::Npc, i));
+            }
+        }
+        // The shared world competes on equal terms; a better-scoring
+        // world hit jumps to the World tab.
+        let mut best_world: Option<(usize, String, WorldNode, &'static str)> = None;
+        for (i, l) in self.world.locations.iter().enumerate() {
+            if let Some(sc) = name_match_score(&q, &l.name) {
+                if best_world.as_ref().map(|b| sc < b.0).unwrap_or(true) {
+                    best_world = Some((sc, l.name.clone(), WorldNode::Loc(i), "Locations"));
+                }
+            }
+        }
+        for (i, n) in self.world.npcs.iter().enumerate() {
+            if let Some(sc) = name_match_score(&q, &n.name) {
+                if best_world.as_ref().map(|b| sc < b.0).unwrap_or(true) {
+                    best_world = Some((sc, n.name.clone(), WorldNode::Npc(i), "NPCs"));
+                }
+            }
+        }
+        if let Some((wsc, wlabel, wnode, wsec)) = best_world {
+            let camp_better = best.as_ref().map(|b| b.score <= wsc).unwrap_or(false);
+            if !camp_better {
+                if !self.world_expanded.iter().any(|e| e == wsec) {
+                    self.world_expanded.push(wsec.to_string());
+                }
+                self.set_tab(Tab::World);
+                let tree = self.build_world_tree();
+                if let Some(idx) = tree.iter().position(|x| *x == wnode) {
+                    self.world_idx = idx;
+                }
+                self.focus = Focus::Left;
+                self.right_pane.ix = 0;
+                self.status_msg(&format!(" \u{2192} {} (World)", wlabel), t::OK);
+                self.render_all();
+                return;
+            }
+        }
+        let Some(hit) = best else {
+            self.status_msg(&format!("No match for \u{201c}{}\u{201d}.", q_raw.trim()), t::WARN);
+            self.render_all();
+            return;
+        };
+        // Expand the path down to the hit, then land the cursor on it.
+        for k in hit.keys {
+            if !self.camp_expanded.iter().any(|e| e == &k) {
+                self.camp_expanded.push(k);
+            }
+        }
+        if let Some(camp) = self.campaign.as_ref() {
+            let tree = build_camp_tree(camp, &self.camp_expanded);
+            if let Some(idx) = tree.iter().position(|it| it.node == hit.node) {
+                self.camp_idx = idx;
+                self.right_pane.ix = 0;
+                self.focus = Focus::Left;
+            }
+        }
+        self.status_msg(&format!(" \u{2192} {}", hit.label), t::OK);
+        self.render_all();
+    }
+
+    // ------------------------------------------------ World tab
+    /// Flattened World-tab tree: two expandable sections (Locations,
+    /// NPCs) with their rows.
+    fn build_world_tree(&self) -> Vec<WorldNode> {
+        let mut out = Vec::new();
+        let loc_open = self.world_expanded.iter().any(|e| e == "Locations");
+        let npc_open = self.world_expanded.iter().any(|e| e == "NPCs");
+        out.push(WorldNode::SecLoc);
+        if loc_open {
+            if self.world.locations.is_empty() {
+                out.push(WorldNode::Empty("(no locations yet — the companion session injects them)"));
+            }
+            for i in 0..self.world.locations.len() { out.push(WorldNode::Loc(i)); }
+        }
+        out.push(WorldNode::SecNpc);
+        if npc_open {
+            if self.world.npcs.is_empty() {
+                out.push(WorldNode::Empty("(no world NPCs yet — the companion session injects them)"));
+            }
+            for i in 0..self.world.npcs.len() { out.push(WorldNode::Npc(i)); }
+        }
+        out
+    }
+
+    fn render_world_panes(&mut self) {
+        let tree = self.build_world_tree();
+        if self.world_idx >= tree.len() { self.world_idx = tree.len().saturating_sub(1); }
+        let tree_active = self.focus == Focus::Left;
+        // Left pane
+        let mut left: Vec<String> = Vec::new();
+        left.push(style::bold(&style::fg("The World", t::ACCENT)).to_string());
+        left.push(String::new());
+        for (i, node) in tree.iter().enumerate() {
+            let cursor = if i == self.world_idx { "\u{2192}" } else { " " };
+            let (depth, label) = match node {
+                WorldNode::SecLoc => (0, format!("{} Locations ({})",
+                    if self.world_expanded.iter().any(|e| e == "Locations") { "-" } else { "+" },
+                    self.world.locations.len())),
+                WorldNode::SecNpc => (0, format!("{} NPCs ({})",
+                    if self.world_expanded.iter().any(|e| e == "NPCs") { "-" } else { "+" },
+                    self.world.npcs.len())),
+                WorldNode::Loc(i) => (1, self.world.locations.get(*i)
+                    .map(|l| if l.kind.is_empty() { l.name.clone() }
+                         else { format!("{}  ({})", l.name, truncate_or_pad(&l.kind, 22).trim_end().to_string()) })
+                    .unwrap_or_default()),
+                WorldNode::Npc(i) => (1, self.world.npcs.get(*i)
+                    .map(|n| n.name.clone()).unwrap_or_default()),
+                WorldNode::Empty(m) => (1, m.to_string()),
+            };
+            let row = format!("{} {}{}", cursor, "  ".repeat(depth + 1), label);
+            let line = if i == self.world_idx {
+                if tree_active { style::bold(&style::fg(&row, t::ACCENT)) }
+                else { style::fg(&row, t::FG_DIM) }
+            } else {
+                match node {
+                    WorldNode::SecLoc | WorldNode::SecNpc => style::fg(&row, t::STEEL),
+                    WorldNode::Empty(_) => style::fg(&row, t::FG_MUTED),
+                    _ => row,
+                }
+            };
+            left.push(line);
+        }
+        self.left_pane.set_text(&left.join("\n"));
+        self.left_pane.ix = scroll_offset(self.world_idx + 2, tree.len() + 2,
+            self.left_pane.h as usize);
+        self.left_pane.full_refresh();
+
+        // Right pane: EITHER plain text, or text + an image overlay
+        // (location map below the text / NPC portrait in its box).
+        let mut pending: Option<(usize, usize, usize, usize, String)> = None;
+        let content: Vec<String> = match tree.get(self.world_idx) {
+            Some(WorldNode::Loc(i)) => {
+                match self.world.locations.get(*i) {
+                    Some(l) => {
+                        let (lines, img) = self.render_location(l);
+                        if let Some(path) = img {
+                            let row = lines.len() + 1;
+                            let w = (self.right_pane.w as usize).saturating_sub(4);
+                            let h = (self.right_pane.h as usize).saturating_sub(row).max(3);
+                            pending = Some((2, row, w, h, path));
+                        }
+                        lines
+                    }
+                    None => vec!["(location not found)".into()],
+                }
+            }
+            Some(WorldNode::Npc(i)) => {
+                match self.world.npcs.get(*i) {
+                    Some(n) => {
+                        // Read-only sheet: world NPCs are edited by the
+                        // companion session; the campaign edit-cursor
+                        // machinery stays untouched here.
+                        let (lines, _edits, port) = self.render_pc_sheet(n, None);
+                        pending = port;
+                        lines
+                    }
+                    None => vec!["(NPC not found)".into()],
+                }
+            }
+            Some(WorldNode::SecLoc) | None => {
+                vec![String::new(),
+                     style::bold(&style::fg(" The World \u{2014} Locations", t::ACCENT)).to_string(),
+                     String::new(),
+                     format!("  {} places known.", self.world.locations.len()),
+                     String::new(),
+                     style::fg("  The shared world: every campaign moves through these.", t::FG_MUTED).to_string(),
+                     style::fg("  Injected + enriched by the companion session (world.json).", t::FG_MUTED).to_string()]
+            }
+            Some(WorldNode::SecNpc) => {
+                vec![String::new(),
+                     style::bold(&style::fg(" The World \u{2014} major NPCs", t::ACCENT)).to_string(),
+                     String::new(),
+                     format!("  {} people of note.", self.world.npcs.len()),
+                     String::new(),
+                     style::fg("  Royals, barons, famous adventurers \u{2014} shared across", t::FG_MUTED).to_string(),
+                     style::fg("  campaigns. Campaign-specific NPCs live on tab 2.", t::FG_MUTED).to_string()]
+            }
+            Some(WorldNode::Empty(_)) => vec![String::new()],
+        };
+        self.right_pane.set_text(&content.join("\n"));
+        self.right_pane.full_refresh();
+        match pending {
+            Some((col, row, w, h, path)) => self.overlay_portrait(col, row, w, h, &path),
+            None => if self.adv_image_shown { self.clear_overlay_image(); },
+        }
+    }
+
+    fn handle_world_key(&mut self, key: &str) {
+        match key {
+            "S-DOWN"  => { self.right_pane.linedown(); return; }
+            "S-UP"    => { self.right_pane.lineup();   return; }
+            "S-RIGHT" => { self.right_pane.pagedown(); return; }
+            "S-LEFT"  => { self.right_pane.pageup();   return; }
+            "/" => { self.campaign_search(); return; }
+            _ => {}
+        }
+        if self.focus == Focus::Right {
+            match key {
+                "j" | "DOWN" => self.right_pane.linedown(),
+                "k" | "UP" => self.right_pane.lineup(),
+                "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
+                "PgUP" | "b" => self.right_pane.pageup(),
+                "g" | "HOME" => self.right_pane.ix = 0,
+                "G" | "END" => { for _ in 0..200 { self.right_pane.pagedown(); } }
+                _ => {}
+            }
+            return;
+        }
+        let tree = self.build_world_tree();
+        let n = tree.len();
+        let toggle = |this: &mut Self, keyname: &str| {
+            if let Some(pos) = this.world_expanded.iter().position(|e| e == keyname) {
+                this.world_expanded.remove(pos);
+            } else {
+                this.world_expanded.push(keyname.to_string());
+            }
+        };
+        match key {
+            "j" | "DOWN" => if self.world_idx + 1 < n { self.world_idx += 1; self.right_pane.ix = 0; },
+            "k" | "UP" => self.world_idx = self.world_idx.saturating_sub(1),
+            "g" | "HOME" => self.world_idx = 0,
+            "G" | "END" => self.world_idx = n.saturating_sub(1),
+            "PgDOWN" => {
+                let step = (self.left_pane.h as usize).saturating_sub(2).max(1);
+                self.world_idx = (self.world_idx + step).min(n.saturating_sub(1));
+            }
+            "PgUP" => {
+                let step = (self.left_pane.h as usize).saturating_sub(2).max(1);
+                self.world_idx = self.world_idx.saturating_sub(step);
+            }
+            "l" | " " | "SPACE" => {
+                match tree.get(self.world_idx) {
+                    Some(WorldNode::SecLoc) => toggle(self, "Locations"),
+                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
+                    _ => {}
+                }
+            }
+            "h" | "LEFT" => {
+                match tree.get(self.world_idx) {
+                    Some(WorldNode::SecLoc) => toggle(self, "Locations"),
+                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
+                    Some(WorldNode::Loc(_)) | Some(WorldNode::Empty(_)) => self.world_idx = 0,
+                    Some(WorldNode::Npc(_)) => {
+                        self.world_idx = tree.iter()
+                            .position(|x| matches!(x, WorldNode::SecNpc)).unwrap_or(0);
+                    }
+                    None => {}
+                }
+            }
+            "ENTER" => {
+                match tree.get(self.world_idx).cloned() {
+                    Some(WorldNode::Loc(i)) => {
+                        let current = self.world.locations.get(i)
+                            .map(|l| l.description.replace('\n', " ")).unwrap_or_default();
+                        if let Some(desc) = self.footer.ask_or_cancel(" Description: ", &current) {
+                            if let Some(l) = self.world.locations.get_mut(i) {
+                                l.description = desc.trim().to_string();
+                            }
+                            let _ = self.world.save();
+                            self.status_msg("Description updated.", t::OK);
+                        }
+                    }
+                    Some(WorldNode::SecLoc) => toggle(self, "Locations"),
+                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
+                    _ => {}
+                }
+            }
+            "RIGHT" => {
+                // Open the cursor's image externally, like pointer.
+                let path = match tree.get(self.world_idx) {
+                    Some(WorldNode::Loc(i)) => self.world.locations.get(*i)
+                        .filter(|l| !l.image.is_empty())
+                        .map(|l| std::path::PathBuf::from(&l.image)),
+                    Some(WorldNode::Npc(i)) => self.world.npcs.get(*i)
+                        .filter(|p| !p.portrait_path.is_empty())
+                        .map(|p| std::path::PathBuf::from(&p.portrait_path)),
+                    _ => None,
+                };
+                if let Some(p) = path { self.open_in_viewer(&p); }
+            }
+            _ => {}
+        }
+    }
+
+    /// Right-pane view of one location: name, kind, description, notes.
+    /// Returns the text lines + the map path (if any) for the inline
+    /// overlay; → also opens the map externally, V pushes it to the
+    /// player display.
+    fn render_location(&self, l: &crate::store::Location)
+        -> (Vec<String>, Option<String>)
+    {
+        let mut out = vec![String::new()];
+        out.push(style::bold(&style::fg(&format!(" {}", l.name), t::ACCENT)).to_string());
+        if !l.kind.is_empty() {
+            out.push(style::fg(&format!("   {}", l.kind), t::AMBER).to_string());
+        }
+        out.push(String::new());
+        // Pre-wrap to the pane width so logical lines == visual rows —
+        // the inline map below is positioned by row count, and the
+        // pane's own soft-wrap would desync it.
+        let w = (self.right_pane.w as usize).saturating_sub(4).max(20);
+        for line in wrap_plain(&l.description, w) {
+            out.push(format!("  {}", inline_md(&line)));
+        }
+        if !l.notes.is_empty() {
+            out.push(String::new());
+            out.push(style::fg("  ── notes ──", t::FG_MUTED).to_string());
+            for line in wrap_plain(&l.notes, w) {
+                out.push(style::fg(&format!("  {}", line), t::FG_MUTED).to_string());
+            }
+        }
+        out.push(String::new());
+        out.push(style::fg("  ENTER edit description \u{00b7} c rename \u{00b7} D delete", t::FG_DIM).to_string());
+        let img = if !l.image.is_empty() && std::path::Path::new(&l.image).exists() {
+            Some(l.image.clone())
+        } else { None };
+        (out, img)
+    }
+
+    /// `n` on the Locations section — add a location (name, kind, one-line
+    /// description; the companion session fills in maps + long text).
+    fn location_new(&mut self) {
+        let Some(name) = self.footer.ask_or_cancel(" Location name: ", "") else {
+            self.status_msg("Cancelled.", t::WARN); return;
+        };
+        let name = name.trim().to_string();
+        if name.is_empty() { self.status_msg("Cancelled.", t::WARN); return; }
+        let kind = self.footer.ask(" Kind (city / keep / region / inn / …): ", "")
+            .trim().to_string();
+        let desc = self.footer.ask(" Description: ", "").trim().to_string();
+        if let Some(c) = self.campaign.as_mut() {
+            c.locations.push(crate::store::Location {
+                name: name.clone(), kind, description: desc,
+                image: String::new(), notes: String::new(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs()).unwrap_or(0),
+            });
+            let _ = c.save();
+        }
+        if !self.camp_expanded.iter().any(|e| e == "Locations") {
+            self.camp_expanded.push("Locations".into());
+        }
+        self.status_msg(&format!("Added location \u{201c}{}\u{201d}.", name), t::OK);
+        self.render_all();
+    }
+
+    /// True when the tree cursor is on the Locations section header, its
+    /// placeholder, or a location row.
+    fn cursor_in_locations(&self) -> bool {
+        let Some(camp) = self.campaign.as_ref() else { return false };
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        matches!(tree.get(self.camp_idx).map(|i| &i.node),
+            Some(CampNode::Section(CampSection::Locations))
+            | Some(CampNode::Placeholder { section: CampSection::Locations, .. })
+            | Some(CampNode::Location(_)))
+    }
+
+    /// Location index when the tree cursor sits on a location row.
+    fn cursor_location_idx(&self) -> Option<usize> {
+        let camp = self.campaign.as_ref()?;
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        match tree.get(self.camp_idx)?.node {
+            CampNode::Location(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// ENTER on a location — edit its description in the footer.
+    fn location_edit_description(&mut self, idx: usize) {
+        let current = self.campaign.as_ref()
+            .and_then(|c| c.locations.get(idx))
+            .map(|l| l.description.replace('\n', " "))
+            .unwrap_or_default();
+        let Some(desc) = self.footer.ask_or_cancel(" Description: ", &current) else {
+            self.status_msg("Cancelled.", t::WARN);
+            self.render_all();
+            return;
+        };
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(l) = c.locations.get_mut(idx) {
+                l.description = desc.trim().to_string();
+            }
+            let _ = c.save();
+        }
+        self.status_msg("Description updated.", t::OK);
+        self.render_all();
+    }
+
+    /// PC index when the tree cursor sits on a PC row.
+    fn cursor_pc_idx(&self) -> Option<usize> {
+        let camp = self.campaign.as_ref()?;
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        match tree.get(self.camp_idx)?.node {
+            CampNode::Pc(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// Saved-encounter index when the cursor sits on one in the tree.
+    fn cursor_encounter_idx(&self) -> Option<usize> {
+        let camp = self.campaign.as_ref()?;
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        match tree.get(self.camp_idx)?.node {
+            CampNode::SavedForge(SavedKind::Encounter, i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// `a` on a PC row — flip the PC's active flag. Inactive PCs are
+    /// dimmed on the roster and skipped when combats pull in "all PCs".
+    fn pc_toggle_active(&mut self, idx: usize) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        let Some(pc) = c.pcs.get_mut(idx) else { return };
+        pc.active = !pc.active;
+        let (name, now) = (pc.name.clone(), pc.active);
+        let _ = c.save();
+        self.status_msg(&format!("{} is now {}.", name,
+            if now { "ACTIVE" } else { "inactive (sits out combats)" }),
+            if now { t::OK } else { t::WARN });
+        self.render_all();
+    }
+
+    /// `c` on a saved encounter — tag every NPC in it that isn't tagged
+    /// yet and launch the combat immediately (active PCs join as always).
+    fn combat_from_encounter(&mut self, enc_idx: usize) {
+        {
+            let Some(c) = self.campaign.as_mut() else { return };
+            let Some(saved) = c.saved_encounters.get(enc_idx) else { return };
+            let n = saved.item.npcs.len();
+            if n == 0 {
+                self.status_msg("This encounter has no NPCs to fight.", t::WARN);
+                return;
+            }
+            for i in 0..n {
+                let r = crate::store::CombatRef::EncounterNpc { enc_idx, npc_idx: i };
+                if !c.tagged.refs.contains(&r) { c.tagged.refs.push(r); }
+            }
+        }
+        self.combat_launch_from_tags();
+    }
+
+    /// Adventure index only when the cursor sits on the adventure header or
+    /// one of its markdown sections — the nodes where ENTER means "edit the
+    /// narrative in scribe" (groups + image assets are excluded so ENTER
+    /// keeps its expand / open-image meaning there).
+    fn cursor_scribe_adventure(&self) -> Option<usize> {
+        let camp = self.campaign.as_ref()?;
+        let tree = build_camp_tree(camp, &self.camp_expanded);
+        match tree.get(self.camp_idx)?.node.clone() {
+            CampNode::Adventure(i) => Some(i),
+            CampNode::AdventureSection(i, _) => Some(i),
             _ => None,
         }
     }
@@ -3294,6 +4101,7 @@ impl App {
             // delegate left+right content to the per-tab renderer.
             self.paint_focus_markers();
             match self.tab {
+                Tab::World    => self.render_world_panes(),
                 Tab::Lore     => self.render_lore_panes(),
                 Tab::Campaign => self.render_campaign_panes(),
                 Tab::Forge    => self.render_forge_panes(),
@@ -3409,36 +4217,55 @@ impl App {
     }
 
     fn render_footer(&mut self) {
+        // The whole line is clipped to the terminal width; the version tag
+        // is dropped first when space runs out so the hint never overflows
+        // into a wrapped second row.
+        let cols = self.cols as usize;
         if let Some((ref msg, color)) = self.status {
-            let pad = self.cols.saturating_sub(crust::display_width(msg) as u16 + 12 + 1) as usize;
-            let right = format!("amar v{}", VERSION);
-            let line = format!("{}{}{}", style::fg(msg, color), " ".repeat(pad), style::fg(&right, t::FG_DIM));
+            let right = format!("amar v{} ", VERSION);
+            let rw = crust::display_width(&right);
+            let msg_fit = crust::truncate_ansi(msg, cols.saturating_sub(1));
+            let mw = crust::display_width(&msg_fit);
+            let line = if mw + rw < cols {
+                format!("{}{}{}", style::fg(&msg_fit, color),
+                    " ".repeat(cols - mw - rw), style::fg(&right, t::FG_DIM))
+            } else {
+                style::fg(&msg_fit, color).to_string()
+            };
             self.footer.set_text(&line);
             self.footer.full_refresh();
             return;
         }
         let hint = match self.tab {
+            Tab::World    => match self.focus {
+                Focus::Left  => " TAB:focus  /:search  j/k:tree  l/h:expand  ENTER:edit-desc  \u{2192}:img  o/O:roll  ?:help",
+                Focus::Right => " TAB:focus-tree  j/k:line  PgUp/PgDn:page  g/G:top/end  o/O:roll",
+            },
             Tab::Forge    => match self.focus {
-                Focus::Left  => " TAB:focus-output  j/k:list  ENTER:run  C-LEFT/RIGHT:tabs  ?:help",
-                Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs",
+                Focus::Left  => " TAB:focus-output  j/k:list  ENTER:run  ?:help",
+                Focus::Right => " TAB:focus-list  ↑↓:line  PgUp/PgDn:page  g/G:top/end",
             },
             Tab::Campaign => match self.focus {
-                Focus::Left  => " TAB:focus  j/k/PgDn/PgUp:tree  l/h/SPACE:expand  →:open-img  V:player  N:note/new-adv  G:gen-img  c:rename  +:promote  I:import  a:active  R:rescan  D:delete  C-l:refresh  ?:help",
-                Focus::Right => " l/h:±1  j/k:±10  ENTER:edit  +:skill  M:melee  I:missile  S:spell  TAB:focus",
+                Focus::Left  => " TAB:focus  /:search  j/k:tree  l/h:expand  →:img  e/ENTER:edit  c:rename/combat  a:active  N:note  I:import  D:del  o/O:roll  ?:help",
+                Focus::Right => " l/h:±1  j/k:±10  ENTER:edit  +:skill  M:melee  I:missile  S:spell  o/O:roll  TAB:focus",
             },
             Tab::Lore     => match self.focus {
-                Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  C-LEFT/RIGHT:tabs  ?:help",
-                Focus::Right => " TAB:focus-tree  ↑↓:line  PgUp/PgDn:page  g/G:top/end  C-LEFT/RIGHT:tabs  ?:help",
+                Focus::Left  => " TAB:focus-content  j/k:tree  l/h:expand/collapse  o/O:roll  ?:help",
+                Focus::Right => " TAB:focus-tree  ↑↓:line  PgUp/PgDn:page  g/G:top/end  ?:help",
             },
-            Tab::Inspire  => " 1-5:tabs  C-LEFT/RIGHT:tabs  6:O6-skill  ^:O6-combat  C:new-camp  L:load  ?:help  q:quit",
-            Tab::Combat   => " ←↑↓→ / hjkl:select  i/I:init  o/d/D:roll  r:round  s:status  w:weapon  +/-:BP  m:move  L:light  a:add  x:remove  C:scrub",
+            Tab::Inspire  => " 1-3:tabs  o/O:O6-roll  C:new-camp  L:load  ?:help  q:quit",
+            Tab::Combat   => " ←↑↓→:select  i/I:init  o/d/D:roll  r:round  s:status  w:weapon  +/-:BP  a:add  x:remove  C:scrub",
         };
-        // Right-align the version. Pad with spaces between hint and version.
         let right = format!("amar v{} ", VERSION);
-        let hw = crust::display_width(hint);
+        let hint_fit = crust::truncate_ansi(hint, cols.saturating_sub(1));
+        let hw = crust::display_width(&hint_fit);
         let rw = crust::display_width(&right);
-        let pad = (self.cols as usize).saturating_sub(hw + rw);
-        let line = format!("{}{}{}", style::fg(hint, t::FG_DIM), " ".repeat(pad), style::fg(&right, t::FG_DIM));
+        let line = if hw + rw < cols {
+            format!("{}{}{}", style::fg(&hint_fit, t::FG_DIM),
+                " ".repeat(cols - hw - rw), style::fg(&right, t::FG_DIM))
+        } else {
+            style::fg(&hint_fit, t::FG_DIM).to_string()
+        };
         self.footer.set_text(&line);
         self.footer.full_refresh();
     }
@@ -3837,7 +4664,7 @@ impl App {
         // cost, distance, duration, area, effects) instead of
         // placeholder names.
         let npc = crate::forge::npc::build_npc_with_canon(cname, level, sex, &self.canon);
-        let (mut lines, _edits) = self.render_pc_sheet(&npc, None);
+        let (mut lines, _edits, _port) = self.render_pc_sheet(&npc, None);
         // Remember the chartype so the AI prompt can mention it
         // without re-deriving from skills + weapons (which is
         // possible but lossy — a "Hunter" rolled with a Longsword
@@ -4066,6 +4893,11 @@ impl App {
                             Some(cc) => style::fg(&row, cc),
                             None => row,
                         },
+                    // Inactive PCs recede: dimmed + tagged, so the GM sees at
+                    // a glance who sits out the campaign (and combats).
+                    CampNode::Pc(idx)
+                        if camp.pcs.get(*idx).map(|p| !p.active).unwrap_or(false) =>
+                        style::fg(&format!("{} · inactive", row), t::FG_DIM),
                     _ => row,
                 }
             };
@@ -4093,12 +4925,16 @@ impl App {
         // Adventure-asset rendering can request a glow image overlay
         // after the text is written. Capture it here, apply post-match.
         let mut pending_img: Option<std::path::PathBuf> = None;
+        // PC/NPC sheets return the portrait box geometry so we can paint the
+        // portrait image over it via glow (out-of-band) after the text lands.
+        let mut pending_portrait: Option<(usize, usize, usize, usize, String)> = None;
         let content = match tree.get(self.camp_idx).map(|t| t.node.clone()) {
             Some(CampNode::Section(sec)) => self.render_camp_section(camp, sec),
             Some(CampNode::Pc(idx)) => {
                 if let Some(pc) = camp.pcs.get(idx) {
-                    let (lines, edits) = self.render_pc_sheet(pc, active_id.as_deref());
+                    let (lines, edits, port) = self.render_pc_sheet(pc, active_id.as_deref());
                     self.edits = edits;
+                    pending_portrait = port;
                     if self.sheet_idx >= self.edits.len().max(1) {
                         self.sheet_idx = self.edits.len().saturating_sub(1);
                     }
@@ -4128,8 +4964,9 @@ impl App {
                 // is_pc flag just tags the roster. Reuses the editable
                 // sheet so the GM can tweak stats post-promotion.
                 if let Some(npc) = camp.npcs.get(idx) {
-                    let (lines, edits) = self.render_pc_sheet(npc, active_id.as_deref());
+                    let (lines, edits, port) = self.render_pc_sheet(npc, active_id.as_deref());
                     self.edits = edits;
+                    pending_portrait = port;
                     if self.sheet_idx >= self.edits.len().max(1) {
                         self.sheet_idx = self.edits.len().saturating_sub(1);
                     }
@@ -4138,8 +4975,21 @@ impl App {
                     vec!["(NPC not found)".into()]
                 }
             }
-            Some(CampNode::Location(_)) => {
-                vec![style::fg("(Coming in a later version.)", t::FG_MUTED).to_string()]
+            Some(CampNode::Location(idx)) => {
+                let (lines, img) = match camp.locations.get(idx) {
+                    Some(l) => self.render_location(l),
+                    None => (vec!["(location not found)".into()], None),
+                };
+                // Inline map below the text: reuse the portrait-overlay
+                // machinery (glow, scroll-aware). Geometry = full pane
+                // width under the text block.
+                if let Some(path) = img {
+                    let row = lines.len() + 1;
+                    let w = (self.right_pane.w as usize).saturating_sub(4);
+                    let h = (self.right_pane.h as usize).saturating_sub(row).max(3);
+                    pending_portrait = Some((2, row, w, h, path));
+                }
+                lines
             }
             Some(CampNode::SavedForge(kind, idx)) => {
                 let (lines, edits) = self.render_saved_forge(camp, kind, idx, active_id.as_deref());
@@ -4156,17 +5006,71 @@ impl App {
             }
             None => vec![],
         };
-        self.right_pane.set_text(&content.join("\n"));
-        self.right_pane.full_refresh();
-        // Images NEVER overlay the text pane — they open on demand via Right
-        // (xdg-open → feh). Whatever a render arm may have proposed, drop it
-        // and make sure any prior overlay is torn down so the text is always
-        // readable.
-        let _ = pending_img;
-        self.pending_image = None;
-        if self.adv_image_shown {
-            self.clear_overlay_image();
+        // EITHER text OR image, never both (an image overlaid on top of the
+        // text scaffold was the old visual-mess bug). An image asset blanks
+        // the pane and paints only the picture via glow; Right still opens it
+        // full-size externally (xdg-open → feh), just like pointer. Every
+        // other node is plain text, so tear down any prior overlay.
+        match pending_img {
+            Some(path) => {
+                self.right_pane.set_text("");
+                self.right_pane.full_refresh();
+                self.overlay_image(&path);
+                if !self.adv_image_shown {
+                    // No kitty/sixel support — fall back to the text scaffold
+                    // so the node isn't a blank pane.
+                    self.right_pane.set_text(&content.join("\n"));
+                    self.right_pane.full_refresh();
+                }
+            }
+            None => {
+                self.right_pane.set_text(&content.join("\n"));
+                self.right_pane.full_refresh();
+                self.pending_image = None;
+                // A PC/NPC sheet paints its portrait into the sheet's box via
+                // glow (out-of-band); every other text node clears any overlay.
+                match pending_portrait {
+                    Some((col, row, w, h, path)) => self.overlay_portrait(col, row, w, h, &path),
+                    None => if self.adv_image_shown { self.clear_overlay_image(); },
+                }
+            }
         }
+    }
+
+    /// Paint a portrait image over the sheet's portrait box via glow. `col`/`row`
+    /// are the box's position in the pane's CONTENT (not screen); we offset by
+    /// the pane origin and its scroll (`ix`) so the picture tracks the text, and
+    /// skip drawing when the box is scrolled out of view.
+    fn overlay_portrait(&mut self, col: usize, row: usize, w: usize, h: usize, path: &str) {
+        let (px, py, ph, pix) = (self.right_pane.x as usize, self.right_pane.y as usize,
+            self.right_pane.h as usize, self.right_pane.ix);
+        // Scrolled above the top, or below the visible area → nothing to draw.
+        if row < pix {
+            if self.adv_image_shown { self.clear_overlay_image(); }
+            return;
+        }
+        let screen_y = py + (row - pix);
+        let pane_bottom = py + ph;
+        if screen_y >= pane_bottom {
+            if self.adv_image_shown { self.clear_overlay_image(); }
+            return;
+        }
+        let vis_h = h.min(pane_bottom - screen_y);
+        if w < 8 || vis_h < 3 {
+            if self.adv_image_shown { self.clear_overlay_image(); }
+            return;
+        }
+        let x = (px + col) as u16;
+        if self.image_display.is_none() {
+            self.image_display = Some(glow::Display::new());
+        }
+        let (rx, ry, rw, rh, cols, rows) = (self.right_pane.x, self.right_pane.y,
+            self.right_pane.w, self.right_pane.h, self.cols, self.rows);
+        let shown = self.image_display.as_mut().map(|d| {
+            d.clear(rx, ry, rw, rh, cols, rows);
+            d.show(path, x, screen_y as u16, w as u16, vis_h as u16)
+        }).unwrap_or(false);
+        self.adv_image_shown = shown;
     }
 
     /// Queue an image to be drawn on the right pane once the current
@@ -4249,7 +5153,13 @@ impl App {
                     let dom = w * 7 + dcol + 1;
                     let date = AmarDate::from_ymd(year, m, dom);
                     let cell = format!(" {:>2}", dom);
-                    let styled = if date == cursor {
+                    // Played history: every day BEFORE the current day is
+                    // underlined on top of its colour coding. `.` (advance)
+                    // underlines the day just played; `,` (step back)
+                    // un-underlines it — both fall out of the comparison,
+                    // no extra state.
+                    let played = lin(date) < lin(today);
+                    let mut styled = if date == cursor {
                         style::reverse(&style::fg(&cell, color_for(date).unwrap_or(252)))
                     } else if let Some(sp) = crate::calendar::special_day(m, dom) {
                         // A god's holy day: cell background in the god's colour.
@@ -4262,6 +5172,9 @@ impl App {
                             None => style::fg(&cell, t::FG_DIM),
                         }
                     };
+                    if played && date != cursor {
+                        styled = style::underline(&styled);
+                    }
                     line.push_str(&styled);
                 }
                 v.push(line);
@@ -4276,6 +5189,9 @@ impl App {
 
         let mut out: Vec<String> = Vec::new();
         out.push(style::bold(&style::fg(&format!(" Calendar — Year {}", year), t::ACCENT)).to_string());
+        out.push(format!(" {} {}",
+            style::fg("Current day:", t::FG_MUTED),
+            style::bold(&style::fg(&today.fmt_header(), t::AMBER))));
         out.push(String::new());
 
         let months: Vec<u32> = (1..=13u32).collect();
@@ -4292,9 +5208,15 @@ impl App {
             out.push(String::new());
         }
 
-        // Selected-day detail + which adventures run that day.
+        // Selected-day detail: date, holy day, weather, diary, adventures.
+        let is_today = cursor == today;
         out.push(style::fg("  ── selected day ──", t::FG_MUTED).to_string());
-        out.push(style::bold(&style::fg(&format!("  {}", cursor.fmt_long()), t::ACCENT)).to_string());
+        let day_hdr = if is_today {
+            format!("  {}  {}", cursor.fmt_long(), style::fg("(current day)", t::AMBER))
+        } else {
+            format!("  {}", cursor.fmt_long())
+        };
+        out.push(style::bold(&style::fg(&day_hdr, t::ACCENT)).to_string());
         // Holy day: the god, what it presides over, and the day's effect.
         if let Some(sp) = cursor.special_day() {
             out.push(style::bold(&style::fg(
@@ -4306,16 +5228,45 @@ impl App {
             out.push(style::fg(
                 "    (Priests keep +3 for the five days before and after.)", t::FG_DIM).to_string());
         }
+        // Weather for the day, from the rolling forecast.
+        if let Some(w) = camp.weather_for(cursor) {
+            let wind = if w.wind_str == 0 {
+                style::fg("calm", w.wind_color()).to_string()
+            } else {
+                format!("{} {}",
+                    style::fg(w.wind_arrow(), w.wind_color()),
+                    style::fg(&w.wind_text(), w.wind_color()))
+            };
+            out.push(format!("  {} {} \u{00b7} {}",
+                w.weather_emoji(),
+                style::fg(w.weather_text(), w.weather_color()),
+                wind));
+        } else {
+            out.push(style::fg("  \u{2601} weather beyond the week-ahead forecast", t::FG_DIM).to_string());
+        }
+        // The diary — what happened (or is planned) this day.
+        let entries = camp.diary_for(cursor);
+        out.push(style::fg("  ── diary ──", t::FG_MUTED).to_string());
+        if entries.is_empty() {
+            out.push(style::fg("  (no diary entry — press n to add one)", t::FG_DIM).to_string());
+        } else {
+            for e in &entries {
+                out.push(format!("  {} {}",
+                    style::fg("\u{2022}", t::AMBER),
+                    style::fg(&e.text, t::FG)));
+            }
+        }
         let active: Vec<String> = camp.adventures.iter().filter(|a| {
             matches!((a.start, a.end), (Some(s), Some(e)) if lin(cursor) >= lin(s) && lin(cursor) <= lin(e))
         }).map(|a| style::fg(&a.name, a.color.unwrap_or(t::FG_MUTED)).to_string()).collect();
-        if active.is_empty() {
-            out.push(style::fg("  (no adventure scheduled this day)", t::FG_DIM).to_string());
-        } else {
-            out.push(format!("  {}", active.join(&style::fg(", ", t::FG_DIM))));
+        if !active.is_empty() {
+            out.push(format!("  {} {}",
+                style::fg("adventure:", t::FG_MUTED),
+                active.join(&style::fg(", ", t::FG_DIM))));
         }
         out.push(String::new());
         out.push(style::fg("  TAB to the calendar, then \u{2190}/\u{2192} \u{00b1}1 day \u{00b7} \u{2191}/\u{2193} \u{00b1}week \u{00b7} PgUp/PgDn \u{00b1}month.", t::FG_DIM).to_string());
+        out.push(style::fg("  n add diary line \u{00b7} . / , advance / step back the current day \u{00b7} T set it to the selection.", t::FG_DIM).to_string());
         out
     }
 
@@ -4376,8 +5327,14 @@ impl App {
             CampSection::Locations => {
                 out.push(style::bold(&style::fg("Locations", t::ACCENT)));
                 out.push(String::new());
-                out.push("  Towns + landmarks visited or known to the party.".into());
-                out.push("  Land in v0.4.0 alongside the Forge → Town generator.".into());
+                out.push(format!("  {} location{} known to the party.",
+                    camp.locations.len(),
+                    if camp.locations.len() == 1 { "" } else { "s" }));
+                out.push(String::new());
+                out.push(style::fg("  l / ENTER  expand the section", LBL).to_string());
+                out.push(style::fg("  n          add a location (name, kind, description)", LBL).to_string());
+                out.push(style::fg("  The companion session can inject richer entries", LBL).to_string());
+                out.push(style::fg("  (long description + a map image, shown inline).", LBL).to_string());
             }
             CampSection::Calendar => {
                 out.extend(self.render_calendar(camp));
@@ -4481,7 +5438,7 @@ impl App {
                 display_name = s.name.clone();
                 saved_at = s.created_at;
                 flavour = s.flavour.clone();
-                let (lines, e) = self.render_pc_sheet(&s.item, active_id);
+                let (lines, e, _port) = self.render_pc_sheet(&s.item, active_id);
                 edits = Some(e);
                 out.extend(lines);
             }
@@ -4668,12 +5625,15 @@ impl App {
                 (out, None)
             }
             _ => {
+                // Text scaffold only shows as a fallback when the terminal
+                // can't paint the image inline (no kitty/sixel). On glass it
+                // never shows — the picture fills the pane instead.
                 let lines = vec![
                     String::new(),
                     style::bold(&style::fg(&asset.name, t::ACCENT)).to_string(),
                     style::fg(&format!("  {}", asset.path), t::FG_MUTED).to_string(),
                     String::new(),
-                    style::fg("  (image loading via glow…)", t::FG_MUTED).to_string(),
+                    style::fg("  (inline image needs a kitty/sixel terminal — \u{2192} opens it externally)", t::FG_MUTED).to_string(),
                 ];
                 (lines, Some(abs))
             }
@@ -4697,6 +5657,75 @@ impl App {
         self.status_msg("Section marked current.", t::OK);
     }
 
+    /// Open an adventure's narrative markdown in scribe for editing.
+    /// Suspends the TUI (same handshake as the Claude-discuss path),
+    /// hands scribe the file, then re-parses the sections on return so
+    /// edits show up immediately. If the adventure has no markdown yet,
+    /// seeds a titled `<dir>.md` so there's something to write into.
+    fn open_adventure_in_scribe(&mut self, adv_idx: usize) {
+        let path = {
+            let Some(c) = self.campaign.as_ref() else { return; };
+            let Some(adv) = c.adventures.get(adv_idx) else { return; };
+            let rel = if adv.narrative_md.trim().is_empty() {
+                let base = std::path::Path::new(&adv.root_dir)
+                    .file_name().and_then(|s| s.to_str())
+                    .unwrap_or(&adv.name);
+                format!("{}.md", base)
+            } else {
+                adv.narrative_md.clone()
+            };
+            adv.absolute(&rel)
+        };
+        // Seed a new file so scribe opens on real content, and record the
+        // md on the adventure so future opens + rescans find it.
+        if !path.exists() {
+            if let Some(parent) = path.parent() { let _ = std::fs::create_dir_all(parent); }
+            let title = self.campaign.as_ref()
+                .and_then(|c| c.adventures.get(adv_idx))
+                .map(|a| a.name.clone()).unwrap_or_default();
+            let _ = std::fs::write(&path, format!("# {}\n\n", title));
+        }
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(adv) = c.adventures.get_mut(adv_idx) {
+                if adv.narrative_md.trim().is_empty() {
+                    adv.narrative_md = path.strip_prefix(&adv.root_dir).ok()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path.file_name()
+                            .map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+                }
+            }
+            let _ = c.save();
+        }
+
+        // Suspend the TUI, hand the terminal to scribe, resume + rescan.
+        use std::io::Write as _;
+        print!("\x1b[?2004l");
+        let _ = std::io::stdout().flush();
+        crust::Crust::cleanup();
+        crust::Crust::clear_screen();
+
+        let status = std::process::Command::new("scribe").arg(&path).status();
+
+        crust::Crust::init();
+        print!("\x1b[?2004h");
+        let _ = std::io::stdout().flush();
+        crust::Crust::clear_screen();
+        self.rebuild_panes();
+        // Re-parse the (possibly edited) sections + persist.
+        if let Some(c) = self.campaign.as_mut() {
+            if let Some(adv) = c.adventures.get_mut(adv_idx) {
+                adv.rescan_sections();
+            }
+            let _ = c.save();
+        }
+        self.render_all();
+        match status {
+            Ok(s) if s.success() => self.status_msg("Adventure updated from scribe.", t::OK),
+            Ok(s)                => self.status_msg(&format!("scribe exited with {}", s), t::WARN),
+            Err(e)               => self.status_msg(&format!("Could not launch scribe: {}", e), t::ERR),
+        }
+    }
+
     /// Render one PC's full character sheet. Mirrors
     /// CharacterSheet-new.xml: Identity, Derived stats, Status, Hit
     /// locations, 3-tier Characteristics + attributes + skills (in
@@ -4705,7 +5734,8 @@ impl App {
     /// Spells, Equipment, Notes. Returns the displayed lines plus a
     /// Vec<EditableField> mapping line indices to the field id the
     /// inline editor should target on ENTER.
-    fn render_pc_sheet(&self, pc: &crate::pc::Character, active_id: Option<&str>) -> (Vec<String>, Vec<EditableField>) {
+    fn render_pc_sheet(&self, pc: &crate::pc::Character, active_id: Option<&str>)
+        -> (Vec<String>, Vec<EditableField>, Option<(usize, usize, usize, usize, String)>) {
         use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS, bp_for_location};
         const LBL_ID:    u8 = 245;
         const LBL_PHYS:  u8 = 174;
@@ -4753,7 +5783,6 @@ impl App {
         let top_start = out.len();
 
         // Title
-        let name_disp = if pc.name.is_empty() { "(unnamed)".to_string() } else { pc.name.clone() };
         let bp_max = pc.bp_max().max(1);
         let (state_text, state_color, wound_penalty) =
             if pc.bp_current <= 0          { ("Helpless", STATUS_X,  None) }
@@ -4767,14 +5796,18 @@ impl App {
         // with WW total 3 → net -1, matching the Amar table.
         let encumbrance = encumbrance_penalty(pc);
         let status_penalty = wound_penalty.map(|w| w + encumbrance);
-        let title = if pc.player.is_empty() {
-            style::bold(&style::fg(&name_disp, TITLE))
-        } else {
-            format!("{}  {}",
-                style::bold(&style::fg(&name_disp, TITLE)),
-                style::fg(&format!("({})", pc.player), PLAYER))
-        };
-        out.push(format!(" {}", title));
+        // Name + player are editable in place — land on them with j/k and
+        // press ENTER, exactly like every other identity field.
+        let name_active = active_id == Some("name");
+        let player_active = active_id == Some("player");
+        edits.push(EditableField { line: out.len(), field_id: "name".into(),
+            label: " Character name".into(), current: pc.name.clone() });
+        edits.push(EditableField { line: out.len(), field_id: "player".into(),
+            label: " Player".into(), current: pc.player.clone() });
+        out.push(format!(" {}   {} {}",
+            style::bold(&style::fg(&value_cell(&pc.name, 16, name_active), TITLE)),
+            style::fg("player:", PLAYER),
+            style::fg(&value_cell(&pc.player, 14, player_active), PLAYER)));
 
         // Identity rows — 3 cells × `id_cell_w` (set above). Tight
         // enough that the right portion stays free for the portrait.
@@ -4832,14 +5865,16 @@ impl App {
         // Long descriptions still wrap onto extra rows below the
         // editable pair, but those are display-only — the user edits
         // them by pressing ENTER on either of the first two lines.
+        // Top description = ONE short intro line only. It lives inside the
+        // portrait's row range, so it is clipped at the portrait column by
+        // the overlay pass below; the full text (line 2+) renders in the
+        // "Details" block at the bottom of the sheet where there's width.
         let desc_lines: Vec<&str> = pc.description.lines().collect();
         let desc_l1 = desc_lines.first().copied().unwrap_or("");
-        let desc_l2 = desc_lines.get(1).copied().unwrap_or("");
         let desc_active  = active_id == Some("description");
-        let desc2_active = active_id == Some("description2");
         edits.push(EditableField { line: out.len(),
             field_id: "description".into(),
-            label: " Description".into(),
+            label: " Description (short intro)".into(),
             current: desc_l1.to_string() });
         out.push(format!(" {} {}",
             style::fg("Description:", LBL_ID),
@@ -4848,23 +5883,6 @@ impl App {
             } else {
                 value_cell("", 8, desc_active)
             }));
-        edits.push(EditableField { line: out.len(),
-            field_id: "description2".into(),
-            label: " Description (line 2)".into(),
-            current: desc_l2.to_string() });
-        // The continuation line is indented under the value column —
-        // 13 leading spaces match the visual offset of "Description: ".
-        out.push(format!("             {}",
-            if desc2_active || !desc_l2.is_empty() {
-                value_cell(desc_l2, desc_l2.chars().count().max(1), desc2_active)
-            } else {
-                value_cell("", 8, desc2_active)
-            }));
-        // Any extra wrapped lines (line 3+) sit below — not editable
-        // through the sheet, just shown for context.
-        for cont in desc_lines.iter().skip(2) {
-            out.push(format!("             {}", cont));
-        }
         out.push(String::new());
 
         // --- Stats + Hit Locations side by side ---
@@ -4958,17 +5976,25 @@ impl App {
         } else {
             Some(pc.portrait_path.as_str())
         };
+        // Screen geometry of the portrait box (content col/row + size + path),
+        // returned so render_campaign_panes can paint the image there via glow.
+        let mut portrait_box: Option<(usize, usize, usize, usize, String)> = None;
         if port_w >= 16 && port_h >= 4 {
             for i in 0..port_h {
                 let row_idx = top_start + i;
-                let original = out[row_idx].clone();
+                // Clip the row at the portrait column FIRST (a long
+                // description or title must never cut across the
+                // portrait), then pad out to it and append the box.
+                let original = crust::truncate_ansi(&out[row_idx], port_left_col);
                 let right = portrait_row(i, port_w, port_h, img_path);
-                // Pad the original content to start the portrait at
-                // `port_left_col` (3 cols right of the hit-location
-                // box).
                 out[row_idx] = format!("{}{}",
                     pad_visible(&original, port_left_col),
                     right);
+            }
+            if let Some(p) = img_path {
+                if std::path::Path::new(p).exists() {
+                    portrait_box = Some((port_left_col, top_start, port_w, port_h, p.to_string()));
+                }
             }
         }
         // `id_cell_w` is still used by the identity-rows layout below.
@@ -5055,9 +6081,10 @@ impl App {
         // so the F-of-OFF lines up with the 1s digit of the value
         // beneath it. Everything else is left-aligned (matches how
         // value_cell / `{:+}` pad).
-        out.push(format!("  {} {} {} {} {} {} {} {} {} {}",
+        out.push(format!("  {} {} {} {} {} {} {} {} {} {} {}",
             pad_visible(&style::fg("Name",  LBL), 16),
-            pad_visible(&style::fg("Skill", LBL), 10),
+            pad_visible(&style::fg("Skill", LBL), 5),
+            pad_visible(&style::fg("Tot",   LBL), 5),
             pad_visible(&style::fg("H",     LBL), 2),
             pad_visible(&style::fg("Init",  LBL), 4),
             pad_visible(&style::fg("±O",    LBL), 4),
@@ -5083,9 +6110,10 @@ impl App {
         // Columns: Name (16) | Skill (10) | Init (4) | ±O (4) | s/r (4)
         //          | OFF (4) | Rng (5) | Dam (4) | HP (3)
         out.push(style::bold(&style::fg("Missile weapons", 130)));
-        out.push(format!("  {} {} {} {} {} {} {} {} {}",
+        out.push(format!("  {} {} {} {} {} {} {} {} {} {}",
             pad_visible(&style::fg("Name",  LBL), 16),
-            pad_visible(&style::fg("Skill", LBL), 10),
+            pad_visible(&style::fg("Skill", LBL), 5),
+            pad_visible(&style::fg("Tot",   LBL), 5),
             pad_visible(&style::fg("Init",  LBL), 4),
             pad_visible(&style::fg("±O",    LBL), 4),
             pad_visible(&style::fg("s/r",   LBL), 4),
@@ -5144,6 +6172,30 @@ impl App {
             &format!("{} sp", pc.money_sp), money_active));
         out.push(String::new());
 
+        // Details — the description's line 2 onward. The top of the sheet
+        // keeps only the one-line intro (clipped at the portrait); the full
+        // story lives down here where the pane is full-width. Line 2 is
+        // editable ("description2" joins into pc.description); lines 3+
+        // are display-only context.
+        out.push(style::bold(&style::fg("Details", t::FG_MUTED)));
+        let desc_l2 = desc_lines.get(1).copied().unwrap_or("");
+        let desc2_active = active_id == Some("description2");
+        edits.push(EditableField { line: out.len(),
+            field_id: "description2".into(),
+            label: " Details (description line 2)".into(),
+            current: desc_l2.to_string() });
+        if desc_l2.is_empty() && desc_lines.len() <= 1 {
+            out.push(format!("  {}", value_cell(
+                "(none — press ENTER to add)", 32, desc2_active)));
+        } else {
+            out.push(format!("  {}", value_cell(desc_l2,
+                crust::display_width(desc_l2).max(1), desc2_active)));
+            for cont in desc_lines.iter().skip(2) {
+                out.push(format!("  {}", cont));
+            }
+        }
+        out.push(String::new());
+
         // Notes
         out.push(style::bold(&style::fg("Notes", t::FG_MUTED)));
         let notes_active = active_id == Some("notes");
@@ -5173,7 +6225,7 @@ impl App {
         // we appended in (BODY → MIND → SPIRIT, armor → AP → BP, etc).
         edits.sort_by_key(|e| e.line);
 
-        (out, edits)
+        (out, edits, portrait_box)
     }
 
     fn render_inspire(&self) -> Vec<String> {
@@ -5918,7 +6970,8 @@ impl App {
             self.status = Some(("Cancelled.".into(), t::WARN));
             return;
         }
-        let c = Campaign::new(&name);
+        let mut c = Campaign::new(&name);
+        c.ensure_forecast(7);
         if let Err(e) = c.save() {
             self.status = Some((format!("Save failed: {}", e), t::ERR));
             return;
@@ -5942,7 +6995,9 @@ impl App {
         );
         let name = name.trim().to_string();
         match Campaign::load(&name) {
-            Ok(c) => {
+            Ok(mut c) => {
+                c.ensure_forecast(7);
+                let _ = c.save();
                 self.config.active_campaign = Some(name.clone());
                 let _ = self.config.save();
                 self.campaign = Some(c);
@@ -6004,86 +7059,82 @@ impl App {
     fn show_help(&mut self) {
         let help = format!("\n  \
             amar v{} - Amar RPG companion\n  \
-            5-tab TUI honoring d6gaming.org canon.\n\n  \
+            4-tab TUI honoring d6gaming.org canon.\n\n  \
             TABS\n  \
-              1   Session    Live in-game tools (combat, party, log)\n  \
-              2   Forge      Generators (NPC, encounter, town, weather, …)\n  \
-              3   Campaign   Persistent state — PCs, NPCs, locations, adventures\n  \
+              1   World      The shared world — locations + major NPCs (all campaigns)\n  \
+              2   Campaign   One campaign — calendar/diary, PCs, its NPCs, adventures\n  \
+              3   Combat     Combat HUD — populated from encounters + active PCs\n  \
               4   Lore       Browsable canon (wiki + setting + author additions)\n  \
-              5   Inspire    AI-assisted brainstorming (claude -p)\n\n  \
+              (Forge + Inspire retired as tabs — run a companion Claude Code\n  \
+               session in a sibling window; amar picks up campaign.json edits\n  \
+               live, on the next keypress.)\n\n  \
             NAVIGATION\n  \
-              1-5            Jump to tab\n  \
+              1-4            Jump to tab\n  \
               C-RIGHT/LEFT   Next / previous tab\n  \
               TAB            Toggle focus between left + right pane\n  \
               ESC            Drop focus back to left pane\n  \
               w / W          Cycle left-pane width (kastrup-style 1-6)\n  \
+              j / k          Down / up (Down/Up walk this help line-by-line)\n  \
               ?              This help\n\n  \
-            LORE — TREE FOCUS (left pane)\n  \
-              j / k          Tree cursor down / up\n  \
-              ENTER / l      Expand a canon category\n  \
-              h              Collapse / jump to parent\n  \
-              g / G          First / last item\n\n  \
-            LORE — CONTENT FOCUS (right pane)\n  \
-              UP / DOWN      Line scroll\n  \
-              PgUp / PgDn    Page scroll (also SPACE / b)\n  \
-              g / HOME       Top of content\n  \
-              G / END        End of content\n\n  \
-            LORE — ALWAYS\n  \
-              S-DOWN / S-UP        Right pane line scroll\n  \
-              S-RIGHT / S-LEFT     Right pane page scroll\n\n  \
+            CALENDAR (first section; TAB into it for the day cursor)\n  \
+              ←→/↑↓          Move the selected day (PgUp/PgDn = month)\n  \
+              n              Add a diary line to the selected day\n  \
+              .              Advance the current day (played days get underlined)\n  \
+              ,              Step the current day back (removes the underline)\n  \
+              T              Set the current day to the selected day\n  \
+              g              Jump back to the current day\n\n  \
             CAMPAIGN\n  \
-              C       Create a new campaign\n  \
-              L       Load an existing campaign\n  \
-              X       Delete a campaign (asks twice — type DELETE to confirm)\n  \
+              C       Create a new campaign   L  Load   X  Delete (asks twice)\n  \
+              e/ENTER Edit the cursor adventure's narrative in scribe\n  \
+              a       On a PC row: toggle the PC ACTIVE/inactive (inactive\n  \
+                      PCs are dimmed and sit out combats).\n  \
+                      On an adventure: mark it ACTIVE (persists).\n  \
+              c       On a saved encounter: take the whole encounter + the\n  \
+                      active PCs into COMBAT. Elsewhere: rename the asset.\n  \
+              /       Search — jump to the closest matching PC / NPC /\n  \
+                      adventure / section / asset / encounter name\n  \
+              t / T   Tag / untag the cursor row for the combat pool\n  \
+              C       With a non-empty tag pool: launch combat from the pool\n  \
               D       Delete the PC or saved-forge entry under the cursor\n  \
-              +       Promote NPC → roster (default: NPC list; press p\n  \
-                      at the second prompt to send to the PC list instead).\n  \
-                      Works on a saved encounter, a saved NPC, or a\n  \
-                      freshly-rolled Forge encounter on the right pane.\n  \
+              +       Promote NPC → roster (p at the prompt = PC list)\n  \
               I       Import an adventure directory into the campaign\n  \
-                      (markdown + Scenes/ + Floorplans/ + NPCs/ get indexed).\n  \
-              N       On Adventures section header → scaffold a NEW adventure\n  \
-                      (creates root dir, Scenes/Floorplans/NPCs subdirs,\n  \
-                      skeleton .md). On a section row → append a session note.\n  \
+              N       Adventures header → scaffold a NEW adventure;\n  \
+                      section row → append a session note\n  \
               M / m   Add a melee / missile weapon to the cursor PC\n  \
-                      (tree pane). On the PC sheet (right pane) it is\n  \
-                      M:melee, I:missile.\n  \
-              a       Mark cursor adventure as ACTIVE (persists between sessions).\n  \
-              R       Re-scan an adventure's on-disk root to pick up\n  \
-                      newly-added scenes, NPC images, or .md edits.\n  \
-              V       Push the cursor's image to the player display via feh\n  \
-                      (window class amar-player so your WM rules can place it).\n  \
+              R       Re-scan an adventure's on-disk root\n  \
+              V       Push the cursor's image to the player display (feh)\n  \
               G       Generate a scene image for the cursor section\n  \
-                      (clipboard → ChatGPT, or direct API). Saves to\n  \
-                      <adv-root>/Scenes/ and auto-attaches on rescan.\n  \
-              E       End the current session — writes a banner to\n  \
-                      ~/.amar/campaigns/<camp>/session.log, advances the\n  \
-                      current_section pointer to the next section.\n  \
-                      ENTER on a section row sets it as the current\n  \
-                      section so the GM can resume next session there.\n\n  \
-            SESSION TAB (Combat HUD)\n  \
-              j/k     select combatant\n  \
-              +/-     damage/heal current HP\n  \
-              M/m     MF up/down (mental fortitude — spell cost, willpower hits)\n  \
-              A       add ALL PCs to the fight (resets HP/MF if zero'd)\n  \
-              a       add one PC or NPC by name substring\n  \
-              d       remove selected combatant\n  \
-              c       clear the HUD\n  \
-              o/O     private skill/combat O6 rolls (status line only)\n\n  \
-            OTHER\n  \
-              o       Roll a SKILL O6 (status line; crit/fumble → table)\n  \
-              O       Roll a COMBAT O6 (status line; crit/fumble → table)\n  \
-              r       Redraw\n  \
-              ESC     Clear status line\n  \
-              q / Q   Quit (saves campaign + config)\n\n  \
+              P       Generate / import a portrait for the cursor PC\n  \
+              E       End session — banner to session.log, advance section\n\n  \
+            PC SHEET (right pane)\n  \
+              l/h ±1 field, j/k ±10   ENTER edits the highlighted field\n  \
+              Name + player are editable on the title line.\n  \
+              Weapons: Skill column = your rank (editable number);\n  \
+              Tot = Char + Attr + rank, feeding OFF/DEF.\n\n  \
+            COMBAT TAB\n  \
+              ←↑↓→    select combatant     i/I  roll initiative\n  \
+              o/d/D   roll OFF / DEF / damage\n  \
+              r       next round           s    status menu\n  \
+              w       cycle weapon         +/-  BP damage/heal\n  \
+              M/F     MF up/down           m/L  movement / lighting\n  \
+              a / x   add by name / remove selected\n  \
+              C       scrub the combat\n\n  \
+            DICE (everywhere except the Combat tab)\n  \
+              o       Roll a SKILL O6 into the status line\n  \
+              O       Roll a COMBAT O6 (crit/fumble tables included)\n  \
+              6 / ^   Same rolls, legacy aliases\n\n  \
+            COMPANION SESSION\n  \
+              A Claude Code session in a sibling window may edit\n  \
+              ~/.amar/campaigns/<name>/campaign.json at any time;\n  \
+              amar reloads it automatically on your next keypress.\n\n  \
             Data: ~/.amar/campaigns/<name>/\n  \
             Canon: bundled, scraped from d6gaming.org\n  \
-            ESC closes this popup.", VERSION);
+            Down/Up scroll · ESC closes this popup.", VERSION);
         let (cols, rows) = Crust::terminal_size();
         let w = cols.saturating_sub(8).min(76);
-        let h = rows.saturating_sub(4).min(28);
+        let h = rows.saturating_sub(4).min(34);
         let mut popup = crust::Popup::centered(w, h, t::FG as u16, 234);
-        let _ = popup.modal(&help);
+        popup.view(&help);
         Crust::clear_screen();
         self.render_all();
     }
@@ -6410,7 +7461,7 @@ fn push_weapon_row(
 ) {
     use crust::style;
     let id_name   = format!("weapon/{}/name", idx);
-    let id_skill  = format!("weapon/{}/skill", idx);
+    let id_skill  = format!("weapon/{}/skillrank", idx);
     let id_two    = format!("weapon/{}/two_handed", idx);
     let id_init   = format!("weapon/{}/init", idx);
     let id_off    = format!("weapon/{}/off_mod", idx);
@@ -6449,7 +7500,7 @@ fn push_weapon_row(
     let active = |id: &str| active_id == Some(id);
 
     push_edit(edits, &id_name,   " Weapon name",       w.name.clone());
-    push_edit(edits, &id_skill,  " Weapon skill",      w.skill_name.clone());
+    push_edit(edits, &id_skill,  " Weapon skill rank", weap_skill_rank.to_string());
     if melee {
         push_edit(edits, &id_two, " Two-handed (y/n)", h_str.into());
     }
@@ -6475,27 +7526,24 @@ fn push_weapon_row(
         pad_visible(&style::bold(&style::fg(&format!("{:+}", init_total), t::FG_BRIGHT)), 4)
     };
 
-    // Skill column: when not under the field editor, show the
-    // weapon's skill NAME plus its live RANK (the number that's
-    // already folded into OFF/DEF). Without the rank visible,
-    // there's nowhere else on the row that exposes how high the
-    // character's skill with this weapon actually is — the value
-    // is what makes the row useful at the table. Editing the cell
-    // still opens the skill-NAME prompt (the rank is governed by
-    // the skill section above; this just looks it up).
+    // Skill + Tot columns, exactly like any other skill row: Skill is the
+    // character's editable RANK with this weapon's skill (sets
+    // pc.skills[Melee/Missile Combat][skill_name]); Tot is the full
+    // Char + Attr + rank total that the rank folds into.
     let skill_cell = if active(&id_skill) {
-        value_cell(&w.skill_name, 10, true)
+        value_cell(&weap_skill_rank.to_string(), 5, true)
     } else {
-        let rank = style::bold(&style::fg(&weap_skill_rank.to_string(), t::FG_BRIGHT));
-        pad_visible(&format!("{} {}", w.skill_name, rank), 10)
+        pad_visible(&style::fg(&weap_skill_rank.to_string(), t::FG), 5)
     };
+    let tot_cell = pad_visible(&style::bold(&style::fg(&base.to_string(), t::FG_BRIGHT)), 5);
 
     // Render the row. Layout differs slightly between melee + missile:
     // melee gets ±D + DEF, missile gets s/r + Rng instead.
     if melee {
-        out.push(format!("  {} {} {} {} {} {} {} {} {} {}",
+        out.push(format!("  {} {} {} {} {} {} {} {} {} {} {}",
             pad_visible(&value_cell(&w.name, 16, active(&id_name)), 16),
             skill_cell,
+            tot_cell,
             pad_visible(&value_cell(h_str, 2, active(&id_two)), 2),
             init_cell,
             pad_visible(&value_cell(&format!("{:+}", w.off_mod), 4, active(&id_off)), 4),
@@ -6505,9 +7553,10 @@ fn push_weapon_row(
             pad_visible(&value_cell(&format!("{:+}", w.damage), 4, active(&id_damage)), 4),
             pad_visible(&value_cell(&w.hp.to_string(), 3, active(&id_hp)), 3)));
     } else {
-        out.push(format!("  {} {} {} {} {} {} {} {} {}",
+        out.push(format!("  {} {} {} {} {} {} {} {} {} {}",
             pad_visible(&value_cell(&w.name, 16, active(&id_name)), 16),
             skill_cell,
+            tot_cell,
             init_cell,
             pad_visible(&value_cell(&format!("{:+}", w.off_mod), 4, active(&id_off)), 4),
             pad_visible(&value_cell(&w.shots_per_round.to_string(), 4, active(&id_shots)), 4),
@@ -6606,16 +7655,12 @@ fn portrait_row(row: usize, w: usize, total: usize, image_path: Option<&str>) ->
     if w < 8 || total < 4 { return String::new(); }
     if let Some(path) = image_path {
         if !path.is_empty() && std::path::Path::new(path).exists() {
-            if row == 0 {
-                // Kitty graphics: a=T transmit-and-display,
-                // f=100 PNG (kitty also auto-detects JPEG/etc),
-                // t=f payload is a base64-encoded filename,
-                // c/r size the image to this many terminal cells.
-                let b64 = crate::portrait::base64_encode(path.as_bytes());
-                return format!(" \x1b_Ga=T,f=100,t=f,c={},r={};{}\x1b\\",
-                    w, total, b64);
-            }
-            return String::new();
+            // Leave the box blank: the image is painted OVER it out-of-band
+            // via glow (kitty), because crust's set_text sanitiser strips a
+            // raw graphics escape if we embed it in the pane text. The
+            // caller (render_pc_sheet) returns the box geometry so
+            // render_campaign_panes can overlay the picture there.
+            return " ".repeat(w);
         }
     }
     // Placeholder mode — original dim frame.
@@ -6929,12 +7974,22 @@ fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
                 }
             }
             CampSection::Locations => {
-                out.push(CampTreeItem {
-                    node: CampNode::Placeholder { section: sec,
-                        msg: "(locations land in v0.4.0)".into() },
-                    depth: 1,
-                    expandable: false, expanded: false,
-                });
+                if camp.locations.is_empty() {
+                    out.push(CampTreeItem {
+                        node: CampNode::Placeholder { section: sec,
+                            msg: "(no locations yet — press n to add)".into() },
+                        depth: 1,
+                        expandable: false, expanded: false,
+                    });
+                } else {
+                    for i in 0..camp.locations.len() {
+                        out.push(CampTreeItem {
+                            node: CampNode::Location(i),
+                            depth: 1,
+                            expandable: false, expanded: false,
+                        });
+                    }
+                }
             }
             CampSection::SavedForge => {
                 let n_enc  = camp.saved_encounters.len();
@@ -7017,7 +8072,7 @@ fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
             CampSection::Pcs        => format!("PCs ({})", camp.pcs.len()),
             CampSection::Adventures => format!("Adventures ({})", camp.adventures.len()),
             CampSection::Npcs       => format!("NPCs ({})", camp.npcs.len()),
-            CampSection::Locations  => "Locations (0)".to_string(),
+            CampSection::Locations  => format!("Locations ({})", camp.locations.len()),
             CampSection::Calendar   => "Calendar".to_string(),
             CampSection::Factions   => "Factions".to_string(),
             CampSection::SavedForge => {
@@ -7094,7 +8149,10 @@ fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
             camp.npcs.get(*idx).map(|n| n.name.clone())
                 .unwrap_or_else(|| "(missing NPC)".to_string())
         }
-        CampNode::Location(idx) => format!("Location #{}", idx + 1),
+        CampNode::Location(idx) => camp.locations.get(*idx)
+            .map(|l| if l.kind.is_empty() { l.name.clone() }
+                     else { format!("{}  ({})", l.name, l.kind) })
+            .unwrap_or_else(|| format!("Location #{}", idx + 1)),
         CampNode::SavedForge(kind, idx) => {
             // Leaf row in the Forge-log section. Glyph indicates
             // type at a glance: ⚔ encounter, ☻ NPC, ⌂ town, ☀ weather.
@@ -7351,6 +8409,65 @@ fn format_npc_summary(npc: &crate::pc::Character) -> Vec<String> {
 }
 
 /// Pretty-print an encounter (header + per-NPC mini block).
+/// Word-wrap plain text to `w` display columns (words longer than the
+/// width go through unbroken). Used where a renderer must know its
+/// exact visual row count (e.g. to place an image overlay below).
+fn wrap_plain(text: &str, w: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if crust::display_width(line) <= w {
+            out.push(line.to_string());
+            continue;
+        }
+        let mut cur = String::new();
+        for word in line.split(' ') {
+            let cand = if cur.is_empty() { word.to_string() }
+                       else { format!("{} {}", cur, word) };
+            if crust::display_width(&cand) > w && !cur.is_empty() {
+                out.push(cur);
+                cur = word.to_string();
+            } else {
+                cur = cand;
+            }
+        }
+        if !cur.is_empty() { out.push(cur); }
+    }
+    out
+}
+
+/// Closest-name match score for `/` search (lower = better): exact <
+/// prefix < word-start < substring < in-order subsequence (fuzzy typo
+/// tolerance); `None` = not a plausible match. Shorter names win ties so
+/// the query lands on the most specific thing.
+fn name_match_score(q: &str, name: &str) -> Option<usize> {
+    let n = name.to_lowercase();
+    if n == q { return Some(0); }
+    if n.starts_with(q) { return Some(100 + n.len()); }
+    if let Some(pos) = n.find(q) {
+        let word_start = pos == 0
+            || !n.as_bytes()[pos - 1].is_ascii_alphanumeric();
+        return Some(if word_start { 500 + pos * 4 + n.len() }
+                    else { 1000 + pos * 4 + n.len() });
+    }
+    // Fuzzy fallback: every query char appears in order; score by how
+    // tightly the match spans.
+    let mut span_start: Option<usize> = None;
+    let mut last = 0usize;
+    let mut it = n.char_indices();
+    'outer: for qc in q.chars() {
+        loop {
+            let Some((i, c)) = it.next() else { return None; };
+            if c == qc {
+                if span_start.is_none() { span_start = Some(i); }
+                last = i;
+                continue 'outer;
+            }
+        }
+    }
+    let span = last.saturating_sub(span_start.unwrap_or(0));
+    Some(5000 + span * 10 + n.len())
+}
+
 fn format_encounter(enc: &crate::forge::encounter::Encounter) -> Vec<String> {
     use crust::style;
     let mut out = Vec::new();
@@ -7386,6 +8503,15 @@ fn format_encounter(enc: &crate::forge::encounter::Encounter) -> Vec<String> {
             "    BP {} | DB {} | MD {} | SIZE {} | Reaction {} | Dodge {}",
             npc.bp_max(), npc.db(), npc.md(), fmt_size(npc.size),
             reaction, dodge));
+        // Short-form spec: the stealth / awareness quartet is always
+        // stated (totals — what the GM rolls), so surprise, ambush and
+        // sneaking resolve straight off the block.
+        out.push(format!(
+            "    MoveQ {} | Hide {} | ReactSpd {} | Alert {}",
+            npc.skill_total(crate::pc::Char::Body, "Athletics", "Move Quietly"),
+            npc.skill_total(crate::pc::Char::Body, "Athletics", "Hide"),
+            reaction,
+            npc.skill_total(crate::pc::Char::Mind, "Awareness", "Alertness")));
         for w in npc.weapons.iter() {
             let melee = matches!(w.kind, crate::pc::WeaponKind::Melee);
             let attr = if melee { "Melee Combat" } else { "Missile Combat" };
@@ -8123,4 +9249,32 @@ fn category_blurb(cat: &str) -> Option<&'static str> {
         "Potions" => "Alchemy: brewed in ~1 hour, last ~1 hour, resolved with the Alchemy skill (under MIND -> Nature Knowledge). The wiki currently lists 9 potions.",
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::name_match_score;
+
+    #[test]
+    fn closest_match_ordering() {
+        // exact < prefix < word-start < substring < fuzzy
+        let exact  = name_match_score("finlo", "Finlo").unwrap();
+        let prefix = name_match_score("finlo", "Finlo Renn").unwrap();
+        let word   = name_match_score("vorian", "Guard Captain Vorian Macch").unwrap();
+        let sub    = name_match_score("ori", "Thalarien Solscar");
+        let fuzzy  = name_match_score("dwrvnroad", "TheDwarvenRoad").unwrap();
+        assert!(exact < prefix);
+        assert!(prefix < word);
+        assert!(sub.is_none() || word < sub.unwrap());
+        assert!(fuzzy > word);
+        // No plausible match at all → None.
+        assert!(name_match_score("zzzqqq", "Finlo Renn").is_none());
+    }
+
+    #[test]
+    fn shorter_name_wins_ties() {
+        let a = name_match_score("durgan", "Durgan Stonehand").unwrap();
+        let b = name_match_score("durgan", "Durgan Stonehand the Elder of Borgheim").unwrap();
+        assert!(a < b);
+    }
 }

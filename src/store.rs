@@ -79,6 +79,76 @@ impl GlobalConfig {
     }
 }
 
+fn now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// One diary line attached to an in-world day. Several entries may share a
+/// date (the GM jots more than one as play unfolds); they render in the
+/// order written. `created_at` is the real-world unix time it was written.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiaryEntry {
+    pub date: AmarDate,
+    pub text: String,
+    #[serde(default)]
+    pub created_at: u64,
+}
+
+/// A place the party knows: city, keep, region, inn, ruin… `image` is
+/// an absolute path to a map / illustration rendered inline under the
+/// text (and openable externally with →). Sparse-friendly: everything
+/// but the name may be omitted in injected JSON.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct Location {
+    pub name: String,
+    /// Free-form kind: "Dwarven mountain-capital", "Inn", "Region", …
+    pub kind: String,
+    pub description: String,
+    /// Absolute path to a map / illustration (optional).
+    pub image: String,
+    pub notes: String,
+    pub created_at: u64,
+}
+
+/// The shared WORLD: locations and the major NPCs that exist across
+/// every campaign (royals, barons, famous adventurers…). Campaigns are
+/// time-boxed groups of players moving through this world; what they
+/// meet that is theirs alone (lesser NPCs, PCs, adventures) lives in
+/// the campaign instead. Stored at `~/.amar/world.json`, edited live
+/// by the companion session under the same contract as campaign.json.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct World {
+    pub locations: Vec<Location>,
+    pub npcs: Vec<crate::pc::Character>,
+}
+
+pub fn world_path() -> PathBuf { root_dir().join("world.json") }
+
+impl World {
+    pub fn load() -> World {
+        let mut w: World = std::fs::read_to_string(world_path())
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default();
+        for n in w.npcs.iter_mut() { n.normalize(); }
+        w
+    }
+
+    pub fn save(&self) -> std::io::Result<()> {
+        std::fs::create_dir_all(root_dir())?;
+        let s = serde_json::to_string_pretty(self)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let tmp = world_path().with_extension("json.tmp");
+        std::fs::write(&tmp, s)?;
+        std::fs::rename(&tmp, world_path())
+    }
+}
+
 /// Generic save-wrapper for forge artefacts. Keeps the user-given
 /// label, the unix timestamp the roll was kept at, the AI flavour
 /// (if `A` was pressed before save), and the artefact itself. The
@@ -135,6 +205,19 @@ pub struct Campaign {
     /// quit.
     #[serde(default)]
     pub tagged: crate::combat::TagPool,
+    /// Places the party knows — towns, keeps, regions, inns. Browsable
+    /// under the Locations section; searchable with `/`.
+    #[serde(default)]
+    pub locations: Vec<Location>,
+    /// The campaign diary: free-form lines the GM writes against in-world
+    /// days from the Calendar. This is the running record of the campaign.
+    #[serde(default)]
+    pub diary: Vec<DiaryEntry>,
+    /// Rolling weather run that always covers the current day plus a week
+    /// ahead. Past days stay immutable so the diary's weather never changes
+    /// retroactively; only the tail is extended as the current day advances.
+    #[serde(default)]
+    pub forecast: Vec<crate::forge::WeatherDay>,
 }
 
 /// One participant in the combat HUD. Indexed against
@@ -193,6 +276,47 @@ impl Campaign {
         created
     }
 
+    fn lin(d: AmarDate) -> i64 {
+        d.year as i64 * crate::calendar::DAYS_PER_YEAR as i64 + d.day_of_year as i64
+    }
+
+    /// Diary lines recorded on `date`, in the order they were written.
+    pub fn diary_for(&self, date: AmarDate) -> Vec<&DiaryEntry> {
+        self.diary.iter().filter(|e| e.date == date).collect()
+    }
+
+    /// Append a diary line to `date`.
+    pub fn add_diary(&mut self, date: AmarDate, text: &str) {
+        self.diary.push(DiaryEntry { date, text: text.to_string(), created_at: now_unix() });
+    }
+
+    /// The generated weather for `date`, if it falls inside the current run.
+    pub fn weather_for(&self, date: AmarDate) -> Option<&crate::forge::WeatherDay> {
+        self.forecast.iter().find(|w| w.date == date)
+    }
+
+    /// Make sure the weather run covers `self.date ..= self.date + horizon-1`.
+    /// Generates only the missing tail (or reseeds if the run is empty or
+    /// starts after today), so past days stay stable and the cost is zero
+    /// once the week ahead already exists.
+    pub fn ensure_forecast(&mut self, horizon: u32) {
+        let horizon = horizon.max(1);
+        let target_end = self.date.advance(horizon as i64 - 1);
+        let starts_after_today = self.forecast.first()
+            .map(|w| Self::lin(w.date) > Self::lin(self.date))
+            .unwrap_or(true);
+        if starts_after_today {
+            self.forecast = crate::forge::generate_weather(self.date, horizon);
+        }
+        if let Some(last) = self.forecast.last().map(|w| w.date) {
+            let gap = Self::lin(target_end) - Self::lin(last);
+            if gap > 0 {
+                let more = crate::forge::generate_weather(last.advance(1), gap as u32);
+                self.forecast.extend(more);
+            }
+        }
+    }
+
     pub fn save(&self) -> std::io::Result<()> {
         let dir = campaign_dir(&self.name);
         std::fs::create_dir_all(&dir)?;
@@ -205,8 +329,19 @@ impl Campaign {
     pub fn load(name: &str) -> std::io::Result<Self> {
         let path = campaign_dir(name).join("campaign.json");
         let s = std::fs::read_to_string(path)?;
-        serde_json::from_str(&s)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        let mut c: Campaign = serde_json::from_str(&s)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        // Normalize every character on the way in: a companion session
+        // may inject sparse "short form" JSON (name, level, a few skills,
+        // weapons); this fills the gaps so it behaves like a full sheet.
+        // Idempotent for fully-populated characters.
+        for p in c.pcs.iter_mut() { p.normalize(); }
+        for n in c.npcs.iter_mut() { n.normalize(); }
+        for s in c.saved_npcs.iter_mut() { s.item.normalize(); }
+        for e in c.saved_encounters.iter_mut() {
+            for n in e.item.npcs.iter_mut() { n.normalize(); }
+        }
+        Ok(c)
     }
 }
 

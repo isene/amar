@@ -99,6 +99,10 @@ fn cli_bootstrap(args: &[String]) -> Result<String, String> {
                         let old = &camp.adventures[idx];
                         new_adv.current_section = old.current_section;
                         new_adv.notes = old.notes.clone();
+                        // Keep the calendar placement across a rescan.
+                        new_adv.start = old.start;
+                        new_adv.end = old.end;
+                        new_adv.color = old.color;
                         for new_sec in new_adv.sections.iter_mut() {
                             if let Some(old_sec) = old.sections.iter()
                                 .find(|s| s.heading == new_sec.heading)
@@ -126,8 +130,9 @@ fn cli_bootstrap(args: &[String]) -> Result<String, String> {
     }
 
     if let Some(name) = create_only.as_ref() {
-        let camp = store::Campaign::load(name)
+        let mut camp = store::Campaign::load(name)
             .unwrap_or_else(|_| store::Campaign::new(name));
+        camp.ensure_forecast(7);
         camp.save().map_err(|e| format!("save failed: {}", e))?;
         // Flip the global active-campaign pointer here too so a
         // `--create-campaign` on its own is enough to point amar at
