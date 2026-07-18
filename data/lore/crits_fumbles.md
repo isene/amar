@@ -32,7 +32,7 @@ result is inapplicable, pick the one above (criticals) or below (fumbles).
 | 5 | Exposed — the failure invites danger at the worst moment (GM) |
 | 6 | Botched — as 4, and subtract one experience mark |
 
-## Criticals (melee / generic)
+## Melee Criticals
 
 | Cat | Roll | Result |
 |---|---|---|
@@ -68,7 +68,7 @@ result is inapplicable, pick the one above (criticals) or below (fumbles).
 | | 6 | Opponent faints, Medical Lore 8 to awaken |
 | 6 | | Roll twice (ignore further 6s), add one experience mark |
 
-## Fumbles (melee / generic)
+## Melee Fumbles
 
 | Cat | Roll | Result |
 |---|---|---|
