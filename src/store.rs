@@ -111,6 +111,9 @@ pub struct Location {
     /// Absolute path to a map / illustration (optional).
     pub image: String,
     pub notes: String,
+    /// Kingdom region/district (same values as Character.region);
+    /// empty = "Any region" group in the World tab.
+    pub region: String,
     pub created_at: u64,
 }
 

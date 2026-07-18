@@ -135,9 +135,14 @@ Unarmed synergy — the Melee Combat attribute already carries it.
 
 ```json
 {"name": "Borgheim", "kind": "Dwarven mountain-capital",
- "description": "…multi-line prose…",
+ "description": "…multi-line prose…", "region": "Borgheim",
  "image": "/abs/path/to/map.png", "notes": "…", "created_at": <unix>}
 ```
+
+`region` uses the same values as `Character.region` (district name or
+other realm; empty = "Any region"). Locations group under region folds
+in the World tab exactly like NPCs; array order within a region is the
+GM's display order — preserve it.
 
 `image` (optional) renders INLINE below the text via glow and opens
 externally with →. In-app: `n` adds, ENTER edits description, `c` renames,
