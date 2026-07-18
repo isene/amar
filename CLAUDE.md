@@ -22,6 +22,11 @@ Tabs: 1 World, 2 Campaign, 3 Combat, 4 Lore.
   Magick Circle, the Wayanah-party, King Gorm, Altira, …). They are always
   FULL character sheets — never sparse stubs. Calibrate old-system (0-20)
   stats via the Altira conversion on the wiki (legacy → 3-tier mapping).
+- Every world NPC carries a `region` field (one of the six districts —
+  Amaronir, Rauinir, Aleresir, Feronir, Calaronir, Mieronir — or another
+  named realm like Borgheim). Empty string = travelling/unbound; the World
+  tab groups those under "Any region". Array order within a region is the
+  GM's display order (Ctrl+Up/Down in-app) — preserve it when editing.
 - **Campaigns** (`~/.amar/campaigns/<name>/campaign.json`) hold the PCs,
   campaign-specific lesser NPCs, encounters, diary, adventures. Several
   campaigns can run concurrently; a campaign meets world NPCs by reference

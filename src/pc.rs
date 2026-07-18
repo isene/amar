@@ -209,6 +209,10 @@ pub struct Character {
     pub height_cm: u32,
     pub weight_kg: u32,
     pub birthplace: String,
+    /// Kingdom region/district the character is tied to (e.g.
+    /// "Amaronir"). Empty = not tied to a region; the World tab groups
+    /// those under "Any region".
+    pub region: String,
     pub description: String,
     pub clothing: String,
 
