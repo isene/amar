@@ -111,6 +111,19 @@ When the GM asks to "upgrade" an encounter (NPC) to full form:
 Derived stats (BP/MD/DB/OFF/DEF/totals) are always computed by amar from
 the three tiers — never inject computed values, only ranks.
 
+## Weapon combinations (one row = one skill)
+
+A weapon combination is ONE weapon row and ONE skill, named for the combo:
+`"Longsword & Shield"`, `"Two Knives"`, `"Whip/Buckler"`. Fold the shield's
+defence into the row's `def_mod` (sword def + shield def); Init/Off/Dam
+come from the primary weapon. Never inject a bare shield row plus a
+separate sword row for a character who fights with the pair — the
+combination is its own skill, ranked separately from the solo weapon.
+
+Synergies: DEF totals get +1 per 5 in Dodge (Athletics), computed by amar.
+Pure dodging is a GM call (Dodge total − 2), no data needed. There is no
+Unarmed synergy — the Melee Combat attribute already carries it.
+
 ## Locations
 
 `world.json locations[]` holds the places of the world. Sparse-friendly:

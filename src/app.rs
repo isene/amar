@@ -7523,7 +7523,7 @@ fn push_weapon_row(
         value_cell(&format!("{:+}", w.init), 4, true)
     } else {
         // Bold-bright like other "derived total" columns (OFF/DEF).
-        pad_visible(&style::bold(&style::fg(&format!("{:+}", init_total), t::FG_BRIGHT)), 4)
+        pad_visible(&style::bold(&style::fg(&format!("{}", init_total), t::FG_BRIGHT)), 4)
     };
 
     // Skill + Tot columns, exactly like any other skill row: Skill is the
@@ -8523,11 +8523,11 @@ fn format_encounter(enc: &crate::forge::encounter::Encounter) -> Vec<String> {
             let init_total = w.init + reaction;
             if melee {
                 out.push(format!(
-                    "    melee:   {:<14} Init {:+}  OFF {}  DEF {}  Dam {:+}",
+                    "    melee:   {:<14} Init {}  OFF {}  DEF {}  Dam {:+}",
                     w.name, init_total, off_total, def_total, w.damage));
             } else {
                 out.push(format!(
-                    "    missile: {:<14} Init {:+}  OFF {}  Rng {}m  Dam {:+}",
+                    "    missile: {:<14} Init {}  OFF {}  Rng {}m  Dam {:+}",
                     w.name, init_total, off_total, w.range_m, w.damage));
             }
         }
@@ -8936,7 +8936,7 @@ fn weapon_def_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
         crate::pc::WeaponKind::Missile => "Missile Combat",
     };
     let skill = ch.skill_total(crate::pc::Char::Body, attr, &w.skill_name);
-    let dodge = ch.skill_total(crate::pc::Char::Body, "Melee Combat", "Dodge");
+    let dodge = ch.skill_total(crate::pc::Char::Body, "Athletics", "Dodge");
     w.def_mod + skill + dodge / 5
 }
 

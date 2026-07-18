@@ -144,12 +144,14 @@ You can always move 1 m per round without penalty.
 
 -5 Offensive per extra attack. Second attack on second 6, third on second 5, etc.
 
-## Secondary Weapons
+## Weapon Combinations
 
-+1 Off and/or Def per extra weapon beyond primary. Shields don't count as extras. Off-hand weapon: -3 penalty; +2 Strength requirement.
+A weapon combination (Longsword & Shield, Two Knives, Whip/Buckler) is ONE
+skill of its own, trained and ranked separately from the solo weapon. The
+sheet folds the pair's modifiers into that single row.
 
-**Unarmed bonus**: +1 Off and Def per full 5 in Unarmed.
-**Dodge bonus**: +1 Def per full 5 in Dodge.
+**Dodge bonus**: +1 Def per full 5 in Dodge (Athletics).
+**Pure dodging**: forgo attacks; defence = Dodge total - 2.
 
 ## Weapon Familiarity
 

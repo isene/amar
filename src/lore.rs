@@ -1,7 +1,7 @@
 //! Lore module — bundles the markdown reference files into the binary
 //! and exposes the tree structure the Lore tab navigates.
 //!
-//! Six setting / system docs sourced from d6gaming.org + the skill refs
+//! The setting / system docs sourced from d6gaming.org + the skill refs
 //! get include_str!()-baked. The three canon categories (Spells,
 //! Rituals, Potions) are drilled into via the live `Canon` index, so
 //! the tree stays in sync with whatever the scraper produced.
@@ -16,6 +16,7 @@ pub const SETTING_DOCS: &[(&str, &str)] = &[
     ("Calendar",         include_str!("../data/lore/calendar.md")),
     ("The Character",    include_str!("../data/lore/character.md")),
     ("Combat (quickref)", include_str!("../data/lore/combat.md")),
+    ("Crits & Fumbles",   include_str!("../data/lore/crits_fumbles.md")),
     ("Magic (quickref)",  include_str!("../data/lore/magic.md")),
 ];
 
