@@ -211,8 +211,12 @@ pub struct Character {
     pub birthplace: String,
     /// Kingdom region/district the character is tied to (e.g.
     /// "Amaronir"). Empty = not tied to a region; the World tab groups
-    /// those under "Any region".
+    /// those under "Other".
     pub region: String,
+    /// World location (city/village name) the character belongs to;
+    /// the World tree nests the NPC under that location row. Empty =
+    /// listed directly under the region fold.
+    pub location: String,
     pub description: String,
     pub clothing: String,
 

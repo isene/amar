@@ -24,9 +24,16 @@ Tabs: 1 World, 2 Campaign, 3 Combat, 4 Lore.
   stats via the Altira conversion on the wiki (legacy → 3-tier mapping).
 - Every world NPC carries a `region` field (one of the six districts —
   Amaronir, Rauinir, Aleresir, Feronir, Calaronir, Mieronir — or another
-  named realm like Borgheim). Empty string = travelling/unbound; the World
-  tab groups those under "Any region". Array order within a region is the
-  GM's display order (Ctrl+Up/Down in-app) — preserve it when editing.
+  named realm like Borgheim) and a `location` field (the world location
+  name it belongs to, e.g. "Amaron"). The World tab is ONE tree: region
+  folds → location rows → that location's NPCs nested beneath. Empty
+  region = the "Other" fold (travellers); empty location = listed at
+  region level. Array order within a nest is the GM's display order
+  (Ctrl+Up/Down in-app) — preserve it when editing.
+- In-app, `+` on a campaign roster NPC promotes it to a world NPC
+  (moves it from campaign.json npcs[] into world.json, asking region +
+  location). Companion sessions do the same by hand: remove from the
+  campaign roster, append to world.npcs with region/location set.
 - **Campaigns** (`~/.amar/campaigns/<name>/campaign.json`) hold the PCs,
   campaign-specific lesser NPCs, encounters, diary, adventures. Several
   campaigns can run concurrently; a campaign meets world NPCs by reference

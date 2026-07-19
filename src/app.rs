@@ -240,20 +240,17 @@ impl CampSection {
 #[derive(Debug, Clone, PartialEq)]
 enum WorldNode {
     SecLoc,
-    SecNpc,
-    /// Region header under the NPCs section ("Amaronir", …, "Any region").
-    Region(String),
-    /// Region header under the Locations section (same region values,
-    /// independent fold state — "locregion:<r>" keys).
+    /// Collapsible region fold ("Kingdom of Amar", the districts, other
+    /// realms, "Other") — "locregion:<r>" keys in world_expanded.
     LocRegion(String),
     Loc(usize),
     Npc(usize),
     Empty(&'static str),
 }
 
-/// The six kingdom districts, in canonical wiki order. World-tab NPC
-/// region headers show these first, then any other named regions
-/// alphabetically, then "Any region" (empty `region`) last.
+/// The six kingdom districts, in canonical wiki order. Region folds
+/// show "Kingdom of Amar" first, then these, then other realms
+/// alphabetically, then "Other" (empty `region`) last.
 const DISTRICT_ORDER: [&str; 6] =
     ["Amaronir", "Rauinir", "Aleresir", "Feronir", "Calaronir", "Mieronir"];
 
@@ -2494,12 +2491,57 @@ impl App {
                 let character = saved.item.clone();
                 self.prompt_roster_and_promote(character, &name);
             }
+            CampNode::Npc(idx) => {
+                self.promote_npc_to_world(idx);
+            }
             _ => {
                 self.status_msg(
-                    "Move cursor onto a saved encounter or saved NPC, then + to promote.",
+                    "Move cursor onto a saved encounter, saved NPC or roster NPC, then + to promote.",
                     t::WARN);
             }
         }
+    }
+
+    /// "+" on a campaign roster NPC: promote it to a WORLD NPC. Asks
+    /// for region (and optionally a location to nest under), MOVES the
+    /// character from the campaign roster into world.json, and jumps
+    /// the World tab to it. Dedupes by name against existing world NPCs.
+    fn promote_npc_to_world(&mut self, idx: usize) {
+        let Some(camp) = self.campaign.as_ref() else { return; };
+        let Some(npc) = camp.npcs.get(idx) else { return; };
+        let name = npc.name.clone();
+        if self.world.npcs.iter().any(|n| n.name == name) {
+            self.status_msg(&format!("\u{201c}{}\u{201d} is already a world NPC.", name), t::WARN);
+            return;
+        }
+        let Some(region) = self.footer.ask_or_cancel(
+            " World region (Amaronir/Rauinir/Aleresir/Feronir/Calaronir/Mieronir/…, empty = Other): ", "")
+        else { self.status_msg("Cancelled.", t::WARN); return; };
+        let region = region.trim().to_string();
+        let location = self.footer.ask(
+            " Nest under location (name, empty = region level): ", "")
+            .trim().to_string();
+        let Some(camp) = self.campaign.as_mut() else { return; };
+        let mut character = camp.npcs.remove(idx);
+        let _ = camp.save();
+        character.region = region.clone();
+        character.location = location;
+        self.world.npcs.push(character);
+        let _ = self.world.save();
+        // Show it: open the fold and land the World cursor on it.
+        for key in ["Locations".to_string(), format!("locregion:{}", region)] {
+            if !self.world_expanded.iter().any(|e| *e == key) {
+                self.world_expanded.push(key);
+            }
+        }
+        let world_i = self.world.npcs.len() - 1;
+        self.set_tab(Tab::World);
+        let tree = self.build_world_tree();
+        if let Some(p) = tree.iter().position(|x| *x == WorldNode::Npc(world_i)) {
+            self.world_idx = p;
+        }
+        self.focus = Focus::Left;
+        self.status_msg(&format!("\u{201c}{}\u{201d} promoted to the World.", name), t::OK);
     }
 
     /// "+" on the Forge tab while an encounter is on the right pane.
@@ -3496,7 +3538,7 @@ impl App {
         for (i, n) in self.world.npcs.iter().enumerate() {
             if let Some(sc) = name_match_score(&q, &n.name) {
                 if best_world.as_ref().map(|b| sc < b.0).unwrap_or(true) {
-                    best_world = Some((sc, n.name.clone(), WorldNode::Npc(i), "NPCs"));
+                    best_world = Some((sc, n.name.clone(), WorldNode::Npc(i), "Locations"));
                 }
             }
         }
@@ -3509,7 +3551,7 @@ impl App {
                 // Hits also need their region group open.
                 if let WorldNode::Npc(i) = wnode {
                     if let Some(n) = self.world.npcs.get(i) {
-                        let key = format!("region:{}", n.region);
+                        let key = format!("locregion:{}", n.region);
                         if !self.world_expanded.iter().any(|e| *e == key) {
                             self.world_expanded.push(key);
                         }
@@ -3561,64 +3603,59 @@ impl App {
     // ------------------------------------------------ World tab
     /// Flattened World-tab tree: two expandable sections (Locations,
     /// NPCs) with their rows.
+    /// One complete tree: Locations → region folds → location rows with
+    /// their NPCs nested beneath (NPC `location` matches the location's
+    /// name). Region-level NPCs with no matching location row list at
+    /// the fold's bottom — that's where the travellers live ("Other").
     fn build_world_tree(&self) -> Vec<WorldNode> {
         let mut out = Vec::new();
         let loc_open = self.world_expanded.iter().any(|e| e == "Locations");
-        let npc_open = self.world_expanded.iter().any(|e| e == "NPCs");
         out.push(WorldNode::SecLoc);
         if loc_open {
-            if self.world.locations.is_empty() {
-                out.push(WorldNode::Empty("(no locations yet — the companion session injects them)"));
+            if self.world.locations.is_empty() && self.world.npcs.is_empty() {
+                out.push(WorldNode::Empty("(empty world — the companion session injects it)"));
             }
-            let regions: Vec<String> = Self::region_order(
-                self.world.locations.iter().map(|l| l.region.as_str()));
-            for region in regions {
+            for region in self.all_regions() {
                 out.push(WorldNode::LocRegion(region.clone()));
                 let key = format!("locregion:{}", region);
-                if self.world_expanded.iter().any(|e| *e == key) {
-                    for (i, l) in self.world.locations.iter().enumerate() {
-                        if l.region == region { out.push(WorldNode::Loc(i)); }
+                if !self.world_expanded.iter().any(|e| *e == key) { continue; }
+                let mut placed = vec![false; self.world.npcs.len()];
+                for (i, l) in self.world.locations.iter().enumerate() {
+                    if l.region != region { continue; }
+                    out.push(WorldNode::Loc(i));
+                    for (j, n) in self.world.npcs.iter().enumerate() {
+                        if n.region == region && n.location == l.name {
+                            out.push(WorldNode::Npc(j));
+                            placed[j] = true;
+                        }
                     }
                 }
-            }
-        }
-        out.push(WorldNode::SecNpc);
-        if npc_open {
-            if self.world.npcs.is_empty() {
-                out.push(WorldNode::Empty("(no world NPCs yet — the companion session injects them)"));
-            }
-            for region in self.world_regions() {
-                out.push(WorldNode::Region(region.clone()));
-                let key = format!("region:{}", region);
-                if self.world_expanded.iter().any(|e| *e == key) {
-                    for (i, n) in self.world.npcs.iter().enumerate() {
-                        if n.region == region { out.push(WorldNode::Npc(i)); }
-                    }
+                for (j, n) in self.world.npcs.iter().enumerate() {
+                    if n.region == region && !placed[j] { out.push(WorldNode::Npc(j)); }
                 }
             }
         }
         out
     }
 
-    /// Distinct regions in display order: the six districts first, then
-    /// other named regions alphabetically, then "" (Any region).
-    fn region_order<'a>(items: impl Iterator<Item = &'a str> + Clone) -> Vec<String> {
+    /// Region folds in display order: "Kingdom of Amar" first, the six
+    /// districts, other named realms alphabetically, then "Other"
+    /// (always shown — it's where unassigned things land).
+    fn all_regions(&self) -> Vec<String> {
+        let present = |r: &str| self.world.locations.iter().any(|l| l.region == r)
+            || self.world.npcs.iter().any(|n| n.region == r);
         let mut out: Vec<String> = Vec::new();
-        for d in DISTRICT_ORDER {
-            if items.clone().any(|r| r == d) { out.push(d.to_string()); }
-        }
-        let mut others: Vec<String> = items.clone()
-            .filter(|r| !r.is_empty() && !DISTRICT_ORDER.contains(r))
-            .map(|r| r.to_string())
+        if present("Kingdom of Amar") { out.push("Kingdom of Amar".to_string()); }
+        for d in DISTRICT_ORDER { if present(d) { out.push(d.to_string()); } }
+        let mut others: Vec<String> = self.world.locations.iter().map(|l| l.region.clone())
+            .chain(self.world.npcs.iter().map(|n| n.region.clone()))
+            .filter(|r| !r.is_empty() && r != "Kingdom of Amar"
+                    && !DISTRICT_ORDER.contains(&r.as_str()))
             .collect();
         others.sort(); others.dedup();
         out.extend(others);
-        if items.clone().any(|r| r.is_empty()) { out.push(String::new()); }
+        out.push(String::new());
         out
-    }
-
-    fn world_regions(&self) -> Vec<String> {
-        Self::region_order(self.world.npcs.iter().map(|n| n.region.as_str()))
     }
 
     fn render_world_panes(&mut self) {
@@ -3629,34 +3666,25 @@ impl App {
         let mut left: Vec<String> = Vec::new();
         left.push(style::bold(&style::fg("The World", t::ACCENT)).to_string());
         left.push(String::new());
+        let mut npc_depth = 2; // NPCs after a Loc row nest one deeper
         for (i, node) in tree.iter().enumerate() {
             let cursor = if i == self.world_idx { "\u{2192}" } else { " " };
             let (depth, label) = match node {
                 WorldNode::SecLoc => (0, format!("{} Locations ({})",
                     if self.world_expanded.iter().any(|e| e == "Locations") { "-" } else { "+" },
                     self.world.locations.len())),
-                WorldNode::SecNpc => (0, format!("{} NPCs ({})",
-                    if self.world_expanded.iter().any(|e| e == "NPCs") { "-" } else { "+" },
-                    self.world.npcs.len())),
-                WorldNode::LocRegion(r) => (1, {
-                    let label = if r.is_empty() { "Any region" } else { r.as_str() };
+                WorldNode::LocRegion(r) => { npc_depth = 2; (1, {
+                    let label = if r.is_empty() { "Other" } else { r.as_str() };
                     let count = self.world.locations.iter().filter(|l| &l.region == r).count();
                     let open = self.world_expanded.iter()
                         .any(|e| *e == format!("locregion:{}", r));
                     format!("{} {} ({})", if open { "-" } else { "+" }, label, count)
-                }),
-                WorldNode::Loc(i) => (2, self.world.locations.get(*i)
+                }) }
+                WorldNode::Loc(i) => { npc_depth = 3; (2, self.world.locations.get(*i)
                     .map(|l| if l.kind.is_empty() { l.name.clone() }
                          else { format!("{}  ({})", l.name, truncate_or_pad(&l.kind, 22).trim_end().to_string()) })
-                    .unwrap_or_default()),
-                WorldNode::Region(r) => (1, {
-                    let label = if r.is_empty() { "Any region" } else { r.as_str() };
-                    let count = self.world.npcs.iter().filter(|n| &n.region == r).count();
-                    let open = self.world_expanded.iter()
-                        .any(|e| *e == format!("region:{}", r));
-                    format!("{} {} ({})", if open { "-" } else { "+" }, label, count)
-                }),
-                WorldNode::Npc(i) => (2, self.world.npcs.get(*i)
+                    .unwrap_or_default()) }
+                WorldNode::Npc(i) => (npc_depth, self.world.npcs.get(*i)
                     .map(|n| n.name.clone()).unwrap_or_default()),
                 WorldNode::Empty(m) => (1, m.to_string()),
             };
@@ -3666,8 +3694,8 @@ impl App {
                 else { style::fg(&row, t::FG_DIM) }
             } else {
                 match node {
-                    WorldNode::SecLoc | WorldNode::SecNpc => style::fg(&row, t::STEEL),
-                    WorldNode::Region(_) | WorldNode::LocRegion(_) => style::fg(&row, t::AMBER),
+                    WorldNode::SecLoc => style::fg(&row, t::STEEL),
+                    WorldNode::LocRegion(_) => style::fg(&row, t::AMBER),
                     WorldNode::Empty(_) => style::fg(&row, t::FG_MUTED),
                     _ => row,
                 }
@@ -3713,41 +3741,24 @@ impl App {
             }
             Some(WorldNode::SecLoc) | None => {
                 vec![String::new(),
-                     style::bold(&style::fg(" The World \u{2014} Locations", t::ACCENT)).to_string(),
+                     style::bold(&style::fg(" The World", t::ACCENT)).to_string(),
                      String::new(),
-                     format!("  {} places known.", self.world.locations.len()),
+                     format!("  {} places, {} people of note.",
+                         self.world.locations.len(), self.world.npcs.len()),
                      String::new(),
-                     style::fg("  The shared world: every campaign moves through these.", t::FG_MUTED).to_string(),
+                     style::fg("  One tree: region \u{2192} location \u{2192} its NPCs.", t::FG_MUTED).to_string(),
                      style::fg("  Injected + enriched by the companion session (world.json).", t::FG_MUTED).to_string()]
             }
-            Some(WorldNode::SecNpc) => {
-                vec![String::new(),
-                     style::bold(&style::fg(" The World \u{2014} major NPCs", t::ACCENT)).to_string(),
-                     String::new(),
-                     format!("  {} people of note.", self.world.npcs.len()),
-                     String::new(),
-                     style::fg("  Royals, barons, famous adventurers \u{2014} shared across", t::FG_MUTED).to_string(),
-                     style::fg("  campaigns. Campaign-specific NPCs live on tab 2.", t::FG_MUTED).to_string()]
-            }
-            Some(WorldNode::Region(r)) => {
-                let label = if r.is_empty() { "Any region" } else { r.as_str() };
-                let count = self.world.npcs.iter().filter(|n| &n.region == r).count();
-                vec![String::new(),
-                     style::bold(&style::fg(&format!(" {}", label), t::ACCENT)).to_string(),
-                     String::new(),
-                     format!("  {} people of note.", count),
-                     String::new(),
-                     style::fg("  Ctrl+Up / Ctrl+Down reorders NPCs within the region.", t::FG_MUTED).to_string()]
-            }
             Some(WorldNode::LocRegion(r)) => {
-                let label = if r.is_empty() { "Any region" } else { r.as_str() };
-                let count = self.world.locations.iter().filter(|l| &l.region == r).count();
+                let label = if r.is_empty() { "Other" } else { r.as_str() };
+                let lc = self.world.locations.iter().filter(|l| &l.region == r).count();
+                let nc = self.world.npcs.iter().filter(|n| &n.region == r).count();
                 vec![String::new(),
                      style::bold(&style::fg(&format!(" {}", label), t::ACCENT)).to_string(),
                      String::new(),
-                     format!("  {} places known.", count),
+                     format!("  {} places, {} people of note.", lc, nc),
                      String::new(),
-                     style::fg("  Ctrl+Up / Ctrl+Down reorders locations within the region.", t::FG_MUTED).to_string()]
+                     style::fg("  Ctrl+Up / Ctrl+Down reorders within the region.", t::FG_MUTED).to_string()]
             }
             Some(WorldNode::Empty(_)) => vec![String::new()],
         };
@@ -3805,11 +3816,6 @@ impl App {
             "l" | " " | "SPACE" => {
                 match tree.get(self.world_idx) {
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
-                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
-                    Some(WorldNode::Region(r)) => {
-                        let key = format!("region:{}", r);
-                        toggle(self, &key);
-                    }
                     Some(WorldNode::LocRegion(r)) => {
                         let key = format!("locregion:{}", r);
                         toggle(self, &key);
@@ -3820,25 +3826,14 @@ impl App {
             "h" | "LEFT" => {
                 match tree.get(self.world_idx) {
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
-                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
                     Some(WorldNode::Empty(_)) => self.world_idx = 0,
-                    Some(WorldNode::Region(r)) => {
-                        // Expanded region collapses; collapsed jumps up.
-                        let key = format!("region:{}", r);
-                        if self.world_expanded.iter().any(|e| *e == key) {
-                            toggle(self, &key);
-                        } else {
-                            self.world_idx = tree.iter()
-                                .position(|x| matches!(x, WorldNode::SecNpc)).unwrap_or(0);
-                        }
-                    }
                     Some(WorldNode::LocRegion(r)) => {
+                        // Expanded region collapses; collapsed jumps up.
                         let key = format!("locregion:{}", r);
                         if self.world_expanded.iter().any(|e| *e == key) {
                             toggle(self, &key);
                         } else {
-                            self.world_idx = tree.iter()
-                                .position(|x| matches!(x, WorldNode::SecLoc)).unwrap_or(0);
+                            self.world_idx = 0;
                         }
                     }
                     Some(WorldNode::Loc(_)) => {
@@ -3848,9 +3843,11 @@ impl App {
                             .unwrap_or(0);
                     }
                     Some(WorldNode::Npc(_)) => {
-                        // Jump to the NPC's region header.
+                        // Jump to the NPC's parent: its location row, or
+                        // the region header for region-level NPCs.
                         self.world_idx = tree[..self.world_idx].iter()
-                            .rposition(|x| matches!(x, WorldNode::Region(_)))
+                            .rposition(|x| matches!(x,
+                                WorldNode::Loc(_) | WorldNode::LocRegion(_)))
                             .unwrap_or(0);
                     }
                     None => {}
@@ -3870,11 +3867,6 @@ impl App {
                         }
                     }
                     Some(WorldNode::SecLoc) => toggle(self, "Locations"),
-                    Some(WorldNode::SecNpc) => toggle(self, "NPCs"),
-                    Some(WorldNode::Region(r)) => {
-                        let key = format!("region:{}", r);
-                        toggle(self, &key);
-                    }
                     Some(WorldNode::LocRegion(r)) => {
                         let key = format!("locregion:{}", r);
                         toggle(self, &key);
@@ -3920,15 +3912,18 @@ impl App {
                     }
                     Some(WorldNode::Npc(i)) => {
                         // Swap with the display-adjacent NPC in the SAME
-                        // region (display order within a region follows
-                        // array order, so scan for the neighbour).
+                        // region + location nest (display order within a
+                        // nest follows array order).
                         let region = self.world.npcs[i].region.clone();
+                        let locn = self.world.npcs[i].location.clone();
+                        let same = |n: &crate::pc::Character|
+                            n.region == region && n.location == locn;
                         let neighbour = if down {
                             self.world.npcs.iter().enumerate().skip(i + 1)
-                                .find(|(_, n)| n.region == region).map(|(j, _)| j)
+                                .find(|(_, n)| same(n)).map(|(j, _)| j)
                         } else {
                             self.world.npcs.iter().enumerate().take(i)
-                                .filter(|(_, n)| n.region == region).map(|(j, _)| j)
+                                .filter(|(_, n)| same(n)).map(|(j, _)| j)
                                 .last()
                         };
                         if let Some(j) = neighbour {
@@ -7270,9 +7265,10 @@ impl App {
               j / k          Down / up (Down/Up walk this help line-by-line)\n  \
               ?              This help\n\n  \
             WORLD (tab 1)\n  \
-              Locations and NPCs are grouped by kingdom region (\u{201c}Any\n  \
-              region\u{201d} = unassigned); regions fold like a hyperlist \u{2014}\n  \
-              l/ENTER opens, h collapses\n  \
+              ONE tree: region folds \u{2192} locations \u{2192} each location's\n  \
+              NPCs nested beneath it. \u{201c}Other\u{201d} holds the unbound\n  \
+              (travellers etc.). Folds work like a hyperlist \u{2014} l/ENTER\n  \
+              opens, h collapses / jumps to the parent\n  \
               C-\u{2191}/C-\u{2193}      Move the cursor location / NPC up or down (NPCs\n  \
                              move within their region; order saved to world.json)\n  \
               ENTER          Edit a location's description\n  \
@@ -7297,7 +7293,8 @@ impl App {
               t / T   Tag / untag the cursor row for the combat pool\n  \
               C       With a non-empty tag pool: launch combat from the pool\n  \
               D       Delete the PC or saved-forge entry under the cursor\n  \
-              +       Promote NPC → roster (p at the prompt = PC list)\n  \
+              +       Promote: encounter/saved NPC → roster (p = PC list);\n  \
+                      roster NPC → WORLD NPC (asks region + location)\n  \
               I       Import an adventure directory into the campaign\n  \
               N       Adventures header → scaffold a NEW adventure;\n  \
                       section row → append a session note\n  \
