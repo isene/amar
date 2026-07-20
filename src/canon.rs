@@ -51,8 +51,8 @@ mod tests {
         let c = Canon::load();
         assert!(c.entries.len() > 150, "entries: {}", c.entries.len());
         assert_eq!(c.spell_count(), 101);
-        assert_eq!(c.ritual_count(), 11);
-        assert_eq!(c.potion_count(), 9);
+        assert_eq!(c.ritual_count(), 23);
+        assert_eq!(c.potion_count(), 21);
     }
 
     #[test]

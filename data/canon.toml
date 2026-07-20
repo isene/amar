@@ -250,6 +250,18 @@ Potions = [
     "Potion of Healing",
     "Potion of Seeing the Truth",
     "Potion of Shivering",
+    "Dream Anchor",
+    "Featherfall Philtre",
+    "Firebelly Flask",
+    "Ghostberry Wine",
+    "Hound Nose Potion",
+    "Owl Draught",
+    "Potion of Iron Guts",
+    "Potion of Mirth",
+    "Potion of the Second Face",
+    "Silvertongue Sip",
+    "Stonebones Potion",
+    "Tortoise Tonic",
 ]
 Protection_Magick = [
     "Armor",
@@ -277,6 +289,18 @@ Rituals = [
     "Tekali’s Torch",
     "Volani’s Cure",
     "Witch Curse",
+    "Ashes of the Departed",
+    "Doomscript",
+    "Hearthbind",
+    "Moon Mirror",
+    "Rustwither",
+    "Seedsong",
+    "Stillwater Oath",
+    "Stormcall",
+    "Sunwaked Blade",
+    "Wayfarer Blessing",
+    "Whisper on the Wind",
+    "Wolfshide",
 ]
 Spells = [
     "Acidic Zap",
@@ -4813,3 +4837,351 @@ duration = "Instant"
 "path(s)" = "Ritual"
 range = "100 m"
 "resist?" = "Y"
+
+[entries."Ashes of the Departed"]
+name = "Ashes of the Departed"
+url = "https://d6gaming.org/index.php/Ashes_of_the_Departed"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Ashes of the Departed".fields]
+description = "Over ashes or grave-earth of the dead, the caster asks one question. The dead answer truthfully but briefly and often crookedly, and they remember being asked. The same dead cannot be questioned twice by the same caster. Ingredients: Ashes or grave-earth of the dead one (50 g). A coin placed where a tongue would be. Myrrh, burnt (10 g). Candles of black wax, one lit, one unlit. The question, written and then burnt."
+display_name = "Ashes of the Departed"
+area_of_effect = "1 dead person"
+casting_time = "1 hour"
+dr = "11"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "Y"
+
+[entries."Doomscript"]
+name = "Doomscript"
+url = "https://d6gaming.org/index.php/Doomscript"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Doomscript".fields]
+description = "A dark writing against a named person: their next critical success turns to a fumble in the moment of triumph. The curse spends itself on that one roll. The victim's Magic Defense resists; if the writing is found and burnt by the victim, the curse rebounds on the caster. Ingredients: Ink mixed with soot from a burnt letter. Paper made from a document the victim signed. A broken pen nib. The victim's full name, written backwards. Three nights of ill will."
+display_name = "Doomscript"
+area_of_effect = "1 named person"
+casting_time = "3 hours"
+dr = "14"
+duration = "Until spent"
+"path(s)" = "Ritual"
+range = "1 km"
+"resist?" = "Y"
+
+[entries."Dream Anchor"]
+name = "Dream Anchor"
+url = "https://d6gaming.org/index.php/Dream_Anchor"
+details = "full"
+domains = ["Potions"]
+
+[entries."Dream Anchor".fields]
+description = "Drunk at bedtime with a person or place firmly in mind, the potion steers the night's dream there: true glimpses mixed with dream-stuff, useful to those wise enough to tell which is which. Ielina initiates prize it. Ingredients: Poppy seeds (5 g). A silver sliver of a mirror.* Lavender (10 g). Water that has reflected the moon (1 dl). Something belonging to the person or place, held while falling asleep."
+display_name = "Dream Anchor"
+dr = "10"
+duration = "1 night"
+
+[entries."Featherfall Philtre"]
+name = "Featherfall Philtre"
+url = "https://d6gaming.org/index.php/Featherfall_Philtre"
+details = "full"
+domains = ["Potions"]
+
+[entries."Featherfall Philtre".fields]
+description = "The drinker falls like a leaf: any fall during the duration lands soft as stepping off a stair. Jumping from great heights on purpose still takes a moment of conviction. Ingredients: Down of a gosling (a pinch). A dandelion clock, blown into the vial. Spider silk (a strand). Rainwater that never touched the ground (1 dl)."
+display_name = "Featherfall Philtre"
+dr = "8"
+duration = "1 minute"
+
+[entries."Firebelly Flask"]
+name = "Firebelly Flask"
+url = "https://d6gaming.org/index.php/Firebelly_Flask"
+details = "full"
+domains = ["Potions"]
+
+[entries."Firebelly Flask".fields]
+description = "The drinker's belly fills with living fire: once per round for three rounds they may breathe a cone of flame 5 m long (damage 5, DEF avoids half). Speaking while it lasts is unwise, and hiccups are dangerous for everyone. Ingredients: Peppers dried over a smith's forge (20 g). Salamander ash (5 g). Strong spirits (1 dl). Oil that has burnt in a temple lamp (1 dl).* Swallowed in one go."
+display_name = "Firebelly Flask"
+dr = "11"
+duration = "3 rounds"
+
+[entries."Ghostberry Wine"]
+name = "Ghostberry Wine"
+url = "https://d6gaming.org/index.php/Ghostberry_Wine"
+details = "full"
+domains = ["Potions"]
+
+[entries."Ghostberry Wine".fields]
+description = "The drinker turns grey, faint and half-here: mundane weapons pass through (half damage), and once during the duration the drinker may walk through a single wall no thicker than an arm's length. Magick bites as usual. Ghostberries are found where the dead were left unburied. Ingredients: Ghostberries (30 g). Grave mist, bottled at dusk. Wine gone thin and pale (2 dl). A sigh, added last."
+display_name = "Ghostberry Wine"
+dr = "13"
+duration = "10 minutes"
+
+[entries."Hearthbind"]
+name = "Hearthbind"
+url = "https://d6gaming.org/index.php/Hearthbind"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Hearthbind".fields]
+description = "Binds the caster to a hearth. The caster knows, wherever they are, the moment a stranger crosses the warded threshold, and whether the stranger comes armed. The knowledge is a feeling, not a picture. Ingredients: Ash from the house's own hearth (100 g). Iron nails from the door, hammered back in place.* Salt strewn along the threshold (50 g). The name of everyone who lives there, spoken aloud."
+display_name = "Hearthbind"
+area_of_effect = "1 house"
+casting_time = "1 hour"
+dr = "8"
+duration = "1 month"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Hound Nose Potion"]
+name = "Hound Nose Potion"
+url = "https://d6gaming.org/index.php/Hound_Nose_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Hound Nose Potion".fields]
+description = "The drinker's nose wakes: track by scent as a hound does (+5 Tracking, scent-based), know who passed and how long ago. Strong smells during the hour can be briefly incapacitating. Ingredients: A hair of a proven tracking hound. Wild garlic (10 g). Rain-wet earth (20 g). Vinegar (1 dl). Shaken, never stirred."
+display_name = "Hound Nose Potion"
+dr = "8"
+duration = "1 hour"
+
+[entries."Moon Mirror"]
+name = "Moon Mirror"
+url = "https://d6gaming.org/index.php/Moon_Mirror"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Moon Mirror".fields]
+description = "Under moonlight, a bowl of still water shows a place the caster has stood in before, as it is now. The image is silent, faint, and lasts while the water stays unbroken. On a new moon night the ritual fails. Ingredients: Rainwater collected in silver (1 l).* A white flower, floated on the water. Moonstone dust (5 g). A soil sample or splinter from the place to be seen."
+display_name = "Moon Mirror"
+area_of_effect = "1 known place"
+casting_time = "30 minutes"
+dr = "10"
+duration = "1 night"
+"path(s)" = "Ritual"
+range = "Self"
+"resist?" = "N"
+
+[entries."Owl Draught"]
+name = "Owl Draught"
+url = "https://d6gaming.org/index.php/Owl_Draught"
+details = "full"
+domains = ["Potions"]
+
+[entries."Owl Draught".fields]
+description = "The drinker needs no sleep that night and suffers no fatigue for the missed rest. The next night's sleep is deep, long and non-negotiable. Ingredients: Owl pellet, powdered (5 g). Strong black tea leaves (20 g). Dew collected before dawn (1 dl). A candle burnt at both ends, the wax."
+display_name = "Owl Draught"
+dr = "8"
+duration = "1 night"
+
+[entries."Potion of Iron Guts"]
+name = "Potion of Iron Guts"
+url = "https://d6gaming.org/index.php/Potion_of_Iron_Guts"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Iron Guts".fields]
+description = "For one day the drinker's stomach fears nothing: poison, spoiled food and foul water do no harm (natural poisons are neutralised; magickal poisons get +6 on the resistance roll). Taste, unfortunately, still works. Ingredients: Charcoal, powdered (30 g). Goat's milk (2 dl). Nettle, boiled soft (20 g). A rusty nail, boiled along and removed.*"
+display_name = "Potion of Iron Guts"
+dr = "9"
+duration = "1 day"
+
+[entries."Potion of Mirth"]
+name = "Potion of Mirth"
+url = "https://d6gaming.org/index.php/Potion_of_Mirth"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Mirth".fields]
+description = "The drinker's heart grows light: immune to fear (no rolls on the fear table) and impossible to intimidate. Also very hard to take anything seriously, which has ended more than one important negotiation. Ingredients: Wine from a wedding (2 dl). Honey (50 g). A jester's bell, dipped and removed.* Feverfew (10 g). A genuinely funny story, told to the brew."
+display_name = "Potion of Mirth"
+dr = "7"
+duration = "1 evening"
+
+[entries."Potion of the Second Face"]
+name = "Potion of the Second Face"
+url = "https://d6gaming.org/index.php/Potion_of_the_Second_Face"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of the Second Face".fields]
+description = "Brewed over a hair of another person, the potion reshapes the drinker's face and voice to theirs for an hour. Height, build and memories stay the drinker's own. Wears off all at once, usually at the worst possible moment. Ingredients: A hair of the person to be worn. Soft wax (30 g). Milk of a black goat (1 dl). A pinch of stage rouge. Brewed before a covered mirror."
+display_name = "Potion of the Second Face"
+dr = "12"
+duration = "1 hour"
+
+[entries."Rustwither"]
+name = "Rustwither"
+url = "https://d6gaming.org/index.php/Rustwither"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Rustwither".fields]
+description = "Ages one metal object a hundred years in a heartbeat: locks crumble, blades pit and dull (double damage to the weapon's hit points), hinges seize. Dwarven work resists with DR +4. Ingredients: Red rust scraped from a shipwreck (20 g). Vinegar in which a key has soaked a week (1 dl). A drop of the caster's blood. A word of unmaking, whispered."
+display_name = "Rustwither"
+area_of_effect = "1 metal object"
+casting_time = "1 round"
+dr = "7"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Seedsong"]
+name = "Seedsong"
+url = "https://d6gaming.org/index.php/Seedsong"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Seedsong".fields]
+description = "A field sung over at sowing yields half again at harvest, and its crops resist blight and vermin. Anashina folk hold the singing must be done barefoot; the ritual works regardless, but they will not believe it. Ingredients: Seed grain from the previous harvest (a handful). Spring water poured at the field's corners (4 dl). A ladybird, released alive. A planting song, sung through twice."
+display_name = "Seedsong"
+area_of_effect = "1 field"
+casting_time = "1 hour"
+dr = "6"
+duration = "1 season"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Silvertongue Sip"]
+name = "Silvertongue Sip"
+url = "https://d6gaming.org/index.php/Silvertongue_Sip"
+details = "full"
+domains = ["Potions"]
+
+[entries."Silvertongue Sip".fields]
+description = "Words come easy and land well: +3 on Bargain and Social Lore. The drinker also finds it unusually hard to stop talking. Ingredients: Honey mead (1 dl). A silver coin, dissolved slowly.* Petals of sweet violet (10 g). A compliment, spoken into the bottle and corked quickly."
+display_name = "Silvertongue Sip"
+dr = "9"
+duration = "1 hour"
+
+[entries."Stillwater Oath"]
+name = "Stillwater Oath"
+url = "https://d6gaming.org/index.php/Stillwater_Oath"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Stillwater Oath".fields]
+description = "Two people swear an oath over a bowl of still water and drink from it. Whoever breaks the oath suffers -3 in Status until they make amends, and every still water they see reminds them. Moltan judges accept a Stillwater Oath as testimony. Ingredients: Still water drawn at dawn (1 l). Two hairs, one from each swearer, tied together. A stone from a courthouse or temple floor.* The oath itself, spoken word for word by both."
+display_name = "Stillwater Oath"
+area_of_effect = "2 sworn persons"
+casting_time = "10 minutes"
+dr = "9"
+duration = "Until fulfilled"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Stonebones Potion"]
+name = "Stonebones Potion"
+url = "https://d6gaming.org/index.php/Stonebones_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Stonebones Potion".fields]
+description = "The drinker's skin greys and hardens to living stone: +2 Armor Points on all hit locations, and unarmed blows against the drinker hurt the striker. While it lasts, swimming is a very bad idea. Ingredients: Granite dust from a standing stone (50 g). A gargoyle's chip or a petrified twig (10 g). Egg of a cliff-nesting bird. Iron filings (10 g). Buried three days in the earth."
+display_name = "Stonebones Potion"
+dr = "12"
+duration = "10 rounds"
+
+[entries."Stormcall"]
+name = "Stormcall"
+url = "https://d6gaming.org/index.php/Stormcall"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Stormcall".fields]
+description = "Calls a storm out of a clear sky, or sends an honest storm elsewhere. The weather arrives within the hour and is genuinely dangerous to shipping, roofs and tempers. Walmaer and Shalissa priests frown on amateurs using this. Ingredients: Seawater taken in foul weather (1 l). A bell rung once and then silenced.* Petrel feathers (3). Powdered flint (20 g). A shouted argument with the sky."
+display_name = "Stormcall"
+area_of_effect = "The sky above (10 km)"
+casting_time = "1 hour"
+dr = "13"
+duration = "1 day"
+"path(s)" = "Ritual"
+range = "Self"
+"resist?" = "N"
+
+[entries."Sunwaked Blade"]
+name = "Sunwaked Blade"
+url = "https://d6gaming.org/index.php/Sunwaked_Blade"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Sunwaked Blade".fields]
+description = "A weapon laid in the first light of dawn and sung over burns with Ikalio's favour for the wielder's next fight: +1 Offensive, and the weapon counts as magical against creatures immune to common steel. The favour fades at the fight's end, or at sunset, whichever comes first. Ingredients: First sunlight, caught on the bare blade. Oil pressed from sunflower seeds (1 dl). A red ribbon tied at the hilt. A hymn to the dawn, sung alone."
+display_name = "Sunwaked Blade"
+area_of_effect = "1 weapon"
+casting_time = "30 minutes"
+dr = "10"
+duration = "1 fight"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Tortoise Tonic"]
+name = "Tortoise Tonic"
+url = "https://d6gaming.org/index.php/Tortoise_Tonic"
+details = "full"
+domains = ["Potions"]
+
+[entries."Tortoise Tonic".fields]
+description = "Slow and certain: the drinker's Move is halved, but they gain +2 Defensive value and cannot be knocked down or staggered. Popular with shield-wall veterans and nervous travellers on mountain paths. Ingredients: A tortoise scute, powdered (5 g). Oak bark (20 g). Thick porridge water (2 dl). Patience, stirred in slowly."
+display_name = "Tortoise Tonic"
+dr = "6"
+duration = "1 hour"
+
+[entries."Wayfarer Blessing"]
+name = "Wayfarer Blessing"
+url = "https://d6gaming.org/index.php/Wayfarer_Blessing"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Wayfarer Blessing".fields]
+description = "Those blessed walk the day without tiring: no fatigue from ordinary travel, and their feet find the road even in the dark. The blessing ends the moment a blessed traveller draws a weapon in anger. Ingredients: Dust from a crossroads. A worn-out shoe sole, burnt. Rosemary (10 g). A verse recited while walking backwards."
+display_name = "Wayfarer Blessing"
+area_of_effect = "Up to 6 travellers"
+casting_time = "10 minutes"
+dr = "6"
+duration = "1 day"
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Whisper on the Wind"]
+name = "Whisper on the Wind"
+url = "https://d6gaming.org/index.php/Whisper_on_the_Wind"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Whisper on the Wind".fields]
+description = "The caster speaks a message of at most twenty words into a feather. The wind carries it, and within the hour the named person hears it whispered as if someone stood behind them. The wind does not carry an answer back. Ingredients: A feather from a bird that has seen the recipient. Breath, exhaled through a silver ring.* Dried thyme, burnt (5 g). The recipient's name, spoken thrice."
+display_name = "Whisper on the Wind"
+area_of_effect = "1 named person"
+casting_time = "10 minutes"
+dr = "9"
+duration = "Instant"
+"path(s)" = "Ritual"
+range = "50 km"
+"resist?" = "N"
+
+[entries."Wolfshide"]
+name = "Wolfshide"
+url = "https://d6gaming.org/index.php/Wolfshide"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Wolfshide".fields]
+description = "Wrapped in a wolf's hide under the open sky, the caster takes wolf shape until dawn: a wolf's body and senses, the caster's own mind. Clothes and gear do not follow. If the hide is stolen while the ritual runs, so is the way back. Ingredients: A whole wolf's hide, honestly won.* Raw meat, eaten cold. Juniper smoke breathed deeply. A howl, given without embarrassment."
+display_name = "Wolfshide"
+area_of_effect = "The caster"
+casting_time = "30 minutes"
+dr = "12"
+duration = "1 night"
+"path(s)" = "Ritual"
+range = "Self"
+"resist?" = "N"
