@@ -3705,7 +3705,8 @@ impl App {
         self.left_pane.set_text(&left.join("\n"));
         self.left_pane.ix = scroll_offset(self.world_idx + 2, tree.len() + 2,
             self.left_pane.h as usize);
-        self.left_pane.full_refresh();
+        // Diff render: a cursor step repaints only the changed lines.
+        self.left_pane.refresh();
 
         // Right pane: EITHER plain text, or text + an image overlay
         // (location map below the text / NPC portrait in its box).
