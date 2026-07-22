@@ -248,6 +248,7 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
     let preferred_order = [
         "domain", "encumbrance", "casting_time", "cooldown", "active_passive",
         "restrictions", "dr", "cost", "distance", "range", "duration",
+        "production_time", "expiration", "market_price",
         "area_of_effect", "effects", "receiving", "giving", "path(s)", "resist?",
     ];
     let mut shown = std::collections::BTreeSet::new();
@@ -260,10 +261,21 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
         }
     }
     for (k, v) in &entry.fields {
-        if !shown.contains(k) && k != "description" && k != "display_name" && k != "back" && k != "category" {
+        if !shown.contains(k) && k != "description" && k != "display_name"
+            && k != "back" && k != "category" && k != "ingredients" {
             out.push(format!("  {:<18} {}",
                 style::fg(&humanize(k), t::FG_MUTED),
                 v));
+        }
+    }
+
+    // Ingredients render as their own bullet block (newline-separated in
+    // the field) — rituals and potions carry the full recipe.
+    if let Some(ing) = entry.fields.get("ingredients") {
+        out.push(String::new());
+        out.push(style::fg("Ingredients", t::FG_MUTED).to_string());
+        for line in ing.lines() {
+            out.push(format!("  \u{2022} {}", line));
         }
     }
 

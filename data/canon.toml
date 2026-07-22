@@ -477,13 +477,13 @@ giving = "Ritual 2 weeks"
 receiving = "Poison Attunement 3"
 restrictions = "None"
 
-[entries.Agony]
+[entries."Agony"]
 name = "Agony"
 url = "https://d6gaming.org/index.php/Agony"
 details = "full"
 domains = ["Spells"]
 
-[entries.Agony.fields]
+[entries."Agony".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -561,9 +561,7 @@ area_of_effect = "1 creature*"
 casting_time = "1 day"
 cooldown = "6 hours"
 cost = "3 Mental Fortitude"
-description = """
-325px|thumb
-Animates one corpse to a zombie or skeleton (depending on the state of the dead body. The zombie gets 6 BP + 1 BP per 2 levels and melee skill of 1 per level. A skeleton gets 1 BP per 2 levels and 1 per 2 levels in melee skill."""
+description = "325px|thumb\nAnimates one corpse to a zombie or skeleton (depending on the state of the dead body. The zombie gets 6 BP + 1 BP per 2 levels and melee skill of 1 per level. A skeleton gets 1 BP per 2 levels and 1 per 2 levels in melee skill."
 display_name = "Animate Dead"
 distance = "Touch"
 domain = "Black"
@@ -575,13 +573,13 @@ giving = "Ritual 2 weeks"
 receiving = "Black Attunement 3"
 restrictions = "None"
 
-[entries.Armor]
+[entries."Armor"]
 name = "Armor"
 url = "https://d6gaming.org/index.php/Armor"
 details = "full"
 domains = ["Spells"]
 
-[entries.Armor.fields]
+[entries."Armor".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 C*"
 casting_time = "1 round"
@@ -623,6 +621,24 @@ giving = "Ritual 2 weeks"
 receiving = "Ice, Protection Attunement 3"
 restrictions = "None"
 
+[entries."Ashes of the Departed"]
+name = "Ashes of the Departed"
+url = "https://d6gaming.org/index.php/Ashes_of_the_Departed"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Ashes of the Departed".fields]
+area_of_effect = "1 dead person"
+casting_time = "1 hour"
+description = "Over ashes or grave-earth of the dead, the caster asks one question. The dead answer truthfully but briefly and often crookedly, and they remember being asked. The same dead cannot be questioned twice by the same caster."
+display_name = "Ashes of the Departed"
+dr = "11"
+duration = "Instant"
+ingredients = "Ashes or grave-earth of the dead one (50 g).\nA coin placed where a tongue would be.\nMyrrh, burnt (10 g).\nCandles of black wax, one lit, one unlit.\nThe question, written and then burnt."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "Y"
+
 [entries."Assemble Weapon"]
 name = "Assemble Weapon"
 url = "https://d6gaming.org/index.php/Assemble_Weapon"
@@ -635,7 +651,7 @@ area_of_effect = "1 object*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = 'Assembles a weapon(s) from the elements nearby, creating it out of "thin air". The weapon(s) can be maximum 0.5 kg per level and will have 2 HP per level.'
+description = "Assembles a weapon(s) from the elements nearby, creating it out of \"thin air\". The weapon(s) can be maximum 0.5 kg per level and will have 2 HP per level."
 display_name = "Assemble Weapon"
 distance = "Touch"
 domain = "Magic"
@@ -647,13 +663,13 @@ giving = "Ritual 1 week"
 receiving = "Magic Attunement 1"
 restrictions = "None"
 
-[entries.Banish]
+[entries."Banish"]
 name = "Banish"
 url = "https://d6gaming.org/index.php/Banish"
 details = "full"
 domains = ["Spells"]
 
-[entries.Banish.fields]
+[entries."Banish".fields]
 active_passive = "Active"
 area_of_effect = "1 demon*"
 casting_time = "1 round"
@@ -682,6 +698,10 @@ description = "The strength of a person is doubled after drinking this potion."
 display_name = "Bear Potion"
 dr = "10"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Blood from a giant (1 dl).\nBlood from a cave lion or bear (1/2 dl) from an animal killed under a full moon.\nBetony (10 g).\nAn iron container.*\nA poem."
+market_price = "50 sp"
+production_time = "3 days"
 
 [entries."Blind Curse"]
 name = "Blind Curse"
@@ -696,17 +716,18 @@ description = "This ritual will make the victim blind for one month. It actually
 display_name = "Blind Curse"
 dr = "8"
 duration = "1 month"
+ingredients = "A part of the target’s body (a hair, nail or the like). A larger part like a finger will decrease the difficulty rating of the spell by up to 3.\nA black lotus burned.\nA 30 carat onyx.*"
 "path(s)" = "Ritual"
 range = "1 km"
 "resist?" = "Y"
 
-[entries.Blindness]
+[entries."Blindness"]
 name = "Blindness"
 url = "https://d6gaming.org/index.php/Blindness"
 details = "full"
 domains = ["Spells"]
 
-[entries.Blindness.fields]
+[entries."Blindness".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -724,13 +745,13 @@ giving = "Ritual 2 weeks"
 receiving = "Black, Life Attunement 3"
 restrictions = "None"
 
-[entries.Blizzard]
+[entries."Blizzard"]
 name = "Blizzard"
 url = "https://d6gaming.org/index.php/Blizzard"
 details = "full"
 domains = ["Spells"]
 
-[entries.Blizzard.fields]
+[entries."Blizzard".fields]
 active_passive = "Active"
 area_of_effect = "1 O*"
 casting_time = "1 round"
@@ -820,13 +841,13 @@ giving = "Ritual 1 week"
 receiving = "Air, Fire, Life, Magic, Protection Attunement 2"
 restrictions = "None"
 
-[entries.Burn]
+[entries."Burn"]
 name = "Burn"
 url = "https://d6gaming.org/index.php/Burn"
 details = "full"
 domains = ["Spells"]
 
-[entries.Burn.fields]
+[entries."Burn".fields]
 active_passive = "Active"
 area_of_effect = "2 m r"
 casting_time = "2 rounds"
@@ -856,11 +877,7 @@ area_of_effect = "½ m radius"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "2 Mental Fortitude"
-description = """
-Creates a magic cage made out of the magick element of the spell. Nothing gets out of or into the cage while the spell is active. A dispel magic spell of the same element is required to break the cage.  
-
-
-The air cage is almost invisible. The fire cage gives warmth but doesn't do damage."""
+description = "Creates a magic cage made out of the magick element of the spell. Nothing gets out of or into the cage while the spell is active. A dispel magic spell of the same element is required to break the cage.  \n\n\nThe air cage is almost invisible. The fire cage gives warmth but doesn't do damage."
 display_name = "Cage O' Magic"
 distance = "16m"
 domain = "Air, Black, Earth, Fire, Water"
@@ -872,13 +889,13 @@ giving = "Ritual 1 week"
 receiving = "Air, Black, Earth, Fire, Water Attunement 2"
 restrictions = "None"
 
-[entries.Call]
+[entries."Call"]
 name = "Call"
 url = "https://d6gaming.org/index.php/Call"
 details = "full"
 domains = ["Spells"]
 
-[entries.Call.fields]
+[entries."Call".fields]
 active_passive = "Active"
 area_of_effect = "1 demon*"
 casting_time = "5 min."
@@ -896,23 +913,19 @@ giving = "Ritual 2 weeks"
 receiving = "Black, Summoning Attunement 3"
 restrictions = "None"
 
-[entries.Camouflage]
+[entries."Camouflage"]
 name = "Camouflage"
 url = "https://d6gaming.org/index.php/Camouflage"
 details = "full"
 domains = ["Spells"]
 
-[entries.Camouflage.fields]
+[entries."Camouflage".fields]
 active_passive = "Active"
 area_of_effect = "1 C*"
 casting_time = "1 round"
 cooldown = "4 hours"
 cost = "3 Mental Fortitude"
-description = """
-Gives the creature that the spell has been casted on, the same texture as the background that is behind the creature. Any objects that is carried by the creature will also gain the same texture. If there is no object behind the creature, the spell will not work. 
-
-
-Each level the DR of seeing the cr…"""
+description = "Gives the creature that the spell has been casted on, the same texture as the background that is behind the creature. Any objects that is carried by the creature will also gain the same texture. If there is no object behind the creature, the spell will not work. \n\n\nEach level the DR of seeing the cr…"
 display_name = "Camouflage"
 distance = "32m"
 domain = "Earth, Perception"
@@ -937,6 +950,7 @@ description = "This ritual will create fire. To make the fire, the caster must h
 display_name = "Catch Fire"
 dr = "6"
 duration = "Instant"
+ingredients = "Ash from a torch.\nA 3 carat ruby.*\nA fire lily.\nPowdered salamander blood (10 g).  Blood from a dragon reduces the difficulty rating by 3.\nA poem.\nA coordination roll of 8."
 "path(s)" = "Ritual"
 range = "10 m"
 "resist?" = "N"
@@ -952,6 +966,10 @@ description = "Upon drinking this potion, the person will be able to see in the 
 display_name = "Cat’s Eye Potion"
 dr = "8"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Blood (1/2 dl) tapped from a living faery at midnight.\nA crystal container.*\nA poem."
+market_price = "20 sp"
+production_time = "1 day"
 
 [entries."Change Emotion"]
 name = "Change Emotion"
@@ -1049,13 +1067,13 @@ giving = "Ritual 2 weeks"
 receiving = "Life Attunement 3"
 restrictions = "None"
 
-[entries.Cleaning]
+[entries."Cleaning"]
 name = "Cleaning"
 url = "https://d6gaming.org/index.php/Cleaning"
 details = "full"
 domains = ["Spells"]
 
-[entries.Cleaning.fields]
+[entries."Cleaning".fields]
 active_passive = "Active"
 area_of_effect = "5 m radius"
 casting_time = "1 round"
@@ -1106,13 +1124,13 @@ domains = []
 [entries."Clone item".fields]
 description = "The clone spell will clone 1 item and the item you have cloned will last up to one day before it disappears. To clone a magic item the DR of the original item will be halfed and added to the difficulty of the spell."
 
-[entries.Command]
+[entries."Command"]
 name = "Command"
 url = "https://d6gaming.org/index.php/Command"
 details = "full"
 domains = ["Spells"]
 
-[entries.Command.fields]
+[entries."Command".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -1321,13 +1339,13 @@ giving = "Ritual 2 weeks"
 receiving = "Air Attunement 3"
 restrictions = "None"
 
-[entries.Cooling]
+[entries."Cooling"]
 name = "Cooling"
 url = "https://d6gaming.org/index.php/Cooling"
 details = "full"
 domains = ["Spells"]
 
-[entries.Cooling.fields]
+[entries."Cooling".fields]
 active_passive = "Active"
 area_of_effect = "Self"
 casting_time = "1 round"
@@ -1430,17 +1448,18 @@ description = "This curse will bring bad luck to its target. This is simulated b
 display_name = "Curse of Fairies"
 dr = "8"
 duration = "1 month"
+ingredients = "A part of the target’s body (see Blind Curse).\nThe true name of the target.\nLotus (50 g) and saffron (50 g) burned in an iron kettle.\nA mirror to break.\nA wooden doll made similar to the victim.\nA poem.\nA coordination roll of 8."
 "path(s)" = "Ritual"
 range = "100 km"
 "resist?" = "Y"
 
-[entries.Darkness]
+[entries."Darkness"]
 name = "Darkness"
 url = "https://d6gaming.org/index.php/Darkness"
 details = "full"
 domains = ["Spells"]
 
-[entries.Darkness.fields]
+[entries."Darkness".fields]
 active_passive = "Active"
 area_of_effect = "5 m radius"
 casting_time = "1 round"
@@ -1506,13 +1525,13 @@ giving = "Ritual 1 months"
 receiving = "Ice Attunement 5"
 restrictions = "None"
 
-[entries.Delay]
+[entries."Delay"]
 name = "Delay"
 url = "https://d6gaming.org/index.php/Delay"
 details = "full"
 domains = ["Spells"]
 
-[entries.Delay.fields]
+[entries."Delay".fields]
 active_passive = "Active"
 area_of_effect = "1 spell*"
 casting_time = "1 round"
@@ -1853,6 +1872,10 @@ description = "After having drunk this potion, the person is able to breathe und
 display_name = "Diver’s Delight Potion"
 dr = "12"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Skin from a merman’s tail (100 g).\nA snow lily.\nRunning water (1 l).\nSea salt (50 g).\nAngelica (50 g).\nA poem."
+market_price = "75 sp"
+production_time = "1 week"
 
 [entries."Divine Rune Of Magic"]
 name = "Divine Rune Of Magic"
@@ -1900,13 +1923,47 @@ giving = "Ritual 2 weeks"
 receiving = "Earth Attunement 3"
 restrictions = "None"
 
-[entries.Drown]
+[entries."Doomscript"]
+name = "Doomscript"
+url = "https://d6gaming.org/index.php/Doomscript"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Doomscript".fields]
+area_of_effect = "1 named person"
+casting_time = "3 hours"
+description = "A dark writing against a named person: their next critical success turns to a fumble in the moment of triumph. The curse spends itself on that one roll. The victim's Magic Defense resists; if the writing is found and burnt by the victim, the curse rebounds on the caster."
+display_name = "Doomscript"
+dr = "14"
+duration = "Until spent"
+ingredients = "Ink mixed with soot from a burnt letter.\nPaper made from a document the victim signed.\nA broken pen nib.\nThe victim's full name, written backwards.\nThree nights of ill will."
+"path(s)" = "Ritual"
+range = "1 km"
+"resist?" = "Y"
+
+[entries."Dream Anchor"]
+name = "Dream Anchor"
+url = "https://d6gaming.org/index.php/Dream_Anchor"
+details = "full"
+domains = ["Potions"]
+
+[entries."Dream Anchor".fields]
+description = "Drunk at bedtime with a person or place firmly in mind, the potion steers the night's dream there: true glimpses mixed with dream-stuff, useful to those wise enough to tell which is which. Ielina initiates prize it."
+display_name = "Dream Anchor"
+dr = "10"
+duration = "1 night"
+expiration = "6 months"
+ingredients = "Poppy seeds (5 g).\nA silver sliver of a mirror.*\nLavender (10 g).\nWater that has reflected the moon (1 dl).\nSomething belonging to the person or place, held while falling asleep."
+market_price = "40 sp"
+production_time = "3 days"
+
+[entries."Drown"]
 name = "Drown"
 url = "https://d6gaming.org/index.php/Drown"
 details = "full"
 domains = ["Spells"]
 
-[entries.Drown.fields]
+[entries."Drown".fields]
 active_passive = "Active"
 area_of_effect = "1 C*"
 casting_time = "3 rounds"
@@ -1924,13 +1981,13 @@ giving = "Ritual 2 weeks"
 receiving = "Water Attunement 3"
 restrictions = "None"
 
-[entries.Dry]
+[entries."Dry"]
 name = "Dry"
 url = "https://d6gaming.org/index.php/Dry"
 details = "full"
 domains = ["Spells"]
 
-[entries.Dry.fields]
+[entries."Dry".fields]
 active_passive = "Active"
 area_of_effect = "1 m radius"
 casting_time = "1 min."
@@ -2008,11 +2065,7 @@ area_of_effect = "1 creature*"
 casting_time = "2 rounds"
 cooldown = "4 hours"
 cost = "3 Mental Fortitude"
-description = """
-Gives a electric shock to the targeted creature. The creature takes D6/2 (the damage is rounded down, but the spell does minimum one damage) damage. Metal armor does not protect against this. 
-The creature will lose anything that is held in their hands.  
-
-In water the electric shock spreads out in …"""
+description = "Gives a electric shock to the targeted creature. The creature takes D6/2 (the damage is rounded down, but the spell does minimum one damage) damage. Metal armor does not protect against this. \nThe creature will lose anything that is held in their hands.  \n\nIn water the electric shock spreads out in …"
 display_name = "Electric Shock"
 distance = "28m"
 domain = "Air, Water"
@@ -2192,22 +2245,19 @@ giving = "Ritual 1 week"
 receiving = "Earth, Life Attunement 2"
 restrictions = "None"
 
-[entries.Exteriorize]
+[entries."Exteriorize"]
 name = "Exteriorize"
 url = "https://d6gaming.org/index.php/Exteriorize"
 details = "full"
 domains = ["Spells"]
 
-[entries.Exteriorize.fields]
+[entries."Exteriorize".fields]
 active_passive = "Active"
 area_of_effect = "Self"
 casting_time = "10 min."
 cooldown = "3 hours"
 cost = "5 Mental Fortitude"
-description = """
-Allows the spirit of the caster to “step out” of the body. He may cast spells as usual while in spirit form. Perception, speed of movement, and range of movement from the body is described in the tables below. At level 4 the spirit can move through liquids, at level 7 it can move through solids.
-
-{|…"""
+description = "Allows the spirit of the caster to “step out” of the body. He may cast spells as usual while in spirit form. Perception, speed of movement, and range of movement from the body is described in the tables below. At level 4 the spirit can move through liquids, at level 7 it can move through solids.\n\n{|…"
 display_name = "Exteriorize"
 distance = "0m"
 domain = "Black, Life"
@@ -2219,13 +2269,13 @@ giving = "Ritual 3 weeks"
 receiving = "Black, Life Attunement 4"
 restrictions = "None"
 
-[entries.Extinguish]
+[entries."Extinguish"]
 name = "Extinguish"
 url = "https://d6gaming.org/index.php/Extinguish"
 details = "full"
 domains = ["Spells"]
 
-[entries.Extinguish.fields]
+[entries."Extinguish".fields]
 active_passive = "Active"
 area_of_effect = "1 m radius"
 casting_time = "1 round"
@@ -2255,17 +2305,18 @@ description = "This ritual must be performed on a specially prepared bowl of wat
 display_name = "Eyes of Tekali"
 dr = "12"
 duration = "1 round"
+ingredients = "Black lotus (10 g) boiled in the water used for the spell.\nFaery blood (1 dl).\nEyes of an eagle shot while flying more than 100 m above the ground."
 "path(s)" = "Ritual"
 range = "1 km"
 "resist?" = "N"
 
-[entries.Farsee]
+[entries."Farsee"]
 name = "Farsee"
 url = "https://d6gaming.org/index.php/Farsee"
 details = "full"
 domains = ["Spells"]
 
-[entries.Farsee.fields]
+[entries."Farsee".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -2282,6 +2333,22 @@ encumbrance = "3"
 giving = "Ritual 1 week"
 receiving = "Life, Perception Attunement 2"
 restrictions = "None"
+
+[entries."Featherfall Philtre"]
+name = "Featherfall Philtre"
+url = "https://d6gaming.org/index.php/Featherfall_Philtre"
+details = "full"
+domains = ["Potions"]
+
+[entries."Featherfall Philtre".fields]
+description = "The drinker falls like a leaf: any fall during the duration lands soft as stepping off a stair. Jumping from great heights on purpose still takes a moment of conviction."
+display_name = "Featherfall Philtre"
+dr = "8"
+duration = "1 minute"
+expiration = "1 year"
+ingredients = "Down of a gosling (a pinch).\nA dandelion clock, blown into the vial.\nSpider silk (a strand).\nRainwater that never touched the ground (1 dl)."
+market_price = "25 sp"
+production_time = "1 day"
 
 [entries."Fiery Phoenix"]
 name = "Fiery Phoenix"
@@ -2306,13 +2373,13 @@ giving = "Ritual 2 weeks"
 receiving = "Lava Attunement 3"
 restrictions = "None"
 
-[entries.Fireball]
+[entries."Fireball"]
 name = "Fireball"
 url = "https://d6gaming.org/index.php/Fireball"
 details = "full"
 domains = ["Spells"]
 
-[entries.Fireball.fields]
+[entries."Fireball".fields]
 active_passive = "Active"
 area_of_effect = "½ m radius"
 casting_time = "1 round"
@@ -2330,6 +2397,22 @@ giving = "Ritual 2 weeks"
 receiving = "Fire Attunement 3"
 restrictions = "None"
 
+[entries."Firebelly Flask"]
+name = "Firebelly Flask"
+url = "https://d6gaming.org/index.php/Firebelly_Flask"
+details = "full"
+domains = ["Potions"]
+
+[entries."Firebelly Flask".fields]
+description = "The drinker's belly fills with living fire: once per round for three rounds they may breathe a cone of flame 5 m long (damage 5, DEF avoids half). Speaking while it lasts is unwise, and hiccups are dangerous for everyone."
+display_name = "Firebelly Flask"
+dr = "11"
+duration = "3 rounds"
+expiration = "1 year"
+ingredients = "Peppers dried over a smith's forge (20 g).\nSalamander ash (5 g).\nStrong spirits (1 dl).\nOil that has burnt in a temple lamp (1 dl).*\nSwallowed in one go."
+market_price = "60 sp"
+production_time = "1 week"
+
 [entries."Flames of Life"]
 name = "Flames of Life"
 url = "https://d6gaming.org/index.php/Flames_of_Life"
@@ -2343,17 +2426,18 @@ description = "This ritual must be performed with a fire at least the size of a 
 display_name = "Flames of Life"
 dr = "6"
 duration = "Instant"
+ingredients = "A 10 carat ruby.*\nA fire lily picked on midsummer day.\nA small poem including a description of the target."
 "path(s)" = "Ritual"
 range = "10 m"
 "resist?" = "Y"
 
-[entries.Flash]
+[entries."Flash"]
 name = "Flash"
 url = "https://d6gaming.org/index.php/Flash"
 details = "full"
 domains = ["Spells"]
 
-[entries.Flash.fields]
+[entries."Flash".fields]
 active_passive = "Active"
 area_of_effect = "Special"
 casting_time = "1 round"
@@ -2371,13 +2455,13 @@ giving = "Ritual 1 week"
 receiving = "Fire Attunement 2"
 restrictions = "None"
 
-[entries.Fly]
+[entries."Fly"]
 name = "Fly"
 url = "https://d6gaming.org/index.php/Fly"
 details = "full"
 domains = ["Spells"]
 
-[entries.Fly.fields]
+[entries."Fly".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -2395,13 +2479,13 @@ giving = "Ritual 3 weeks"
 receiving = "Air Attunement 4"
 restrictions = "None"
 
-[entries.Fog]
+[entries."Fog"]
 name = "Fog"
 url = "https://d6gaming.org/index.php/Fog"
 details = "full"
 domains = ["Spells"]
 
-[entries.Fog.fields]
+[entries."Fog".fields]
 active_passive = "Active"
 area_of_effect = "10 m radius"
 casting_time = "1 min."
@@ -2431,11 +2515,7 @@ area_of_effect = "1 C*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-The spell is cast on a target and a tree. The tree will try to capture the targeted creature with its branches, after the duration of the spell the targeted creature will be let free. 
-
-Every level the branches get +2 in strength and unarmed. 
-Small sized trees start with 1 in unarmed and strength. …"""
+description = "The spell is cast on a target and a tree. The tree will try to capture the targeted creature with its branches, after the duration of the spell the targeted creature will be let free. \n\nEvery level the branches get +2 in strength and unarmed. \nSmall sized trees start with 1 in unarmed and strength. …"
 display_name = "Forest Hands"
 distance = "47m"
 domain = "Swamp, Anashina"
@@ -2447,13 +2527,13 @@ giving = "Ritual 1 week"
 receiving = "Swamp, Anashina Attunement 1"
 restrictions = "None"
 
-[entries.Freeze]
+[entries."Freeze"]
 name = "Freeze"
 url = "https://d6gaming.org/index.php/Freeze"
 details = "full"
 domains = ["Spells"]
 
-[entries.Freeze.fields]
+[entries."Freeze".fields]
 active_passive = "Active"
 area_of_effect = "1 target*"
 casting_time = "1 round"
@@ -2567,13 +2647,13 @@ giving = "Ritual 1 week"
 receiving = "Ice Attunement 2"
 restrictions = "None"
 
-[entries.Frostbite]
+[entries."Frostbite"]
 name = "Frostbite"
 url = "https://d6gaming.org/index.php/Frostbite"
 details = "full"
 domains = ["Spells"]
 
-[entries.Frostbite.fields]
+[entries."Frostbite".fields]
 active_passive = "Active"
 area_of_effect = "1 target*"
 casting_time = "1 round"
@@ -2615,22 +2695,19 @@ giving = "Ritual 2 weeks"
 receiving = "Ice Attunement 3"
 restrictions = "None"
 
-[entries.Fuse]
+[entries."Fuse"]
 name = "Fuse"
 url = "https://d6gaming.org/index.php/Fuse"
 details = "full"
 domains = ["Spells"]
 
-[entries.Fuse.fields]
+[entries."Fuse".fields]
 active_passive = "Active"
 area_of_effect = "2c or 2o"
 casting_time = "3 rounds"
 cooldown = "6 hours"
 cost = "3 Mental Fortitude"
-description = """
-Fuses multiple objects or creatures together. Fusing two creatures together will give severe damage to their bodies and will lose D6+1 + 1 per level of the characters body points. When fusing objects they will interact different depending on the objects. 
-
-This spell was used a long time ago in Giel…"""
+description = "Fuses multiple objects or creatures together. Fusing two creatures together will give severe damage to their bodies and will lose D6+1 + 1 per level of the characters body points. When fusing objects they will interact different depending on the objects. \n\nThis spell was used a long time ago in Giel…"
 display_name = "Fuse"
 distance = "31m"
 domain = "Forbidden Spells"
@@ -2654,10 +2731,7 @@ area_of_effect = "1c* or 1o*"
 casting_time = "1 hour"
 cooldown = "3 hours"
 cost = "6 Mental Fortitude"
-description = """
-Summons a rift that pulls in a creature or a object into the rift and destroys it. 
-
-This spell was created by a Spell Searcher a long time ago."""
+description = "Summons a rift that pulls in a creature or a object into the rift and destroys it. \n\nThis spell was created by a Spell Searcher a long time ago."
 display_name = "Galaxy Rift"
 distance = "13m"
 domain = "Forbidden Spells"
@@ -2669,13 +2743,29 @@ giving = "Ritual 1 months"
 receiving = "Forbidden Spells Attunement 5"
 restrictions = "None"
 
-[entries.Glue]
+[entries."Ghostberry Wine"]
+name = "Ghostberry Wine"
+url = "https://d6gaming.org/index.php/Ghostberry_Wine"
+details = "full"
+domains = ["Potions"]
+
+[entries."Ghostberry Wine".fields]
+description = "The drinker turns grey, faint and half-here: mundane weapons pass through (half damage), and once during the duration the drinker may walk through a single wall no thicker than an arm's length. Magick bites as usual. Ghostberries are found where the dead were left unburied."
+display_name = "Ghostberry Wine"
+dr = "13"
+duration = "10 minutes"
+expiration = "1 month"
+ingredients = "Ghostberries (30 g).\nGrave mist, bottled at dusk.\nWine gone thin and pale (2 dl).\nA sigh, added last."
+market_price = "120 sp"
+production_time = "2 weeks"
+
+[entries."Glue"]
 name = "Glue"
 url = "https://d6gaming.org/index.php/Glue"
 details = "full"
 domains = ["Spells"]
 
-[entries.Glue.fields]
+[entries."Glue".fields]
 active_passive = "Active"
 area_of_effect = "5 cm radius"
 casting_time = "1 round"
@@ -2693,13 +2783,13 @@ giving = "Ritual 1 week"
 receiving = "Earth Attunement 2"
 restrictions = "None"
 
-[entries.Healing]
+[entries."Healing"]
 name = "Healing"
 url = "https://d6gaming.org/index.php/Healing"
 details = "full"
 domains = ["Spells"]
 
-[entries.Healing.fields]
+[entries."Healing".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 min."
@@ -2741,6 +2831,24 @@ giving = "Ritual 2 weeks"
 receiving = "Water Attunement 3"
 restrictions = "None"
 
+[entries."Hearthbind"]
+name = "Hearthbind"
+url = "https://d6gaming.org/index.php/Hearthbind"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Hearthbind".fields]
+area_of_effect = "1 house"
+casting_time = "1 hour"
+description = "Binds the caster to a hearth. The caster knows, wherever they are, the moment a stranger crosses the warded threshold, and whether the stranger comes armed. The knowledge is a feeling, not a picture."
+display_name = "Hearthbind"
+dr = "8"
+duration = "1 month"
+ingredients = "Ash from the house's own hearth (100 g).\nIron nails from the door, hammered back in place.*\nSalt strewn along the threshold (50 g).\nThe name of everyone who lives there, spoken aloud."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
 [entries."Heat Smoke"]
 name = "Heat Smoke"
 url = "https://d6gaming.org/index.php/Heat_Smoke"
@@ -2753,15 +2861,7 @@ area_of_effect = "½ m radius"
 casting_time = "3 rounds"
 cooldown = "4 hours"
 cost = "3 Mental Fortitude"
-description = """
-When the spell is used, a black-red smoke will appear. The spell level has special actions that unlock as the spell level increase. The caster can choose what actions the smoke will do, as long as the level is high enough.
-
-{| class="wikitable"
-|+Heat Smoke 
-|-
-|Actions  || Level || Description
-|-
-|…"""
+description = "When the spell is used, a black-red smoke will appear. The spell level has special actions that unlock as the spell level increase. The caster can choose what actions the smoke will do, as long as the level is high enough.\n\n{| class=\"wikitable\"\n|+Heat Smoke \n|-\n|Actions  || Level || Description\n|-\n|…"
 display_name = "Heat Smoke"
 distance = "16m"
 domain = "Fire"
@@ -2797,6 +2897,22 @@ giving = "Ritual 2 weeks"
 receiving = "Fire Attunement 3"
 restrictions = "None"
 
+[entries."Hound Nose Potion"]
+name = "Hound Nose Potion"
+url = "https://d6gaming.org/index.php/Hound_Nose_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Hound Nose Potion".fields]
+description = "The drinker's nose wakes: track by scent as a hound does (+5 Tracking, scent-based), know who passed and how long ago. Strong smells during the hour can be briefly incapacitating."
+display_name = "Hound Nose Potion"
+dr = "8"
+duration = "1 hour"
+expiration = "3 months"
+ingredients = "A hair of a proven tracking hound.\nWild garlic (10 g).\nRain-wet earth (20 g).\nVinegar (1 dl).\nShaken, never stirred."
+market_price = "20 sp"
+production_time = "1 day"
+
 [entries."Ice Shards"]
 name = "Ice Shards"
 url = "https://d6gaming.org/index.php/Ice_Shards"
@@ -2809,10 +2925,7 @@ area_of_effect = "1 target*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-The Ice Shards does d-3 damage per shard. The spell fires 1 shard per level.  
-
-The skill of Pointing is used to determine if this spell hits its intended target."""
+description = "The Ice Shards does d-3 damage per shard. The spell fires 1 shard per level.  \n\nThe skill of Pointing is used to determine if this spell hits its intended target."
 display_name = "Ice Shards"
 distance = "38m"
 domain = "Ice"
@@ -2836,10 +2949,7 @@ area_of_effect = "1 target*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "2 Mental Fortitude"
-description = """
-The Ice Strike does d-2 + 1 per level in damage.  
-
-The skill of Pointing is used to determine if this spell hits its intended target."""
+description = "The Ice Strike does d-2 + 1 per level in damage.  \n\nThe skill of Pointing is used to determine if this spell hits its intended target."
 display_name = "Ice Strike"
 distance = "36m"
 domain = "Ice"
@@ -2899,40 +3009,19 @@ giving = "Ritual 1 week"
 receiving = "Magic, Perception Attunement 2"
 restrictions = "None"
 
-[entries.Ignite]
+[entries."Ignite"]
 name = "Ignite"
 url = "https://d6gaming.org/index.php/Ignite"
 details = "full"
 domains = ["Spells"]
 
-[entries.Ignite.fields]
+[entries."Ignite".fields]
 active_passive = "Active"
 area_of_effect = "5 cm radius"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-Ignites flammable materials, see the table below.
-
-{| class="wikitable"
-|+Ignite
-|-
-|Level  || Material
-|-
-| 1 || Paper, kindling
-|-
-| 2 || Dry porous wood, linen
-|-
-| 3 || Dry wood
-|-
-| 4 || Hard, dry wood
-|-
-| 5 || Trees
-|-
-| 6 || Wet wood
-|-
-| 7 || Dead body
-|}"""
+description = "Ignites flammable materials, see the table below.\n\n{| class=\"wikitable\"\n|+Ignite\n|-\n|Level  || Material\n|-\n| 1 || Paper, kindling\n|-\n| 2 || Dry porous wood, linen\n|-\n| 3 || Dry wood\n|-\n| 4 || Hard, dry wood\n|-\n| 5 || Trees\n|-\n| 6 || Wet wood\n|-\n| 7 || Dead body\n|}"
 display_name = "Ignite"
 distance = "10m"
 domain = "Fire"
@@ -2944,13 +3033,13 @@ giving = "Ritual 1 week"
 receiving = "Fire Attunement 1"
 restrictions = "None"
 
-[entries.Immobilize]
+[entries."Immobilize"]
 name = "Immobilize"
 url = "https://d6gaming.org/index.php/Immobilize"
 details = "full"
 domains = ["Spells"]
 
-[entries.Immobilize.fields]
+[entries."Immobilize".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -2992,13 +3081,13 @@ giving = "Ritual 1 week"
 receiving = "Fire, Perception Attunement 1"
 restrictions = "None"
 
-[entries.Invisibility]
+[entries."Invisibility"]
 name = "Invisibility"
 url = "https://d6gaming.org/index.php/Invisibility"
 details = "full"
 domains = ["Spells"]
 
-[entries.Invisibility.fields]
+[entries."Invisibility".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 C*"
 casting_time = "1 round"
@@ -3016,13 +3105,13 @@ giving = "Ritual 2 weeks"
 receiving = "Air Attunement 3"
 restrictions = "None"
 
-[entries.Itchiness]
+[entries."Itchiness"]
 name = "Itchiness"
 url = "https://d6gaming.org/index.php/Itchiness"
 details = "full"
 domains = ["Spells"]
 
-[entries.Itchiness.fields]
+[entries."Itchiness".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -3064,13 +3153,13 @@ giving = "Ritual 1 week"
 receiving = "Air Attunement 1"
 restrictions = "None"
 
-[entries.Levitation]
+[entries."Levitation"]
 name = "Levitation"
 url = "https://d6gaming.org/index.php/Levitation"
 details = "full"
 domains = ["Spells"]
 
-[entries.Levitation.fields]
+[entries."Levitation".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 round"
@@ -3100,9 +3189,7 @@ area_of_effect = "1 creature*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "2 Mental Fortitude"
-description = """
-Steales 1BP per level from a creature and gives it back to the caster.
-At level 5 the caster can choose what creature that will receive the bodypoints."""
+description = "Steales 1BP per level from a creature and gives it back to the caster.\nAt level 5 the caster can choose what creature that will receive the bodypoints."
 display_name = "Life Steal"
 distance = "28m"
 domain = "Black, Kraagh, Mestronorpha"
@@ -3114,13 +3201,13 @@ giving = "Ritual 1 week"
 receiving = "Black, Kraagh, Mestronorpha Attunement 2"
 restrictions = "None"
 
-[entries.Light]
+[entries."Light"]
 name = "Light"
 url = "https://d6gaming.org/index.php/Light"
 details = "full"
 domains = ["Spells"]
 
-[entries.Light.fields]
+[entries."Light".fields]
 active_passive = "Active"
 area_of_effect = "1 m radius"
 casting_time = "1 round"
@@ -3138,24 +3225,19 @@ giving = "Ritual 1 week"
 receiving = "Fire, Perception Attunement 1"
 restrictions = "None"
 
-[entries.Lightningbolt]
+[entries."Lightningbolt"]
 name = "Lightningbolt"
 url = "https://d6gaming.org/index.php/Lightningbolt"
 details = "full"
 domains = ["Spells"]
 
-[entries.Lightningbolt.fields]
+[entries."Lightningbolt".fields]
 active_passive = "Active"
 area_of_effect = "1 target*"
 casting_time = "1 round"
 cooldown = "8 hours"
 cost = "3 Mental Fortitude"
-description = """
-The lightningbolt delivers an electric shock which does d-1 + 1 per level in damage. Metal armor does not protect against this. 
-
-In water the electric shock spreads out in all directions.
-
-The skill of Pointing is used to determine if this spell hits its intended target."""
+description = "The lightningbolt delivers an electric shock which does d-1 + 1 per level in damage. Metal armor does not protect against this. \n\nIn water the electric shock spreads out in all directions.\n\nThe skill of Pointing is used to determine if this spell hits its intended target."
 display_name = "Lightningbolt"
 distance = "40m"
 domain = "Air, Water"
@@ -3179,11 +3261,7 @@ area_of_effect = "1 creature*"
 casting_time = "3 rounds"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-Draines 1 Magical Aptitude from the target. The range gets increased each spell level. The spell uses 1 BP of the caster.
-The target will regain the magical aptitude after a good night sleep.
-
-Can not reduce the target's MA below 0."""
+description = "Draines 1 Magical Aptitude from the target. The range gets increased each spell level. The spell uses 1 BP of the caster.\nThe target will regain the magical aptitude after a good night sleep.\n\nCan not reduce the target's MA below 0."
 display_name = "Magical Drain"
 distance = "18m"
 domain = "Black"
@@ -3231,9 +3309,7 @@ area_of_effect = "1 creature"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-Allows the caster to choose what happens in the dream the target or targets have the next time they sleep.
-If the spell is used while some one is sleeping, the target's old dream will stop and the magick dream will start."""
+description = "Allows the caster to choose what happens in the dream the target or targets have the next time they sleep.\nIf the spell is used while some one is sleeping, the target's old dream will stop and the magick dream will start."
 display_name = "Magick Dreams"
 distance = "89m"
 domain = "Life, Perception, Black"
@@ -3245,13 +3321,13 @@ giving = "Ritual 1 week"
 receiving = "Life, Perception, Black Attunement 1"
 restrictions = "None"
 
-[entries.Magnetization]
+[entries."Magnetization"]
 name = "Magnetization"
 url = "https://d6gaming.org/index.php/Magnetization"
 details = "full"
 domains = ["Spells"]
 
-[entries.Magnetization.fields]
+[entries."Magnetization".fields]
 active_passive = "Active"
 area_of_effect = "1 meter radius*"
 casting_time = "1 min."
@@ -3281,9 +3357,7 @@ area_of_effect = "1 animal*"
 casting_time = "12 hours"
 cooldown = "3 hours"
 cost = "3 Mental Fortitude"
-description = """
-325px|thumb
-A person may only have one familiar at a time. You can not make a familiar for someone else. See the table below for the effect(s) of the spell. You also get all the effects listed below the level you cast. Even though you may communicate with your familiar, it will still have the unders…"""
+description = "325px|thumb\nA person may only have one familiar at a time. You can not make a familiar for someone else. See the table below for the effect(s) of the spell. You also get all the effects listed below the level you cast. Even though you may communicate with your familiar, it will still have the unders…"
 display_name = "Make Familiar"
 distance = "Touch"
 domain = "Air, Black, Earth, Life, Water"
@@ -3318,13 +3392,13 @@ giving = "Ritual 1 week"
 receiving = "Lava Attunement 2"
 restrictions = "None"
 
-[entries.Memorize]
+[entries."Memorize"]
 name = "Memorize"
 url = "https://d6gaming.org/index.php/Memorize"
 details = "full"
 domains = ["Spells"]
 
-[entries.Memorize.fields]
+[entries."Memorize".fields]
 active_passive = "Active"
 area_of_effect = "Self"
 casting_time = "1 round"
@@ -3390,6 +3464,24 @@ giving = "Ritual 1 week"
 receiving = "Air Attunement 2"
 restrictions = "None"
 
+[entries."Moon Mirror"]
+name = "Moon Mirror"
+url = "https://d6gaming.org/index.php/Moon_Mirror"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Moon Mirror".fields]
+area_of_effect = "1 known place"
+casting_time = "30 minutes"
+description = "Under moonlight, a bowl of still water shows a place the caster has stood in before, as it is now. The image is silent, faint, and lasts while the water stays unbroken. On a new moon night the ritual fails."
+display_name = "Moon Mirror"
+dr = "10"
+duration = "1 night"
+ingredients = "Rainwater collected in silver (1 l).*\nA white flower, floated on the water.\nMoonstone dust (5 g).\nA soil sample or splinter from the place to be seen."
+"path(s)" = "Ritual"
+range = "Self"
+"resist?" = "N"
+
 [entries."Night Vision"]
 name = "Night Vision"
 url = "https://d6gaming.org/index.php/Night_Vision"
@@ -3414,22 +3506,39 @@ giving = "Ritual 1 week"
 receiving = "Life, Perception Attunement 2"
 restrictions = "None"
 
-[entries.Nightfall]
+[entries."Nightfall"]
 name = "Nightfall"
 url = "https://d6gaming.org/index.php/Nightfall"
 details = "full"
 domains = ["Rituals"]
 
-[entries.Nightfall.fields]
+[entries."Nightfall".fields]
 area_of_effect = "3 m radius"
 casting_time = "1 min."
 description = "By performing this ritual, the caster conjures a sphere of darkness with a radius of 3 m around himself."
 display_name = "Nightfall"
 dr = "8"
 duration = "10 min."
+ingredients = "A 20 carat onyx.*\nCrushed ebony (100 g).\nWhale bones (100 g) crushed and mixed with four drops of mercury.\nThe talons of an owl killed at midnight during winter.\nA special small poem."
 "path(s)" = "Ritual"
 range = "None"
 "resist?" = "N"
+
+[entries."Owl Draught"]
+name = "Owl Draught"
+url = "https://d6gaming.org/index.php/Owl_Draught"
+details = "full"
+domains = ["Potions"]
+
+[entries."Owl Draught".fields]
+description = "The drinker needs no sleep that night and suffers no fatigue for the missed rest. The next night's sleep is deep, long and non-negotiable."
+display_name = "Owl Draught"
+dr = "8"
+duration = "1 night"
+expiration = "1 week"
+ingredients = "Owl pellet, powdered (5 g).\nStrong black tea leaves (20 g).\nDew collected before dawn (1 dl).\nA candle burnt at both ends, the wax."
+market_price = "18 sp"
+production_time = "1 day"
 
 [entries."Panther Potion"]
 name = "Panther Potion"
@@ -3442,14 +3551,18 @@ description = "This potion will increase the coordination by 3 and coordination 
 display_name = "Panther Potion"
 dr = "10"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Crushed flies (10 g).\nThe blood of a snake killed while attacking (0.1 dl).\nThe blood of a cat shot in the head while running (1 dl)."
+market_price = "50 sp"
+production_time = "3 days"
 
-[entries.Passify]
+[entries."Passify"]
 name = "Passify"
 url = "https://d6gaming.org/index.php/Passify"
 details = "full"
 domains = ["Spells"]
 
-[entries.Passify.fields]
+[entries."Passify".fields]
 active_passive = "Active"
 area_of_effect = "1 spell*"
 casting_time = "As spell"
@@ -3467,13 +3580,13 @@ giving = "Ritual 2 months"
 receiving = "Magic Attunement 5"
 restrictions = "None"
 
-[entries.Permanency]
+[entries."Permanency"]
 name = "Permanency"
 url = "https://d6gaming.org/index.php/Permanency"
 details = "full"
 domains = ["Spells"]
 
-[entries.Permanency.fields]
+[entries."Permanency".fields]
 active_passive = "Active"
 area_of_effect = "1 spell*"
 casting_time = "12 hours"
@@ -3539,13 +3652,13 @@ giving = "Ritual 1 week"
 receiving = "Life Attunement 1"
 restrictions = "None"
 
-[entries.Polish]
+[entries."Polish"]
 name = "Polish"
 url = "https://d6gaming.org/index.php/Polish"
 details = "full"
 domains = ["Spells"]
 
-[entries.Polish.fields]
+[entries."Polish".fields]
 active_passive = "Active"
 area_of_effect = "1 object"
 casting_time = "5 rounds"
@@ -3563,13 +3676,13 @@ giving = "Ritual 1 week"
 receiving = "Air, Earth, Fire, Water Attunement 1"
 restrictions = "None"
 
-[entries.Polymorph]
+[entries."Polymorph"]
 name = "Polymorph"
 url = "https://d6gaming.org/index.php/Polymorph"
 details = "full"
 domains = ["Spells"]
 
-[entries.Polymorph.fields]
+[entries."Polymorph".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 min."
@@ -3587,13 +3700,13 @@ giving = "Ritual 3 weeks"
 receiving = "Life, Water Attunement 5"
 restrictions = "None"
 
-[entries.Possession]
+[entries."Possession"]
 name = "Possession"
 url = "https://d6gaming.org/index.php/Possession"
 details = "full"
 domains = ["Spells"]
 
-[entries.Possession.fields]
+[entries."Possession".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 min."
@@ -3622,6 +3735,10 @@ description = "This potion will cause the person to fight with more aggression a
 display_name = "Potion of Battle Frenzy"
 dr = "12"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Vervain (10 g).\nFly amanita (2 g).\nTroll blood (1/4 dl).\nBlood from a cave lion killed in single combat (1/2 dl)."
+market_price = "80 sp"
+production_time = "1 week"
 
 [entries."Potion of Detection"]
 name = "Potion of Detection"
@@ -3634,6 +3751,10 @@ description = "This potion will raise the awareness of the drinker by 5."
 display_name = "Potion of Detection"
 dr = "10"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Fresh faery blood (1/2 dl).\nEyes of flies (2 g) separated by a coordination roll of 8.\nA faery eye.\nA crushed faery ear.\nA black lotus.\nA poem."
+market_price = "40 sp"
+production_time = "3 days"
 
 [entries."Potion of Healing"]
 name = "Potion of Healing"
@@ -3646,6 +3767,42 @@ description = "A healing potion of this type gives a healing rate of one body po
 display_name = "Potion of Healing"
 dr = "10"
 duration = "1 month"
+expiration = "1 month"
+ingredients = "Bryony (10 g).\nDaffodil (10 g).\nFresh blood from the type of body (race) intended to heal (1 dl).\nA poem."
+market_price = "25 sp"
+production_time = "3 days"
+
+[entries."Potion of Iron Guts"]
+name = "Potion of Iron Guts"
+url = "https://d6gaming.org/index.php/Potion_of_Iron_Guts"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Iron Guts".fields]
+description = "For one day the drinker's stomach fears nothing: poison, spoiled food and foul water do no harm (natural poisons are neutralised; magickal poisons get +6 on the resistance roll). Taste, unfortunately, still works."
+display_name = "Potion of Iron Guts"
+dr = "9"
+duration = "1 day"
+expiration = "1 year"
+ingredients = "Charcoal, powdered (30 g).\nGoat's milk (2 dl).\nNettle, boiled soft (20 g).\nA rusty nail, boiled along and removed.*"
+market_price = "30 sp"
+production_time = "3 days"
+
+[entries."Potion of Mirth"]
+name = "Potion of Mirth"
+url = "https://d6gaming.org/index.php/Potion_of_Mirth"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of Mirth".fields]
+description = "The drinker's heart grows light: immune to fear (no rolls on the fear table) and impossible to intimidate. Also very hard to take anything seriously, which has ended more than one important negotiation."
+display_name = "Potion of Mirth"
+dr = "7"
+duration = "1 evening"
+expiration = "1 month"
+ingredients = "Wine from a wedding (2 dl).\nHoney (50 g).\nA jester's bell, dipped and removed.*\nFeverfew (10 g).\nA genuinely funny story, told to the brew."
+market_price = "15 sp"
+production_time = "1 day"
 
 [entries."Potion of Seeing the Truth"]
 name = "Potion of Seeing the Truth"
@@ -3658,6 +3815,10 @@ description = "This potion makes the drinker very resistant to illusions (increa
 display_name = "Potion of Seeing the Truth"
 dr = "10"
 duration = "1 year"
+expiration = "1 year"
+ingredients = "Purslane (20 g).\nA primrose.\nPowdered agate (5 g).\nA faery eye.\nA poem."
+market_price = "45 sp"
+production_time = "3 days"
 
 [entries."Potion of Shivering"]
 name = "Potion of Shivering"
@@ -3670,6 +3831,26 @@ description = "This potion causes fear in the drinker.  Subtract five from his e
 display_name = "Potion of Shivering"
 dr = "6"
 duration = "10 years"
+expiration = "10 years"
+ingredients = "A spider.\nSpores from white amanita.\nA poem.\nAn endurance roll of 6."
+market_price = "10 sp"
+production_time = "1 day"
+
+[entries."Potion of the Second Face"]
+name = "Potion of the Second Face"
+url = "https://d6gaming.org/index.php/Potion_of_the_Second_Face"
+details = "full"
+domains = ["Potions"]
+
+[entries."Potion of the Second Face".fields]
+description = "Brewed over a hair of another person, the potion reshapes the drinker's face and voice to theirs for an hour. Height, build and memories stay the drinker's own. Wears off all at once, usually at the worst possible moment."
+display_name = "Potion of the Second Face"
+dr = "12"
+duration = "1 hour"
+expiration = "1 month"
+ingredients = "A hair of the person to be worn.\nSoft wax (30 g).\nMilk of a black goat (1 dl).\nA pinch of stage rouge.\nBrewed before a covered mirror."
+market_price = "90 sp"
+production_time = "1 week"
 
 [entries."Prepared Teleport"]
 name = "Prepared Teleport"
@@ -3863,13 +4044,13 @@ giving = "Ritual 1 week"
 receiving = "Air Attunement 1"
 restrictions = "None"
 
-[entries.Push]
+[entries."Push"]
 name = "Push"
 url = "https://d6gaming.org/index.php/Push"
 details = "full"
 domains = ["Spells"]
 
-[entries.Push.fields]
+[entries."Push".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 C*"
 casting_time = "1 round"
@@ -3899,12 +4080,7 @@ area_of_effect = "½ m radius"
 casting_time = "1 min"
 cooldown = "7 hours"
 cost = "2 Mental Fortitude"
-description = """
-Turns dirt and sand into quicksand. The spell can only be used in open areas, and does not effect mountains or buildings.
-
-Detecting the trap requires a Detect Traps roll with DR 3 + 1 per spell level.
-
-To recover from the trap requires a Climb roll with DR 3 +1 per spell level. It takes 1 round per…"""
+description = "Turns dirt and sand into quicksand. The spell can only be used in open areas, and does not effect mountains or buildings.\n\nDetecting the trap requires a Detect Traps roll with DR 3 + 1 per spell level.\n\nTo recover from the trap requires a Climb roll with DR 3 +1 per spell level. It takes 1 round per…"
 display_name = "Quicksand Trap"
 distance = "29m"
 domain = "Earth"
@@ -3949,13 +4125,11 @@ domains = ["Rituals"]
 [entries."Raven Of Darkness".fields]
 area_of_effect = "1 m radius"
 casting_time = "5 min."
-description = """
-By performing this ritual, the area arnound the character will become dark and the Raven Demon will summon. 
-When the demon is encountered the player must do a fear roll of D6+3.
-If the character has done this ritual before, the ingredients are not needed and the DR is decreased by 3."""
+description = "By performing this ritual, the area arnound the character will become dark and the Raven Demon will summon. \nWhen the demon is encountered the player must do a fear roll of D6+3.\nIf the character has done this ritual before, the ingredients are not needed and the DR is decreased by 3."
 display_name = "Raven Of Darkness"
 dr = "11"
 duration = "Instant"
+ingredients = "A Raven Feather."
 "path(s)" = "Ritual"
 range = "1m"
 "resist?" = "N"
@@ -3984,13 +4158,13 @@ giving = "Ritual 2 weeks"
 receiving = "Life, Perception Attunement 3"
 restrictions = "None"
 
-[entries.Recall]
+[entries."Recall"]
 name = "Recall"
 url = "https://d6gaming.org/index.php/Recall"
 details = "full"
 domains = ["Spells"]
 
-[entries.Recall.fields]
+[entries."Recall".fields]
 active_passive = "Active"
 area_of_effect = "Self"
 casting_time = "1 round"
@@ -4008,13 +4182,13 @@ giving = "Ritual 1 week"
 receiving = "Life, Magic, Perception Attunement 1"
 restrictions = "None"
 
-[entries.Regeneration]
+[entries."Regeneration"]
 name = "Regeneration"
 url = "https://d6gaming.org/index.php/Regeneration"
 details = "full"
 domains = ["Spells"]
 
-[entries.Regeneration.fields]
+[entries."Regeneration".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "1 hour"
@@ -4056,13 +4230,13 @@ giving = "Ritual 1 week"
 receiving = "Life Attunement 1"
 restrictions = "None"
 
-[entries.Repair]
+[entries."Repair"]
 name = "Repair"
 url = "https://d6gaming.org/index.php/Repair"
 details = "full"
 domains = ["Spells"]
 
-[entries.Repair.fields]
+[entries."Repair".fields]
 active_passive = "Active"
 area_of_effect = "1 object*"
 casting_time = "10 min."
@@ -4080,13 +4254,13 @@ giving = "Ritual 1 week"
 receiving = "Earth Attunement 2"
 restrictions = "None"
 
-[entries.Resurrection]
+[entries."Resurrection"]
 name = "Resurrection"
 url = "https://d6gaming.org/index.php/Resurrection"
 details = "full"
 domains = ["Spells"]
 
-[entries.Resurrection.fields]
+[entries."Resurrection".fields]
 active_passive = "Active"
 area_of_effect = "1 creature*"
 casting_time = "2 hours"
@@ -4104,13 +4278,31 @@ giving = "Ritual 1 months"
 receiving = "Life Attunement 5"
 restrictions = "None"
 
-[entries.Sandstorm]
+[entries."Rustwither"]
+name = "Rustwither"
+url = "https://d6gaming.org/index.php/Rustwither"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Rustwither".fields]
+area_of_effect = "1 metal object"
+casting_time = "1 round"
+description = "Ages one metal object a hundred years in a heartbeat: locks crumble, blades pit and dull (double damage to the weapon's hit points), hinges seize. Dwarven work resists with DR +4."
+display_name = "Rustwither"
+dr = "7"
+duration = "Instant"
+ingredients = "Red rust scraped from a shipwreck (20 g).\nVinegar in which a key has soaked a week (1 dl).\nA drop of the caster's blood.\nA word of unmaking, whispered."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Sandstorm"]
 name = "Sandstorm"
 url = "https://d6gaming.org/index.php/Sandstorm"
 details = "full"
 domains = ["Spells"]
 
-[entries.Sandstorm.fields]
+[entries."Sandstorm".fields]
 active_passive = "Active"
 area_of_effect = "3 m radius"
 casting_time = "1 min."
@@ -4127,13 +4319,31 @@ giving = "Ritual 2 weeks"
 receiving = "Earth Attunement 3"
 restrictions = "None"
 
-[entries.Seek]
+[entries."Seedsong"]
+name = "Seedsong"
+url = "https://d6gaming.org/index.php/Seedsong"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Seedsong".fields]
+area_of_effect = "1 field"
+casting_time = "1 hour"
+description = "A field sung over at sowing yields half again at harvest, and its crops resist blight and vermin. Anashina folk hold the singing must be done barefoot; the ritual works regardless, but they will not believe it."
+display_name = "Seedsong"
+dr = "6"
+duration = "1 season"
+ingredients = "Seed grain from the previous harvest (a handful).\nSpring water poured at the field's corners (4 dl).\nA ladybird, released alive.\nA planting song, sung through twice."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Seek"]
 name = "Seek"
 url = "https://d6gaming.org/index.php/Seek"
 details = "full"
 domains = ["Spells"]
 
-[entries.Seek.fields]
+[entries."Seek".fields]
 active_passive = "Active"
 area_of_effect = "1 missile*"
 casting_time = "1 round"
@@ -4151,13 +4361,13 @@ giving = "Ritual 2 weeks"
 receiving = "Air Attunement 3"
 restrictions = "None"
 
-[entries.Sharpness]
+[entries."Sharpness"]
 name = "Sharpness"
 url = "https://d6gaming.org/index.php/Sharpness"
 details = "full"
 domains = ["Spells"]
 
-[entries.Sharpness.fields]
+[entries."Sharpness".fields]
 active_passive = "Active"
 area_of_effect = "1 weapon*"
 casting_time = "1 round"
@@ -4175,13 +4385,13 @@ giving = "Ritual 2 weeks"
 receiving = "Magic Attunement 3"
 restrictions = "None"
 
-[entries.Silence]
+[entries."Silence"]
 name = "Silence"
 url = "https://d6gaming.org/index.php/Silence"
 details = "full"
 domains = ["Spells"]
 
-[entries.Silence.fields]
+[entries."Silence".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 C*"
 casting_time = "1 round"
@@ -4199,13 +4409,29 @@ giving = "Ritual 2 weeks"
 receiving = "Air Attunement 3"
 restrictions = "None"
 
-[entries.Sleep]
+[entries."Silvertongue Sip"]
+name = "Silvertongue Sip"
+url = "https://d6gaming.org/index.php/Silvertongue_Sip"
+details = "full"
+domains = ["Potions"]
+
+[entries."Silvertongue Sip".fields]
+description = "Words come easy and land well: +3 on Bargain and Social Lore. The drinker also finds it unusually hard to stop talking."
+display_name = "Silvertongue Sip"
+dr = "9"
+duration = "1 hour"
+expiration = "6 months"
+ingredients = "Honey mead (1 dl).\nA silver coin, dissolved slowly.*\nPetals of sweet violet (10 g).\nA compliment, spoken into the bottle and corked quickly."
+market_price = "35 sp"
+production_time = "3 days"
+
+[entries."Sleep"]
 name = "Sleep"
 url = "https://d6gaming.org/index.php/Sleep"
 details = "full"
 domains = ["Spells"]
 
-[entries.Sleep.fields]
+[entries."Sleep".fields]
 active_passive = "Active"
 area_of_effect = "1 creature"
 casting_time = "1 min."
@@ -4260,6 +4486,7 @@ description = "This ritual will hypnotize the victim so as to obey the caster. H
 display_name = "Snake Eyes"
 dr = "6"
 duration = "1 min."
+ingredients = "A tin rod with a 20 carat amethyst.*\nMyrtle berries (10 g).\nChicory leaves (10 g).\nCeladine flowers (10 g).\nSnake eyes (2)."
 "path(s)" = "Ritual"
 range = "10 m"
 "resist?" = "Y"
@@ -4276,9 +4503,7 @@ area_of_effect = "1 C*"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "2 Mental Fortitude"
-description = """
-Makes a creature's movement speed faster. Each level the creature's speed will be increased by 50%.
-When the spell is active, it is possible to see wind behind the creature."""
+description = "Makes a creature's movement speed faster. Each level the creature's speed will be increased by 50%.\nWhen the spell is active, it is possible to see wind behind the creature."
 display_name = "Speed of Winds"
 distance = "24m"
 domain = "Air"
@@ -4289,6 +4514,40 @@ encumbrance = "3"
 giving = "Ritual 1 week"
 receiving = "Air Attunement 2"
 restrictions = "None"
+
+[entries."Stillwater Oath"]
+name = "Stillwater Oath"
+url = "https://d6gaming.org/index.php/Stillwater_Oath"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Stillwater Oath".fields]
+area_of_effect = "2 sworn persons"
+casting_time = "10 minutes"
+description = "Two people swear an oath over a bowl of still water and drink from it. Whoever breaks the oath suffers -3 in Status until they make amends, and every still water they see reminds them. Moltan judges accept a Stillwater Oath as testimony."
+display_name = "Stillwater Oath"
+dr = "9"
+duration = "Until fulfilled"
+ingredients = "Still water drawn at dawn (1 l).\nTwo hairs, one from each swearer, tied together.\nA stone from a courthouse or temple floor.*\nThe oath itself, spoken word for word by both."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Stonebones Potion"]
+name = "Stonebones Potion"
+url = "https://d6gaming.org/index.php/Stonebones_Potion"
+details = "full"
+domains = ["Potions"]
+
+[entries."Stonebones Potion".fields]
+description = "The drinker's skin greys and hardens to living stone: +2 Armor Points on all hit locations, and unarmed blows against the drinker hurt the striker. While it lasts, swimming is a very bad idea."
+display_name = "Stonebones Potion"
+dr = "12"
+duration = "10 rounds"
+expiration = "1 year"
+ingredients = "Granite dust from a standing stone (50 g).\nA gargoyle's chip or a petrified twig (10 g).\nEgg of a cliff-nesting bird.\nIron filings (10 g).\nBuried three days in the earth."
+market_price = "80 sp"
+production_time = "1 week"
 
 [entries."Stop Bleeding"]
 name = "Stop Bleeding"
@@ -4314,6 +4573,24 @@ giving = "Ritual 1 week"
 receiving = "Life Attunement 1"
 restrictions = "None"
 
+[entries."Stormcall"]
+name = "Stormcall"
+url = "https://d6gaming.org/index.php/Stormcall"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Stormcall".fields]
+area_of_effect = "The sky above (10 km)"
+casting_time = "1 hour"
+description = "Calls a storm out of a clear sky, or sends an honest storm elsewhere. The weather arrives within the hour and is genuinely dangerous to shipping, roofs and tempers. Walmaer and Shalissa priests frown on amateurs using this."
+display_name = "Stormcall"
+dr = "13"
+duration = "1 day"
+ingredients = "Seawater taken in foul weather (1 l).\nA bell rung once and then silenced.*\nPetrel feathers (3).\nPowdered flint (20 g).\nA shouted argument with the sky."
+"path(s)" = "Ritual"
+range = "Self"
+"resist?" = "N"
+
 [entries."Summon Elemental"]
 name = "Summon Elemental"
 url = "https://d6gaming.org/index.php/Summon_Elemental"
@@ -4326,14 +4603,7 @@ area_of_effect = "1 elemental*"
 casting_time = "5 min."
 cooldown = "6 hours"
 cost = "3 Mental Fortitude"
-description = """
-325px|thumb
-
-The elemental uses 1 round to manifest.  You must have a sufficient amount of the element for the elemental to form a body or the spell will fail.  Elementals are hostile to life and will try to kill all living creatures, starting with the summoner.  
-
-{| class="wikitable"
-|+Elementals
-…"""
+description = "325px|thumb\n\nThe elemental uses 1 round to manifest.  You must have a sufficient amount of the element for the elemental to form a body or the spell will fail.  Elementals are hostile to life and will try to kill all living creatures, starting with the summoner.  \n\n{| class=\"wikitable\"\n|+Elementals\n…"
 display_name = "Summon Elemental"
 distance = "14m"
 domain = "Air, Earth, Fire, Summoning, Water, Ice"
@@ -4345,13 +4615,13 @@ giving = "Ritual 2 weeks"
 receiving = "Air, Earth, Fire, Summoning, Water, Ice Attunement 3"
 restrictions = "None"
 
-[entries.Summoning]
+[entries."Summoning"]
 name = "Summoning"
 url = "https://d6gaming.org/index.php/Summoning"
 details = "full"
 domains = ["Spells"]
 
-[entries.Summoning.fields]
+[entries."Summoning".fields]
 active_passive = "Active"
 area_of_effect = "1 demon*"
 casting_time = "5 min."
@@ -4369,6 +4639,24 @@ giving = "Ritual 2 weeks"
 receiving = "Black, Summoning Attunement 3"
 restrictions = "None"
 
+[entries."Sunwaked Blade"]
+name = "Sunwaked Blade"
+url = "https://d6gaming.org/index.php/Sunwaked_Blade"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Sunwaked Blade".fields]
+area_of_effect = "1 weapon"
+casting_time = "30 minutes"
+description = "A weapon laid in the first light of dawn and sung over burns with Ikalio's favour for the wielder's next fight: +1 Offensive, and the weapon counts as magical against creatures immune to common steel. The favour fades at the fight's end, or at sunset, whichever comes first."
+display_name = "Sunwaked Blade"
+dr = "10"
+duration = "1 fight"
+ingredients = "First sunlight, caught on the bare blade.\nOil pressed from sunflower seeds (1 dl).\nA red ribbon tied at the hilt.\nA hymn to the dawn, sung alone."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
 [entries."Tekali’s Torch"]
 name = "Tekali’s Torch"
 url = "https://d6gaming.org/index.php/Tekali%E2%80%99s_Torch"
@@ -4382,17 +4670,18 @@ description = "This ritual must be performed on a crystal to take effect. It wil
 display_name = "Tekali’s Torch"
 dr = "8"
 duration = "10 min."
+ingredients = "A 5 carat diamond.*\nAsh from a torch.\nA sunflower.\nCrushed whale bones (100 g).\nAn endurance roll of 8."
 "path(s)" = "Ritual"
 range = "10 m"
 "resist?" = "N"
 
-[entries.Telekinesis]
+[entries."Telekinesis"]
 name = "Telekinesis"
 url = "https://d6gaming.org/index.php/Telekinesis"
 details = "full"
 domains = ["Spells"]
 
-[entries.Telekinesis.fields]
+[entries."Telekinesis".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 C*"
 casting_time = "1 round"
@@ -4410,13 +4699,13 @@ giving = "Ritual 2 weeks"
 receiving = "Air Attunement 3"
 restrictions = "None"
 
-[entries.Teleport]
+[entries."Teleport"]
 name = "Teleport"
 url = "https://d6gaming.org/index.php/Teleport"
 details = "full"
 domains = ["Spells"]
 
-[entries.Teleport.fields]
+[entries."Teleport".fields]
 active_passive = "Active"
 area_of_effect = "1 C* or 1 O*"
 casting_time = "1 round"
@@ -4434,23 +4723,19 @@ giving = "Ritual 2 months"
 receiving = "Air Attunement 5"
 restrictions = "None"
 
-[entries.Tornado]
+[entries."Tornado"]
 name = "Tornado"
 url = "https://d6gaming.org/index.php/Tornado"
 details = "full"
 domains = ["Spells"]
 
-[entries.Tornado.fields]
+[entries."Tornado".fields]
 active_passive = "Active"
 area_of_effect = "1 target*"
 casting_time = "1 round"
 cooldown = "4 hours"
 cost = "3 Mental Fortitude"
-description = """
-Shoots a small tornado towards the target. The tornado will suck up the target, whirling itin a circle for the duration of the spell. For the duration of the spell, the tornado does 1BP + 1 every other level in damage. 
-The target will get -3 in combat while whirling around.  
-
-While the air version…"""
+description = "Shoots a small tornado towards the target. The tornado will suck up the target, whirling itin a circle for the duration of the spell. For the duration of the spell, the tornado does 1BP + 1 every other level in damage. \nThe target will get -3 in combat while whirling around.  \n\nWhile the air version…"
 display_name = "Tornado"
 distance = "49m"
 domain = "Air, Water"
@@ -4461,6 +4746,22 @@ encumbrance = "5"
 giving = "Ritual 2 weeks"
 receiving = "Air, Water Attunement 3"
 restrictions = "None"
+
+[entries."Tortoise Tonic"]
+name = "Tortoise Tonic"
+url = "https://d6gaming.org/index.php/Tortoise_Tonic"
+details = "full"
+domains = ["Potions"]
+
+[entries."Tortoise Tonic".fields]
+description = "Slow and certain: the drinker's Move is halved, but they gain +2 Defensive value and cannot be knocked down or staggered. Popular with shield-wall veterans and nervous travellers on mountain paths."
+display_name = "Tortoise Tonic"
+dr = "6"
+duration = "1 hour"
+expiration = "5 years"
+ingredients = "A tortoise scute, powdered (5 g).\nOak bark (20 g).\nThick porridge water (2 dl).\nPatience, stirred in slowly."
+market_price = "12 sp"
+production_time = "1 day"
 
 [entries."Turn Undead"]
 name = "Turn Undead"
@@ -4499,6 +4800,7 @@ description = "While under the effect of this ritual you will heal at the rate o
 display_name = "Volani’s Cure"
 dr = "8"
 duration = "1 week"
+ingredients = "Daffodil flowers (50 g).\nBryony grapes (50 g).\nBindwood (20 g).\nSulfur (20 g).\nSome strange words spoken aloud."
 "path(s)" = "Ritual"
 range = "Touch"
 "resist?" = "N"
@@ -4574,13 +4876,13 @@ giving = "Ritual 2 weeks"
 receiving = "Ice Attunement 3"
 restrictions = "None"
 
-[entries.Warding]
+[entries."Warding"]
 name = "Warding"
 url = "https://d6gaming.org/index.php/Warding"
 details = "full"
 domains = ["Spells"]
 
-[entries.Warding.fields]
+[entries."Warding".fields]
 active_passive = "Active"
 area_of_effect = "1 O* or 1 m r"
 casting_time = "10 min."
@@ -4598,13 +4900,13 @@ giving = "Ritual 2 months"
 receiving = "Magic Attunement 5"
 restrictions = "None"
 
-[entries.Warmth]
+[entries."Warmth"]
 name = "Warmth"
 url = "https://d6gaming.org/index.php/Warmth"
 details = "full"
 domains = ["Spells"]
 
-[entries.Warmth.fields]
+[entries."Warmth".fields]
 active_passive = "Active"
 area_of_effect = "Self"
 casting_time = "1 round"
@@ -4658,11 +4960,7 @@ area_of_effect = "1 mirage*"
 casting_time = "3 rounds"
 cooldown = "4 hours"
 cost = "3 Mental Fortitude"
-description = """
-Creates a mirage of what the caster wants out of water. To create the mirage, 5 liters of water is required per level of size. 
-Each level the maxiumum size of the mirage increases by 1, starting on 2. When the duration is over the mirage will transform back into water. 
-
-The spell Control Water can…"""
+description = "Creates a mirage of what the caster wants out of water. To create the mirage, 5 liters of water is required per level of size. \nEach level the maxiumum size of the mirage increases by 1, starting on 2. When the duration is over the mirage will transform back into water. \n\nThe spell Control Water can…"
 display_name = "Water Mirage"
 distance = "45m"
 domain = "Water"
@@ -4686,9 +4984,7 @@ area_of_effect = "1 liter"
 casting_time = "1 min."
 cooldown = "4 hours"
 cost = "2 Mental Fortitude"
-description = """
-Creates fresh water capable of healing creatures who drink it. 
-The water heals a creature 2BP, over 30 minutes, per liter that is drunk."""
+description = "Creates fresh water capable of healing creatures who drink it. \nThe water heals a creature 2BP, over 30 minutes, per liter that is drunk."
 display_name = "Water O' Restoring"
 distance = "26m"
 domain = "Water"
@@ -4772,6 +5068,42 @@ giving = "Ritual 1 week"
 receiving = "Water Attunement 1"
 restrictions = "None"
 
+[entries."Wayfarer Blessing"]
+name = "Wayfarer Blessing"
+url = "https://d6gaming.org/index.php/Wayfarer_Blessing"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Wayfarer Blessing".fields]
+area_of_effect = "Up to 6 travellers"
+casting_time = "10 minutes"
+description = "Those blessed walk the day without tiring: no fatigue from ordinary travel, and their feet find the road even in the dark. The blessing ends the moment a blessed traveller draws a weapon in anger."
+display_name = "Wayfarer Blessing"
+dr = "6"
+duration = "1 day"
+ingredients = "Dust from a crossroads.\nA worn-out shoe sole, burnt.\nRosemary (10 g).\nA verse recited while walking backwards."
+"path(s)" = "Ritual"
+range = "Touch"
+"resist?" = "N"
+
+[entries."Whisper on the Wind"]
+name = "Whisper on the Wind"
+url = "https://d6gaming.org/index.php/Whisper_on_the_Wind"
+details = "full"
+domains = ["Rituals"]
+
+[entries."Whisper on the Wind".fields]
+area_of_effect = "1 named person"
+casting_time = "10 minutes"
+description = "The caster speaks a message of at most twenty words into a feather. The wind carries it, and within the hour the named person hears it whispered as if someone stood behind them. The wind does not carry an answer back."
+display_name = "Whisper on the Wind"
+dr = "9"
+duration = "Instant"
+ingredients = "A feather from a bird that has seen the recipient.\nBreath, exhaled through a silver ring.*\nDried thyme, burnt (5 g).\nThe recipient's name, spoken thrice."
+"path(s)" = "Ritual"
+range = "50 km"
+"resist?" = "N"
+
 [entries."Whispering Wind"]
 name = "Whispering Wind"
 url = "https://d6gaming.org/index.php/Whispering_Wind"
@@ -4784,9 +5116,7 @@ area_of_effect = "1 creature"
 casting_time = "1 round"
 cooldown = "3 hours"
 cost = "1 Mental Fortitude"
-description = """
-Creates a weak wind with a message from the caster that will travel to the selected target or targets.  
-The wind moves 5m/s and will die out after telling its message to the targeted creature or creatures."""
+description = "Creates a weak wind with a message from the caster that will travel to the selected target or targets.  \nThe wind moves 5m/s and will die out after telling its message to the targeted creature or creatures."
 display_name = "Whispering Wind"
 distance = "250m"
 domain = "Air"
@@ -4834,340 +5164,10 @@ description = "This curse will decrease the current of one of the target’s att
 display_name = "Witch Curse"
 dr = "10"
 duration = "Instant"
+ingredients = "A part of the target’s body (see Blind Curse).\nThe true name of the target.\nLead and mercury boiled in a stone bowl.\nA long poem.\nA coordination roll of 6."
 "path(s)" = "Ritual"
 range = "100 m"
 "resist?" = "Y"
-
-[entries."Ashes of the Departed"]
-name = "Ashes of the Departed"
-url = "https://d6gaming.org/index.php/Ashes_of_the_Departed"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Ashes of the Departed".fields]
-description = "Over ashes or grave-earth of the dead, the caster asks one question. The dead answer truthfully but briefly and often crookedly, and they remember being asked. The same dead cannot be questioned twice by the same caster. Ingredients: Ashes or grave-earth of the dead one (50 g). A coin placed where a tongue would be. Myrrh, burnt (10 g). Candles of black wax, one lit, one unlit. The question, written and then burnt."
-display_name = "Ashes of the Departed"
-area_of_effect = "1 dead person"
-casting_time = "1 hour"
-dr = "11"
-duration = "Instant"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "Y"
-
-[entries."Doomscript"]
-name = "Doomscript"
-url = "https://d6gaming.org/index.php/Doomscript"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Doomscript".fields]
-description = "A dark writing against a named person: their next critical success turns to a fumble in the moment of triumph. The curse spends itself on that one roll. The victim's Magic Defense resists; if the writing is found and burnt by the victim, the curse rebounds on the caster. Ingredients: Ink mixed with soot from a burnt letter. Paper made from a document the victim signed. A broken pen nib. The victim's full name, written backwards. Three nights of ill will."
-display_name = "Doomscript"
-area_of_effect = "1 named person"
-casting_time = "3 hours"
-dr = "14"
-duration = "Until spent"
-"path(s)" = "Ritual"
-range = "1 km"
-"resist?" = "Y"
-
-[entries."Dream Anchor"]
-name = "Dream Anchor"
-url = "https://d6gaming.org/index.php/Dream_Anchor"
-details = "full"
-domains = ["Potions"]
-
-[entries."Dream Anchor".fields]
-description = "Drunk at bedtime with a person or place firmly in mind, the potion steers the night's dream there: true glimpses mixed with dream-stuff, useful to those wise enough to tell which is which. Ielina initiates prize it. Ingredients: Poppy seeds (5 g). A silver sliver of a mirror.* Lavender (10 g). Water that has reflected the moon (1 dl). Something belonging to the person or place, held while falling asleep."
-display_name = "Dream Anchor"
-dr = "10"
-duration = "1 night"
-
-[entries."Featherfall Philtre"]
-name = "Featherfall Philtre"
-url = "https://d6gaming.org/index.php/Featherfall_Philtre"
-details = "full"
-domains = ["Potions"]
-
-[entries."Featherfall Philtre".fields]
-description = "The drinker falls like a leaf: any fall during the duration lands soft as stepping off a stair. Jumping from great heights on purpose still takes a moment of conviction. Ingredients: Down of a gosling (a pinch). A dandelion clock, blown into the vial. Spider silk (a strand). Rainwater that never touched the ground (1 dl)."
-display_name = "Featherfall Philtre"
-dr = "8"
-duration = "1 minute"
-
-[entries."Firebelly Flask"]
-name = "Firebelly Flask"
-url = "https://d6gaming.org/index.php/Firebelly_Flask"
-details = "full"
-domains = ["Potions"]
-
-[entries."Firebelly Flask".fields]
-description = "The drinker's belly fills with living fire: once per round for three rounds they may breathe a cone of flame 5 m long (damage 5, DEF avoids half). Speaking while it lasts is unwise, and hiccups are dangerous for everyone. Ingredients: Peppers dried over a smith's forge (20 g). Salamander ash (5 g). Strong spirits (1 dl). Oil that has burnt in a temple lamp (1 dl).* Swallowed in one go."
-display_name = "Firebelly Flask"
-dr = "11"
-duration = "3 rounds"
-
-[entries."Ghostberry Wine"]
-name = "Ghostberry Wine"
-url = "https://d6gaming.org/index.php/Ghostberry_Wine"
-details = "full"
-domains = ["Potions"]
-
-[entries."Ghostberry Wine".fields]
-description = "The drinker turns grey, faint and half-here: mundane weapons pass through (half damage), and once during the duration the drinker may walk through a single wall no thicker than an arm's length. Magick bites as usual. Ghostberries are found where the dead were left unburied. Ingredients: Ghostberries (30 g). Grave mist, bottled at dusk. Wine gone thin and pale (2 dl). A sigh, added last."
-display_name = "Ghostberry Wine"
-dr = "13"
-duration = "10 minutes"
-
-[entries."Hearthbind"]
-name = "Hearthbind"
-url = "https://d6gaming.org/index.php/Hearthbind"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Hearthbind".fields]
-description = "Binds the caster to a hearth. The caster knows, wherever they are, the moment a stranger crosses the warded threshold, and whether the stranger comes armed. The knowledge is a feeling, not a picture. Ingredients: Ash from the house's own hearth (100 g). Iron nails from the door, hammered back in place.* Salt strewn along the threshold (50 g). The name of everyone who lives there, spoken aloud."
-display_name = "Hearthbind"
-area_of_effect = "1 house"
-casting_time = "1 hour"
-dr = "8"
-duration = "1 month"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Hound Nose Potion"]
-name = "Hound Nose Potion"
-url = "https://d6gaming.org/index.php/Hound_Nose_Potion"
-details = "full"
-domains = ["Potions"]
-
-[entries."Hound Nose Potion".fields]
-description = "The drinker's nose wakes: track by scent as a hound does (+5 Tracking, scent-based), know who passed and how long ago. Strong smells during the hour can be briefly incapacitating. Ingredients: A hair of a proven tracking hound. Wild garlic (10 g). Rain-wet earth (20 g). Vinegar (1 dl). Shaken, never stirred."
-display_name = "Hound Nose Potion"
-dr = "8"
-duration = "1 hour"
-
-[entries."Moon Mirror"]
-name = "Moon Mirror"
-url = "https://d6gaming.org/index.php/Moon_Mirror"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Moon Mirror".fields]
-description = "Under moonlight, a bowl of still water shows a place the caster has stood in before, as it is now. The image is silent, faint, and lasts while the water stays unbroken. On a new moon night the ritual fails. Ingredients: Rainwater collected in silver (1 l).* A white flower, floated on the water. Moonstone dust (5 g). A soil sample or splinter from the place to be seen."
-display_name = "Moon Mirror"
-area_of_effect = "1 known place"
-casting_time = "30 minutes"
-dr = "10"
-duration = "1 night"
-"path(s)" = "Ritual"
-range = "Self"
-"resist?" = "N"
-
-[entries."Owl Draught"]
-name = "Owl Draught"
-url = "https://d6gaming.org/index.php/Owl_Draught"
-details = "full"
-domains = ["Potions"]
-
-[entries."Owl Draught".fields]
-description = "The drinker needs no sleep that night and suffers no fatigue for the missed rest. The next night's sleep is deep, long and non-negotiable. Ingredients: Owl pellet, powdered (5 g). Strong black tea leaves (20 g). Dew collected before dawn (1 dl). A candle burnt at both ends, the wax."
-display_name = "Owl Draught"
-dr = "8"
-duration = "1 night"
-
-[entries."Potion of Iron Guts"]
-name = "Potion of Iron Guts"
-url = "https://d6gaming.org/index.php/Potion_of_Iron_Guts"
-details = "full"
-domains = ["Potions"]
-
-[entries."Potion of Iron Guts".fields]
-description = "For one day the drinker's stomach fears nothing: poison, spoiled food and foul water do no harm (natural poisons are neutralised; magickal poisons get +6 on the resistance roll). Taste, unfortunately, still works. Ingredients: Charcoal, powdered (30 g). Goat's milk (2 dl). Nettle, boiled soft (20 g). A rusty nail, boiled along and removed.*"
-display_name = "Potion of Iron Guts"
-dr = "9"
-duration = "1 day"
-
-[entries."Potion of Mirth"]
-name = "Potion of Mirth"
-url = "https://d6gaming.org/index.php/Potion_of_Mirth"
-details = "full"
-domains = ["Potions"]
-
-[entries."Potion of Mirth".fields]
-description = "The drinker's heart grows light: immune to fear (no rolls on the fear table) and impossible to intimidate. Also very hard to take anything seriously, which has ended more than one important negotiation. Ingredients: Wine from a wedding (2 dl). Honey (50 g). A jester's bell, dipped and removed.* Feverfew (10 g). A genuinely funny story, told to the brew."
-display_name = "Potion of Mirth"
-dr = "7"
-duration = "1 evening"
-
-[entries."Potion of the Second Face"]
-name = "Potion of the Second Face"
-url = "https://d6gaming.org/index.php/Potion_of_the_Second_Face"
-details = "full"
-domains = ["Potions"]
-
-[entries."Potion of the Second Face".fields]
-description = "Brewed over a hair of another person, the potion reshapes the drinker's face and voice to theirs for an hour. Height, build and memories stay the drinker's own. Wears off all at once, usually at the worst possible moment. Ingredients: A hair of the person to be worn. Soft wax (30 g). Milk of a black goat (1 dl). A pinch of stage rouge. Brewed before a covered mirror."
-display_name = "Potion of the Second Face"
-dr = "12"
-duration = "1 hour"
-
-[entries."Rustwither"]
-name = "Rustwither"
-url = "https://d6gaming.org/index.php/Rustwither"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Rustwither".fields]
-description = "Ages one metal object a hundred years in a heartbeat: locks crumble, blades pit and dull (double damage to the weapon's hit points), hinges seize. Dwarven work resists with DR +4. Ingredients: Red rust scraped from a shipwreck (20 g). Vinegar in which a key has soaked a week (1 dl). A drop of the caster's blood. A word of unmaking, whispered."
-display_name = "Rustwither"
-area_of_effect = "1 metal object"
-casting_time = "1 round"
-dr = "7"
-duration = "Instant"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Seedsong"]
-name = "Seedsong"
-url = "https://d6gaming.org/index.php/Seedsong"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Seedsong".fields]
-description = "A field sung over at sowing yields half again at harvest, and its crops resist blight and vermin. Anashina folk hold the singing must be done barefoot; the ritual works regardless, but they will not believe it. Ingredients: Seed grain from the previous harvest (a handful). Spring water poured at the field's corners (4 dl). A ladybird, released alive. A planting song, sung through twice."
-display_name = "Seedsong"
-area_of_effect = "1 field"
-casting_time = "1 hour"
-dr = "6"
-duration = "1 season"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Silvertongue Sip"]
-name = "Silvertongue Sip"
-url = "https://d6gaming.org/index.php/Silvertongue_Sip"
-details = "full"
-domains = ["Potions"]
-
-[entries."Silvertongue Sip".fields]
-description = "Words come easy and land well: +3 on Bargain and Social Lore. The drinker also finds it unusually hard to stop talking. Ingredients: Honey mead (1 dl). A silver coin, dissolved slowly.* Petals of sweet violet (10 g). A compliment, spoken into the bottle and corked quickly."
-display_name = "Silvertongue Sip"
-dr = "9"
-duration = "1 hour"
-
-[entries."Stillwater Oath"]
-name = "Stillwater Oath"
-url = "https://d6gaming.org/index.php/Stillwater_Oath"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Stillwater Oath".fields]
-description = "Two people swear an oath over a bowl of still water and drink from it. Whoever breaks the oath suffers -3 in Status until they make amends, and every still water they see reminds them. Moltan judges accept a Stillwater Oath as testimony. Ingredients: Still water drawn at dawn (1 l). Two hairs, one from each swearer, tied together. A stone from a courthouse or temple floor.* The oath itself, spoken word for word by both."
-display_name = "Stillwater Oath"
-area_of_effect = "2 sworn persons"
-casting_time = "10 minutes"
-dr = "9"
-duration = "Until fulfilled"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Stonebones Potion"]
-name = "Stonebones Potion"
-url = "https://d6gaming.org/index.php/Stonebones_Potion"
-details = "full"
-domains = ["Potions"]
-
-[entries."Stonebones Potion".fields]
-description = "The drinker's skin greys and hardens to living stone: +2 Armor Points on all hit locations, and unarmed blows against the drinker hurt the striker. While it lasts, swimming is a very bad idea. Ingredients: Granite dust from a standing stone (50 g). A gargoyle's chip or a petrified twig (10 g). Egg of a cliff-nesting bird. Iron filings (10 g). Buried three days in the earth."
-display_name = "Stonebones Potion"
-dr = "12"
-duration = "10 rounds"
-
-[entries."Stormcall"]
-name = "Stormcall"
-url = "https://d6gaming.org/index.php/Stormcall"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Stormcall".fields]
-description = "Calls a storm out of a clear sky, or sends an honest storm elsewhere. The weather arrives within the hour and is genuinely dangerous to shipping, roofs and tempers. Walmaer and Shalissa priests frown on amateurs using this. Ingredients: Seawater taken in foul weather (1 l). A bell rung once and then silenced.* Petrel feathers (3). Powdered flint (20 g). A shouted argument with the sky."
-display_name = "Stormcall"
-area_of_effect = "The sky above (10 km)"
-casting_time = "1 hour"
-dr = "13"
-duration = "1 day"
-"path(s)" = "Ritual"
-range = "Self"
-"resist?" = "N"
-
-[entries."Sunwaked Blade"]
-name = "Sunwaked Blade"
-url = "https://d6gaming.org/index.php/Sunwaked_Blade"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Sunwaked Blade".fields]
-description = "A weapon laid in the first light of dawn and sung over burns with Ikalio's favour for the wielder's next fight: +1 Offensive, and the weapon counts as magical against creatures immune to common steel. The favour fades at the fight's end, or at sunset, whichever comes first. Ingredients: First sunlight, caught on the bare blade. Oil pressed from sunflower seeds (1 dl). A red ribbon tied at the hilt. A hymn to the dawn, sung alone."
-display_name = "Sunwaked Blade"
-area_of_effect = "1 weapon"
-casting_time = "30 minutes"
-dr = "10"
-duration = "1 fight"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Tortoise Tonic"]
-name = "Tortoise Tonic"
-url = "https://d6gaming.org/index.php/Tortoise_Tonic"
-details = "full"
-domains = ["Potions"]
-
-[entries."Tortoise Tonic".fields]
-description = "Slow and certain: the drinker's Move is halved, but they gain +2 Defensive value and cannot be knocked down or staggered. Popular with shield-wall veterans and nervous travellers on mountain paths. Ingredients: A tortoise scute, powdered (5 g). Oak bark (20 g). Thick porridge water (2 dl). Patience, stirred in slowly."
-display_name = "Tortoise Tonic"
-dr = "6"
-duration = "1 hour"
-
-[entries."Wayfarer Blessing"]
-name = "Wayfarer Blessing"
-url = "https://d6gaming.org/index.php/Wayfarer_Blessing"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Wayfarer Blessing".fields]
-description = "Those blessed walk the day without tiring: no fatigue from ordinary travel, and their feet find the road even in the dark. The blessing ends the moment a blessed traveller draws a weapon in anger. Ingredients: Dust from a crossroads. A worn-out shoe sole, burnt. Rosemary (10 g). A verse recited while walking backwards."
-display_name = "Wayfarer Blessing"
-area_of_effect = "Up to 6 travellers"
-casting_time = "10 minutes"
-dr = "6"
-duration = "1 day"
-"path(s)" = "Ritual"
-range = "Touch"
-"resist?" = "N"
-
-[entries."Whisper on the Wind"]
-name = "Whisper on the Wind"
-url = "https://d6gaming.org/index.php/Whisper_on_the_Wind"
-details = "full"
-domains = ["Rituals"]
-
-[entries."Whisper on the Wind".fields]
-description = "The caster speaks a message of at most twenty words into a feather. The wind carries it, and within the hour the named person hears it whispered as if someone stood behind them. The wind does not carry an answer back. Ingredients: A feather from a bird that has seen the recipient. Breath, exhaled through a silver ring.* Dried thyme, burnt (5 g). The recipient's name, spoken thrice."
-display_name = "Whisper on the Wind"
-area_of_effect = "1 named person"
-casting_time = "10 minutes"
-dr = "9"
-duration = "Instant"
-"path(s)" = "Ritual"
-range = "50 km"
-"resist?" = "N"
 
 [entries."Wolfshide"]
 name = "Wolfshide"
@@ -5176,12 +5176,14 @@ details = "full"
 domains = ["Rituals"]
 
 [entries."Wolfshide".fields]
-description = "Wrapped in a wolf's hide under the open sky, the caster takes wolf shape until dawn: a wolf's body and senses, the caster's own mind. Clothes and gear do not follow. If the hide is stolen while the ritual runs, so is the way back. Ingredients: A whole wolf's hide, honestly won.* Raw meat, eaten cold. Juniper smoke breathed deeply. A howl, given without embarrassment."
-display_name = "Wolfshide"
 area_of_effect = "The caster"
 casting_time = "30 minutes"
+description = "Wrapped in a wolf's hide under the open sky, the caster takes wolf shape until dawn: a wolf's body and senses, the caster's own mind. Clothes and gear do not follow. If the hide is stolen while the ritual runs, so is the way back."
+display_name = "Wolfshide"
 dr = "12"
 duration = "1 night"
+ingredients = "A whole wolf's hide, honestly won.*\nRaw meat, eaten cold.\nJuniper smoke breathed deeply.\nA howl, given without embarrassment."
 "path(s)" = "Ritual"
 range = "Self"
 "resist?" = "N"
+

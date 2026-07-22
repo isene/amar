@@ -297,6 +297,20 @@ fn parse_entry(page: &str, wikitext: &str) -> Entry {
         fields.insert("description".to_string(), body_blurb);
     }
 
+    // Ingredients section (rituals + potions): bullet list under
+    // `=== Ingredients ===`. Stored newline-joined; the Lore renderer
+    // re-bullets them.
+    let re_ing = Regex::new(r"(?s)===\s*Ingredients\s*===\s*\n(.*?)(?:\n\n|\nBack:|\n\[\[Category)").unwrap();
+    if let Some(cap) = re_ing.captures(wikitext) {
+        let items: Vec<String> = cap[1].lines()
+            .filter(|l| l.starts_with("* "))
+            .map(|l| l[2..].trim().to_string())
+            .collect();
+        if !items.is_empty() {
+            fields.insert("ingredients".to_string(), items.join("\n"));
+        }
+    }
+
     let details = if fields.is_empty() && wikitext.trim().len() < 64 {
         "missing".to_string()
     } else {

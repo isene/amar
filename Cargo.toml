@@ -1,6 +1,6 @@
 [package]
 name = "amar"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2021"
 authors = ["Geir Isene <g@isene.com>"]
 description = "Amar RPG companion: NPC/encounter/town/weather forge, campaign tracker, lore, AI inspiration. Honors d6gaming.org."
