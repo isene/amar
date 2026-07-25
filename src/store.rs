@@ -288,6 +288,17 @@ impl Campaign {
         self.diary.iter().filter(|e| e.date == date).collect()
     }
 
+    /// The first day the campaign has any record of: the earliest
+    /// adventure span start or diary line. Days before it are calendar,
+    /// not history, so the calendar leaves them un-underlined. `None`
+    /// when nothing is recorded yet (a fresh campaign underlines every
+    /// day before today, as before).
+    pub fn first_recorded_day(&self) -> Option<AmarDate> {
+        self.adventures.iter().filter_map(|a| a.start)
+            .chain(self.diary.iter().map(|e| e.date))
+            .min_by_key(|d| Self::lin(*d))
+    }
+
     /// Append a diary line to `date`.
     pub fn add_diary(&mut self, date: AmarDate, text: &str) {
         self.diary.push(DiaryEntry { date, text: text.to_string(), created_at: now_unix() });
@@ -367,4 +378,19 @@ pub fn list_campaigns() -> Vec<String> {
         .collect();
     names.sort();
     names
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn first_recorded_day_is_the_earliest_record() {
+        let mut c = Campaign::new("t");
+        assert!(c.first_recorded_day().is_none());
+        c.add_diary(AmarDate::from_ymd(354, 4, 10), "later");
+        c.add_diary(AmarDate::from_ymd(354, 3, 21), "arrival");
+        assert_eq!(c.first_recorded_day(),
+            Some(AmarDate::from_ymd(354, 3, 21)));
+    }
 }

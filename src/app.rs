@@ -5317,6 +5317,10 @@ impl App {
         let year = cursor.year;
 
         let lin = |d: AmarDate| d.year as i64 * 364 + d.day_of_year as i64;
+        // The campaign's own first day. Anything earlier was never
+        // played, so it stays un-underlined however far back the GM
+        // scrolls. Computed once per render, not per day cell.
+        let first_day = camp.first_recorded_day().map(lin);
         // Colour of the first adventure whose [start,end] covers `d`.
         let color_for = |d: AmarDate| -> Option<u8> {
             for a in &camp.adventures {
@@ -5342,12 +5346,14 @@ impl App {
                     let dom = w * 7 + dcol + 1;
                     let date = AmarDate::from_ymd(year, m, dom);
                     let cell = format!(" {:>2}", dom);
-                    // Played history: every day BEFORE the current day is
+                    // Played history: every day from the campaign's first
+                    // record up to (not including) the current day is
                     // underlined on top of its colour coding. `.` (advance)
                     // underlines the day just played; `,` (step back)
                     // un-underlines it — both fall out of the comparison,
                     // no extra state.
-                    let played = lin(date) < lin(today);
+                    let played = lin(date) < lin(today)
+                        && first_day.is_none_or(|f| lin(date) >= f);
                     let mut styled = if date == cursor {
                         style::reverse(&style::fg(&cell, color_for(date).unwrap_or(252)))
                     } else if let Some(sp) = crate::calendar::special_day(m, dom) {
