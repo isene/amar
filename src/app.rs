@@ -5894,7 +5894,7 @@ impl App {
 
         // Suspend the TUI, hand the terminal to scribe, resume + rescan.
         use std::io::Write as _;
-        print!("\x1b[?2004l");
+        Crust::disable_bracketed_paste();
         let _ = std::io::stdout().flush();
         crust::Crust::cleanup();
         crust::Crust::clear_screen();
@@ -5902,7 +5902,7 @@ impl App {
         let status = std::process::Command::new("scribe").arg(&path).status();
 
         crust::Crust::init();
-        print!("\x1b[?2004h");
+        Crust::enable_bracketed_paste();
         let _ = std::io::stdout().flush();
         crust::Crust::clear_screen();
         self.rebuild_panes();
@@ -6569,7 +6569,7 @@ impl App {
         // Drop the alt-screen + bracketed-paste so claude has a clean
         // terminal. Same handshake kastrup uses for :chat.
         use std::io::Write as _;
-        print!("\x1b[?2004l");
+        Crust::disable_bracketed_paste();
         let _ = std::io::stdout().flush();
         crust::Crust::cleanup();
         crust::Crust::clear_screen();
@@ -6577,7 +6577,7 @@ impl App {
         let status = std::process::Command::new("claude").arg(&ctx).status();
 
         crust::Crust::init();
-        print!("\x1b[?2004h");
+        Crust::enable_bracketed_paste();
         let _ = std::io::stdout().flush();
         // Force a full repaint. Rebuild the pane layout in case the
         // user resized the terminal during the Claude session, then
