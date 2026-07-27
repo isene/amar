@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "amar"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "fe2o3-crust",
  "fe2o3-glow",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "fe2o3-crust"
-version = "0.1.35"
+version = "0.1.46"
 dependencies = [
  "crossterm",
  "libc",
@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "fe2o3-glow"
-version = "0.1.19"
+version = "0.1.21"
 dependencies = [
  "base64",
  "image",

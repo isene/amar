@@ -16,6 +16,29 @@ mod store;
 mod theme;
 
 fn main() {
+    // --help and --version answer before the TUI touches the terminal.
+    // A tool that asks what this is — the fe2o3 launcher's ? popup, a
+    // packaging script, a curious shell — should get an answer, not a
+    // screen paint.
+    if std::env::args().skip(1).any(|a| a == "-h" || a == "--help") {
+        println!("amar — Amar RPG companion (Fe2O3 suite)");
+        println!();
+        println!("Usage: amar [OPTIONS]");
+        println!();
+        println!("  --import FILE           import a campaign or lore file");
+        println!("  --create-campaign NAME  start a new campaign and exit");
+        println!("  --current-section       print the section the session is on");
+        println!("  --rescan-all            rebuild the lore index");
+        println!();
+        println!("Five tabs: Inspire, Forge, Campaign, Session, Lore. Honours the");
+        println!("d6gaming.org canon. Data in ~/.amar/.");
+        return;
+    }
+    if std::env::args().skip(1).any(|a| a == "-v" || a == "--version") {
+        println!("amar {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     // CLI bootstrap mode — non-TUI. Lets the user populate a
     // campaign from the shell without walking the menu tree.
     // Recognised flags (all optional, but at least one must be
