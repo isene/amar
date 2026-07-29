@@ -1666,11 +1666,22 @@ impl App {
             // Expandable nodes fall through to the tree-expand handler below,
             // so Right still expands sections that have children.
             "l" | "RIGHT" => {
-                let expandable = self.campaign.as_ref().map(|c| {
+                let (expandable, open) = self.campaign.as_ref().map(|c| {
                     let tree = build_camp_tree(c, &self.camp_expanded);
-                    tree.get(self.camp_idx).map(|i| i.expandable).unwrap_or(false)
-                }).unwrap_or(false);
-                if !expandable {
+                    match tree.get(self.camp_idx) {
+                        Some(item) => (item.expandable,
+                            self.expand_key_for_node(&item.node, c)
+                                .map(|k| self.camp_expanded.iter().any(|e| e == &k))
+                                .unwrap_or(false)),
+                        None => (false, false),
+                    }
+                }).unwrap_or((false, false));
+                // A leaf opens its picture straight away. A section that
+                // also has child subsections keeps its tree meaning on the
+                // first Right (expand) and opens the picture on the next,
+                // so "→ to open" is true for those rows too instead of
+                // being swallowed by a no-op re-expand.
+                if !expandable || open {
                     if let Some(path) = self.cursor_image_path() {
                         self.open_in_viewer(&path);
                         return;
