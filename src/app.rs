@@ -6225,13 +6225,19 @@ impl App {
             // slot.
             let target_h = body_col.lines.len().max(mind_col.lines.len());
             let avail = target_h.saturating_sub(spirit_col.lines.len() + 2);
-            let n_slots = avail.max(8).max(pc.open_skills.len());
+            // Cap at 12: balancing against a very tall BODY/MIND column
+            // used to fill the pane with empty dash rows.
+            let n_slots = avail.clamp(8, 12).max(pc.open_skills.len());
             let line_offset = spirit_col.lines.len();
             let (slot_lines, slot_edits) = render_open_slots(pc, n_slots, line_offset, active_id);
             spirit_col.lines.extend(slot_lines);
             spirit_col.edits.extend(slot_edits);
-            // 3-col gap between BODY / MIND / SPIRIT.
-            let col_w = (pane_w / 3).min(36).max(33);
+            // 3-col gap between BODY / MIND / SPIRIT. The widest right-
+            // column row is an open-slot row (38 visible chars); size the
+            // two padded columns so the merged row fits the pane, else the
+            // wrapping right pane breaks every slot row onto a second
+            // screen line (one ragged "naked" row per slot).
+            let col_w = ((pane_w.saturating_sub(38)) / 2).clamp(31, 36);
             let max_rows = body_col.lines.len()
                 .max(mind_col.lines.len())
                 .max(spirit_col.lines.len());
@@ -6240,10 +6246,12 @@ impl App {
                 let b = body_col.lines.get(i).cloned().unwrap_or_default();
                 let m = mind_col.lines.get(i).cloned().unwrap_or_default();
                 let s = spirit_col.lines.get(i).cloned().unwrap_or_default();
-                out.push(format!("{}{}{}",
+                let merged = format!("{}{}{}",
                     pad_visible(&b, col_w),
                     pad_visible(&m, col_w),
-                    s));
+                    s);
+                // The pane wraps; a merged row must never exceed it.
+                out.push(crust::truncate_ansi(&merged, pane_w));
             }
             for col in [&body_col, &mind_col, &spirit_col] {
                 for e in &col.edits {
@@ -7484,7 +7492,7 @@ fn render_open_slots(
     use crust::style;
     const LBL: u8 = 245;
     const ATTR_W: usize = 12;
-    const NAME_W: usize = 14;
+    const NAME_W: usize = 13;
     let mut lines: Vec<String> = Vec::new();
     let mut edits: Vec<EditableField> = Vec::new();
     // Empty row sets the slot section apart from the SPIRIT column's
