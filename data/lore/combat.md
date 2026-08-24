@@ -180,7 +180,16 @@ sheet folds the pair's modifiers into that single row.
 | Very long range | 20 |
 | Maximum range | 25 |
 
-Modifiers: +1 per Size, -3 hit-location aim, -5 missile firing penalty floor, dodge missiles -2 + 1 per full 5 in Dodge.
+Modifiers: +1 per Size, -3 hit-location aim, -5 missile firing penalty floor.
+
+**Aware targets.** The DRs above are for an unaware target (surprised, asleep, bound, or holding still on purpose). An aware target adds to the DR, at the target's choice:
+
+- its own O6 + (Dodge total − 5), or
+- a flat +5 (moving unpredictably).
+
+Everyone in a melee counts as aware. Below Dodge 7 the flat +5 is the better bet.
+
+**Missile damage.** Bows, crossbows and slings have -1 damage compared to the old tables (baked into the weapon table). Thrown weapons are unchanged. DB is never added to missile damage.
 
 Shield AP vs missiles: round shield +1 AP, kite shield +2 AP.
 

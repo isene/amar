@@ -9164,9 +9164,14 @@ fn weapon_def_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
     w.def_mod + skill + dodge / 5
 }
 
-/// Damage total: weapon.damage + character damage bonus.
+/// Damage total: weapon.damage + character damage bonus. DB is a
+/// melee thing (wiki rules): a bow's damage is the bow's, so missile
+/// weapons roll their own damage without it.
 fn weapon_dam_total(ch: &crate::pc::Character, w: &crate::pc::Weapon) -> i32 {
-    w.damage + ch.db()
+    match w.kind {
+        crate::pc::WeaponKind::Melee   => w.damage + ch.db(),
+        crate::pc::WeaponKind::Missile => w.damage,
+    }
 }
 
 /// Net status modifier in effect for a participant THIS instant.
