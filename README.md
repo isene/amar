@@ -96,6 +96,7 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | Ctrl-L | Hard refresh |
 | r | Redraw |
 | ? | Help popup |
+| Ctrl-A | A full Claude session about the campaign, from any tab, as in every Fe₂O₃ app |
 | q / Q | Quit (saves) |
 
 ### Campaign tab

@@ -525,6 +525,9 @@ impl App {
                 "w" => { self.cycle_width(false); }
                 "W" => { self.cycle_width(true); }
                 "?" => self.show_help(),
+                // Ctrl+A, as in every Fe2O3 app: the full Claude session,
+                // from any tab, with the campaign as context.
+                "C-A" => { self.launch_inspire_claude(); }
                 "C" => {
                     // `C` is overloaded:
                     //  - on the Combat tab, the per-tab handler runs
@@ -7289,7 +7292,8 @@ impl App {
               ESC            Drop focus back to left pane\n  \
               w / W          Cycle left-pane width (kastrup-style 1-6)\n  \
               j / k          Down / up (Down/Up walk this help line-by-line)\n  \
-              ?              This help\n\n  \
+              ?              This help\n  \
+              C-A            A full Claude session about the campaign\n\n  \
             WORLD (tab 1)\n  \
               ONE tree: region folds \u{2192} locations \u{2192} each location's\n  \
               NPCs nested beneath it. \u{201c}Other\u{201d} holds the unbound\n  \
