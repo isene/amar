@@ -82,8 +82,7 @@ SKILL_PARENT = {
     "Number of Targets":    "Casting",
 }
 
-# Per-NPC stat data, transcribed from
-# /home/geir/Main/G/AMAR/ThePortal/Amaron/TheShatteredHourglass/
+# Per-NPC stat data, transcribed from the adventure text,
 # TheShatteredHourglass.md
 #
 # Each "skills" entry is the *displayed total* exactly as printed in

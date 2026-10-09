@@ -34,8 +34,7 @@ pub struct GlobalConfig {
     #[serde(default = "default_pane_width")]
     pub pane_width: u8,
     /// Path to a file containing the OpenAI API key (one line). The
-    /// global default lives at `/home/.safe/openai.txt` per the
-    /// user's machine convention. Empty / missing → OpenAI image
+    /// default is `~/.amar/openai.txt`. Empty / missing → OpenAI image
     /// generation is unavailable.
     #[serde(default = "default_openai_key_path")]
     pub openai_key_path: String,
@@ -50,7 +49,7 @@ pub struct GlobalConfig {
 }
 
 fn default_pane_width() -> u8 { 3 }
-fn default_openai_key_path() -> String { "/home/.safe/openai.txt".into() }
+fn default_openai_key_path() -> String { root_dir().join("openai.txt").to_string_lossy().into_owned() }
 fn default_image_provider() -> String { "openai".into() }
 
 impl Default for GlobalConfig {

@@ -211,7 +211,7 @@ See the [Fe₂O₃ suite overview](https://github.com/isene/fe2o3) and the [land
 - A kitty-protocol-capable terminal (kitty, wezterm, ghostty) for inline images
 - `feh` for player display (`V` key)
 - `claude` CLI for the Inspire tab
-- `OPENAI_API_KEY` (`/home/.safe/openai.txt` convention) for DALL-E scene / portrait generation
+- An OpenAI key in `~/.amar/openai.txt` (or its path as `openai_key_path` in `~/.amar/config.toml`) for DALL-E scene / portrait generation
 - `GEMINI_API_KEY` for Imagen scene generation (alternative)
 
 ## License
