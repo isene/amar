@@ -220,6 +220,10 @@ pub struct Campaign {
     /// retroactively; only the tail is extended as the current day advances.
     #[serde(default)]
     pub forecast: Vec<crate::forge::WeatherDay>,
+    /// Where the party is now: a location name (World or campaign).
+    /// Set with `g` on the Table tab; empty = not set.
+    #[serde(default)]
+    pub party_location: String,
 }
 
 /// One participant in the combat HUD. Indexed against
@@ -303,6 +307,42 @@ impl Campaign {
         self.diary.push(DiaryEntry { date, text: text.to_string(), created_at: now_unix() });
     }
 
+    /// Keep one "▶ scene" line per day: replace today's, or add one.
+    pub fn set_scene_line(&mut self, date: AmarDate, text: &str) {
+        let line = format!("\u{25B6} {}", text);
+        match self.diary.iter_mut().find(|e| e.date == date && e.text.starts_with('\u{25B6}')) {
+            Some(e) => { e.text = line; e.created_at = now_unix(); }
+            None => self.add_diary(date, &line),
+        }
+    }
+
+    /// The active adventure's index in `adventures`.
+    pub fn active_adventure_idx(&self) -> Option<usize> {
+        let id = self.active_adventure_id?;
+        self.adventures.iter().position(|a| a.id == id)
+    }
+
+    /// Tag each NPC that has no adventure: the adventure whose folder
+    /// holds its portrait, else the first whose text names it. Reads
+    /// the adventure texts only when some NPC is untagged.
+    pub fn infer_npc_adventures(&mut self) {
+        if self.npcs.iter().all(|n| n.adventure_id.is_some()) { return; }
+        let texts: Vec<(u64, String, String)> = self.adventures.iter().map(|a| {
+            let text = if a.narrative_md.is_empty() { String::new() } else {
+                std::fs::read_to_string(a.absolute(&a.narrative_md))
+                    .unwrap_or_default().to_lowercase()
+            };
+            (a.id, format!("{}/", a.root_dir.trim_end_matches('/')), text)
+        }).collect();
+        for n in self.npcs.iter_mut().filter(|n| n.adventure_id.is_none()) {
+            let core = n.name.split('(').next().unwrap_or("").trim().to_lowercase();
+            n.adventure_id = texts.iter()
+                .find(|(_, root, _)| !n.portrait_path.is_empty() && n.portrait_path.starts_with(root))
+                .or_else(|| texts.iter().find(|(_, _, t)| !core.is_empty() && t.contains(&core)))
+                .map(|(id, _, _)| *id);
+        }
+    }
+
     /// The generated weather for `date`, if it falls inside the current run.
     pub fn weather_for(&self, date: AmarDate) -> Option<&crate::forge::WeatherDay> {
         self.forecast.iter().find(|w| w.date == date)
@@ -350,6 +390,7 @@ impl Campaign {
         // Idempotent for fully-populated characters.
         for p in c.pcs.iter_mut() { p.normalize(); }
         for n in c.npcs.iter_mut() { n.normalize(); }
+        c.infer_npc_adventures();
         for s in c.saved_npcs.iter_mut() { s.item.normalize(); }
         for e in c.saved_encounters.iter_mut() {
             for n in e.item.npcs.iter_mut() { n.normalize(); }
@@ -391,5 +432,43 @@ mod tests {
         c.add_diary(AmarDate::from_ymd(354, 3, 21), "arrival");
         assert_eq!(c.first_recorded_day(),
             Some(AmarDate::from_ymd(354, 3, 21)));
+    }
+
+    #[test]
+    fn scene_line_is_one_per_day() {
+        let mut c = Campaign::new("t");
+        let d = AmarDate::from_ymd(354, 4, 10);
+        c.add_diary(d, "met the dwarves");
+        c.set_scene_line(d, "Crestaar: The Hook");
+        c.set_scene_line(d, "Crestaar: Day One");
+        assert_eq!(c.diary.len(), 2);
+        assert_eq!(c.diary[1].text, "\u{25B6} Crestaar: Day One");
+        c.set_scene_line(d.advance(1), "Crestaar: Day Two");
+        assert_eq!(c.diary.len(), 3);
+    }
+
+    #[test]
+    fn npcs_are_tagged_by_portrait_folder_then_text() {
+        let dir = std::env::temp_dir().join(format!("amar-infer-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("b.md"), "## Scene\nBrokk Slateward waits.\n").unwrap();
+        let mut c = Campaign::new("t");
+        for (id, md) in [(1u64, ""), (2, "b.md")] {
+            let mut a = crate::adventure::Adventure::default();
+            a.id = id;
+            a.root_dir = dir.join(format!("a{}", id)).to_string_lossy().into();
+            if !md.is_empty() { a.root_dir = dir.to_string_lossy().into(); }
+            a.narrative_md = md.into();
+            c.adventures.push(a);
+        }
+        let mut alric = Character::new_blank("Brother Alric(The Kindly)");
+        alric.portrait_path = dir.join("a1/NPCs/x.png").to_string_lossy().into();
+        c.npcs.push(alric);
+        c.npcs.push(Character::new_blank("Brokk Slateward"));
+        c.npcs.push(Character::new_blank("Nobody"));
+        c.infer_npc_adventures();
+        let tags: Vec<_> = c.npcs.iter().map(|n| n.adventure_id).collect();
+        assert_eq!(tags, vec![Some(1), Some(2), None]);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

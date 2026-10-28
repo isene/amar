@@ -217,6 +217,11 @@ pub struct Character {
     /// the World tree nests the NPC under that location row. Empty =
     /// listed directly under the region fold.
     pub location: String,
+    /// `id` of the adventure this NPC belongs to. Empty = guessed at
+    /// load from the portrait folder or the adventure text; NPCs of
+    /// other adventures sit under the Book tab's "Earlier" fold.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub adventure_id: Option<u64>,
     pub description: String,
     pub clothing: String,
 

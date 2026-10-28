@@ -297,7 +297,7 @@ fn best_section_for(adv: &Adventure, img_name: &str) -> Option<usize> {
 /// (carries a demographic in parens or a `[Level N]` suffix).
 /// Used by the image-attachment matcher to skip these headings
 /// so an unrelated image keyword doesn't bind to an NPC entry.
-fn is_stat_block_heading(h: &str) -> bool {
+pub fn is_stat_block_heading(h: &str) -> bool {
     let hl = h.to_lowercase();
     if hl.contains("[level ") { return true; }
     if hl.contains("(m,") || hl.contains("(f,")

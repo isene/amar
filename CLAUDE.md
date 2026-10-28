@@ -9,7 +9,7 @@ companion session replaces them.
 
 ## World vs Campaign (v0.2.0)
 
-Tabs: 1 World, 2 Campaign, 3 Combat, 4 Lore.
+Tabs: 1 Table, 2 World, 3 Combat, 4 Lore, 5 Book (the Campaign tab).
 
 `~/.amar/world.json` holds what exists independently of any campaign:
 
@@ -154,6 +154,28 @@ GM's display order — preserve it.
 `image` (optional) renders INLINE below the text via glow and opens
 externally with →. In-app: `n` adds, ENTER edits description, `c` renames,
 `D` deletes; `/` search covers locations.
+
+## The Table, the party's place and adventure tags (v0.3.0)
+
+The Table tab (opens first) shows the ACTIVE adventure (`active_adventure_id`)
+and its `current_section` (▶). Keep these fields right and the GM's screen
+follows:
+
+- `campaign.party_location` (string): where the party is, matched by name
+  (case-insensitive) against `world.json locations[]`. The Table shows that
+  place, the NPCs whose `location` equals it (campaign and world), and the
+  other places with the same `region` as "Nearby". A name not on the map is
+  allowed; it shows as "Not on the map".
+- `npcs[].adventure_id` (optional u64): the adventure an NPC belongs to.
+  Set it when you add an NPC for an adventure. When missing, amar guesses at
+  load: the adventure whose `root_dir` holds the portrait, else the first
+  whose narrative names the NPC. The Book lists the active adventure's NPCs
+  (and untagged ones) first; the rest sit under an "Earlier" fold.
+- `combat.adventure_id` (optional u64): set when a fight starts. Making
+  another adventure active clears the fight.
+- Diary: moving the ▶ keeps ONE line per day that starts with "▶ "
+  (replaced on each move); travel appends "Travelled to X". Leave those
+  lines alone, or edit them like any other diary line.
 
 ## Build
 

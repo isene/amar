@@ -36,6 +36,10 @@ pub struct CombatState {
     pub selected: usize,
     #[serde(default)]
     pub log: Vec<RollEntry>,
+    /// The adventure this fight belongs to. Switching to another
+    /// adventure clears the fight.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adventure_id: Option<u64>,
 }
 
 fn default_round() -> u32 { 1 }

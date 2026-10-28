@@ -4,9 +4,9 @@
 
 **The Amar RPG companion. Written in Rust.**
 
-![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.1.37-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
+![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.0-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
-Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five-tab TUI: a Forge for NPCs / encounters / towns / weather, a persistent Campaign tracker with adventure import and scene images, a live Session HUD, browsable Lore from the canon wiki, and AI-assisted Inspire prompts. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
+Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five tabs: the Table for the game being played now, the shared World, a Combat HUD, browsable Lore from the canon wiki, and the Book that keeps the whole campaign. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
 
 Part of the [Fe₂O₃ Rust terminal suite](https://github.com/isene/fe2o3).
 
@@ -34,12 +34,12 @@ Part of the [Fe₂O₃ Rust terminal suite](https://github.com/isene/fe2o3).
 
 ## Features
 
-- **5-tab TUI**
-  - **Inspire** — AI-assisted brainstorming via `claude -p`
-  - **Forge** — generators for NPCs, encounters, towns, weather; saved-library with `S`
-  - **Campaign** — persistent PCs, NPCs, locations, factions, adventures, calendar
-  - **Session** — live combat HUD, party tracker, session log
+- **5 tabs**
+  - **Table** (opens first) — the active adventure's scenes, the party, where they are, who is there and the places nearby
+  - **World** — the shared places and major NPCs, across all campaigns
+  - **Combat** — live combat HUD
   - **Lore** — browsable canon: mythology, kingdom, world, calendar, spells, rituals, potions
+  - **Book** — the whole campaign: calendar and diary, PCs, NPCs, adventures; other adventures sit under an "Earlier" fold
 - **3-tier d6 character system** (Char + Attribute + Skill = Total) honored throughout
 - **187 wiki entries** scraped from d6gaming.org (spells / rituals / potions), bundled offline
 - **Adventure import**: point at a directory, amar walks `*.md` + `Scenes/` + `Floorplans/` + `NPCs/`, parses heading-level sections, auto-attaches scene images to their sections
@@ -88,7 +88,7 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 
 | Key | Action |
 |-----|--------|
-| 1-5 | Jump to tab (Inspire / Forge / Campaign / Session / Lore) |
+| 1-5 | Jump to tab (Table / World / Combat / Lore / Book) |
 | Ctrl-←/→ | Previous / next tab |
 | TAB | Toggle focus between left and right pane |
 | ESC | Drop focus back to left pane / clear status line |
@@ -99,7 +99,20 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | Ctrl-A | A full Claude session about the campaign, from any tab, as in every Fe₂O₃ app |
 | q / Q | Quit (saves) |
 
-### Campaign tab
+### Table tab
+
+| Key | Action |
+|-----|--------|
+| SPACE / , | Move the current scene (▶) to the next / previous scene; today's diary gets one "▶ scene" line |
+| j / k | Move the cursor; the right pane shows the scene, sheet or place |
+| ENTER | On a scene: make it current. On a PC or NPC: edit it in the Book. On a nearby place: travel there |
+| → / l | Open the scene's image |
+| g | Go to a place (fuzzy name); sets where the party is and writes "Travelled to X" in the diary |
+| f | Fight: the party, the NPCs where the party is and the tag pool, in the Combat tab |
+| ESC | Back to the current scene |
+| / | Search the Book |
+
+### Book tab
 
 | Key | Action |
 |-----|--------|
@@ -128,7 +141,7 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | g / G | First / last item |
 | PgUp / PgDn | Page scroll content |
 
-### Session tab (combat HUD)
+### Combat tab
 
 | Key | Action |
 |-----|--------|

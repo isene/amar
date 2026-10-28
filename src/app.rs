@@ -16,6 +16,9 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
+    /// The game being played now: the active adventure's scenes, the
+    /// party, and where they are. Tab 1 and the opening screen.
+    Table,
     /// The shared world: locations + the major NPCs that exist across
     /// every campaign. Campaigns are time-boxed lenses onto this.
     World,
@@ -31,9 +34,10 @@ pub enum Tab {
 impl Tab {
     fn name(self) -> &'static str {
         match self {
+            Tab::Table => "Table",
             Tab::World => "World",
             Tab::Forge => "Forge",
-            Tab::Campaign => "Campaign",
+            Tab::Campaign => "Book",
             Tab::Lore => "Lore",
             Tab::Inspire => "Inspire",
             Tab::Combat => "Combat",
@@ -43,8 +47,8 @@ impl Tab {
     // the GM runs a companion Claude Code session in a sibling glass
     // window instead, which injects into campaign.json directly (amar
     // picks the edits up live via the mtime watch in run()).
-    fn all() -> [Tab; 4] {
-        [Tab::World, Tab::Campaign, Tab::Combat, Tab::Lore]
+    fn all() -> [Tab; 5] {
+        [Tab::Table, Tab::World, Tab::Combat, Tab::Lore, Tab::Campaign]
     }
     fn next(self) -> Tab {
         let all = Tab::all();
@@ -157,6 +161,9 @@ pub struct App {
     /// flattened tree (Sections + items: PCs, Adventures, …).
     /// `camp_expanded` holds the expanded-sections set.
     pub camp_idx: usize,
+    /// Cursor row on the Table tab. `None` = on the current scene, so
+    /// the screen opens where play stopped.
+    pub table_idx: Option<usize>,
     pub camp_expanded: Vec<String>,
     /// Left-pane width on a 1-6 scale (kastrup convention). Persisted
     /// in GlobalConfig.
@@ -277,6 +284,26 @@ enum CampNode {
     AdventureAsset(usize, AdventureAssetKind, usize),
     /// Placeholder shown under an expanded section that has no items.
     Placeholder { section: CampSection, msg: String },
+    /// The fold holding other adventures (or their NPCs) than the
+    /// active one, under the Adventures or NPCs section.
+    Earlier(CampSection),
+}
+
+/// One selectable row on the Table tab's left pane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TableRow {
+    /// A section of the active adventure.
+    Scene(usize),
+    /// An active PC.
+    Pc(usize),
+    /// Where the party is.
+    Here,
+    /// A campaign NPC at the party's place.
+    Npc(usize),
+    /// A World NPC at the party's place.
+    WorldNpc(usize),
+    /// A place in the same district, as an index into `App::places()`.
+    Place(usize),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -392,7 +419,7 @@ impl App {
         footer.wrap = false;
         footer.scroll = false;
         Self {
-            canon, config, campaign, tab: Tab::Campaign,
+            canon, config, campaign, tab: Tab::Table,
             focus: Focus::Left,
             cols, rows, header, body,
             left_marker, left_pane,
@@ -412,6 +439,7 @@ impl App {
             pending_image: None,
             adv_image_shown: false,
             camp_idx: 0,
+            table_idx: None,
             camp_expanded: vec!["PCs".to_string()],  // PCs auto-expanded on first run
             pane_width,
             sheet_idx: 0,
@@ -496,10 +524,11 @@ impl App {
                     let _ = self.config.save();
                     break;
                 }
-                "1" => { self.set_tab(Tab::World); }
-                "2" => { self.set_tab(Tab::Campaign); }
+                "1" => { self.set_tab(Tab::Table); }
+                "2" => { self.set_tab(Tab::World); }
                 "3" => { self.set_tab(Tab::Combat); }
                 "4" => { self.set_tab(Tab::Lore); }
+                "5" => { self.set_tab(Tab::Campaign); }
                 // O6 rolls into the status line: o = skill roll, O = combat
                 // roll. Not on the Combat tab, where o rolls OFF for the
                 // selected combatant. `6` / `^` remain as aliases.
@@ -620,6 +649,9 @@ impl App {
                     if self.focus == Focus::Right {
                         self.focus = Focus::Left;
                     }
+                    // On the Table, ESC also brings the cursor home to
+                    // the current scene.
+                    if self.tab == Tab::Table { self.table_idx = None; }
                     self.render_all();
                 }
                 other => {
@@ -772,11 +804,12 @@ impl App {
     }
 
     fn tab_has_two_panes(&self) -> bool {
-        matches!(self.tab, Tab::World | Tab::Lore | Tab::Campaign | Tab::Forge)
+        matches!(self.tab, Tab::Table | Tab::World | Tab::Lore | Tab::Campaign | Tab::Forge)
     }
 
     fn handle_tab_key(&mut self, key: &str) {
         match self.tab {
+            Tab::Table    => self.handle_table_key(key),
             Tab::Lore     => self.handle_lore_key(key),
             Tab::Campaign => self.handle_campaign_key(key),
             Tab::World    => self.handle_world_key(key),
@@ -784,6 +817,351 @@ impl App {
             Tab::Inspire  => self.handle_inspire_key(key),
             Tab::Combat   => self.handle_combat_key(key),
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Table tab — the game being played now: the active adventure's
+    // scenes, the party, where they are and what lies near.
+    // ------------------------------------------------------------------
+
+    /// Every place the party can be: campaign locations, then World ones.
+    fn places(&self) -> Vec<&crate::store::Location> {
+        self.campaign.iter().flat_map(|c| c.locations.iter())
+            .chain(self.world.locations.iter())
+            .collect()
+    }
+
+    /// The Table's selectable rows, top to bottom.
+    fn table_rows(&self) -> Vec<TableRow> {
+        let Some(camp) = self.campaign.as_ref() else { return Vec::new() };
+        // The party, their place and the people there first (they stay
+        // on screen), then the scenes and the places nearby.
+        let mut rows: Vec<TableRow> = camp.pcs.iter().enumerate()
+            .filter(|(_, p)| p.active).map(|(i, _)| TableRow::Pc(i)).collect();
+        rows.push(TableRow::Here);
+        let here = camp.party_location.trim().to_lowercase();
+        if !here.is_empty() {
+            rows.extend(camp.npcs.iter().enumerate()
+                .filter(|(_, n)| n.location.to_lowercase() == here).map(|(i, _)| TableRow::Npc(i)));
+            rows.extend(self.world.npcs.iter().enumerate()
+                .filter(|(_, n)| n.location.to_lowercase() == here).map(|(i, _)| TableRow::WorldNpc(i)));
+        }
+        if let Some(ai) = camp.active_adventure_idx() {
+            rows.extend((0..camp.adventures[ai].sections.len()).map(TableRow::Scene));
+        }
+        if here.is_empty() { return rows; }
+        // Nearby = the other places in the same district.
+        let places = self.places();
+        if let Some(region) = places.iter().find(|l| l.name.to_lowercase() == here)
+            .map(|l| l.region.clone()).filter(|r| !r.is_empty())
+        {
+            rows.extend(places.iter().enumerate()
+                .filter(|(_, l)| l.region == region && l.name.to_lowercase() != here)
+                .map(|(i, _)| TableRow::Place(i)));
+        }
+        rows
+    }
+
+    /// The cursor row; `None` resolves to the current scene (or the top).
+    fn table_cursor(&self, rows: &[TableRow]) -> usize {
+        if let Some(i) = self.table_idx { return i.min(rows.len().saturating_sub(1)); }
+        let cur = self.campaign.as_ref()
+            .and_then(|c| c.active_adventure_idx().and_then(|ai| c.adventures[ai].current_section));
+        cur.and_then(|s| rows.iter().position(|r| *r == TableRow::Scene(s)))
+            .or_else(|| rows.iter().position(|r| matches!(r, TableRow::Scene(_))))
+            .unwrap_or(0)
+    }
+
+    fn render_table_panes(&mut self) {
+        if self.campaign.is_none() {
+            // Same "load or create" help as the Book tab.
+            self.render_campaign_panes();
+            return;
+        }
+        let rows = self.table_rows();
+        let cursor = self.table_cursor(&rows);
+        let left_active = self.focus == Focus::Left;
+        let w = (self.left_pane.w as usize).saturating_sub(1).max(10);
+        let (left, cursor_line, pinned, content, portrait) = {
+            let camp = self.campaign.as_ref().unwrap();
+            let ai = camp.active_adventure_idx();
+            let places = self.places();
+            let here = camp.party_location.trim();
+            // Header: adventure and day, then date and weather.
+            let mut left: Vec<String> = Vec::new();
+            let title = match ai.map(|i| &camp.adventures[i]) {
+                Some(a) => {
+                    let lin = |d: crate::calendar::AmarDate|
+                        d.year as i64 * crate::calendar::DAYS_PER_YEAR as i64 + d.day_of_year as i64;
+                    match (a.start, a.end) {
+                        (Some(s), Some(e)) if (lin(s)..=lin(e)).contains(&lin(camp.date)) => format!(" {}  \u{00b7}  day {} of {}",
+                            a.name, lin(camp.date) - lin(s) + 1, lin(e) - lin(s) + 1),
+                        _ => format!(" {}", a.name),
+                    }
+                }
+                None => " No active adventure (Book tab: a)".to_string(),
+            };
+            left.push(style::bold(&crust::truncate_ansi(&title, w)).to_string());
+            let wx = camp.weather_for(camp.date)
+                .map(|x| format!("  \u{00b7}  {} {}", x.weather_emoji(), x.weather_text()))
+                .unwrap_or_default();
+            left.push(style::fg(&crust::truncate_ansi(
+                &format!(" {}{}", camp.date.fmt_header(), wx), w), t::FG_MUTED).to_string());
+            let mut cursor_line = 0;
+            let mut pinned = 0;
+            let mut group = "";
+            for (i, row) in rows.iter().enumerate() {
+                let g = match row {
+                    TableRow::Scene(_) => "Scenes",
+                    TableRow::Pc(_) => "Party",
+                    TableRow::Here | TableRow::Npc(_) | TableRow::WorldNpc(_) => "Here",
+                    TableRow::Place(_) => "Nearby",
+                };
+                if g != group {
+                    left.push(String::new());
+                    left.push(style::fg(&format!(" {}", g), t::STEEL).to_string());
+                    group = g;
+                }
+                let mut muted = false;
+                let mut current = false;
+                let text = match *row {
+                    TableRow::Scene(s) => {
+                        let adv = &camp.adventures[ai.unwrap()];
+                        let sec = &adv.sections[s];
+                        current = adv.current_section == Some(s);
+                        let indent = "  ".repeat(sec.level.saturating_sub(2) as usize);
+                        if crate::adventure::is_stat_block_heading(&sec.heading) {
+                            // A stat block: just the name.
+                            muted = true;
+                            let name = sec.heading.split(" (").next().unwrap_or(&sec.heading);
+                            format!("{}{}", indent, name.split(" - ").next().unwrap_or(name))
+                        } else {
+                            format!("{}{}", indent, sec.heading)
+                        }
+                    }
+                    TableRow::Pc(p) => {
+                        let pc = &camp.pcs[p];
+                        format!("{}  BP {}/{}", pc.name, pc.bp_current, pc.bp_max())
+                    }
+                    TableRow::Here if here.is_empty() => { muted = true; "g sets where the party is".into() }
+                    TableRow::Here => here.to_string(),
+                    TableRow::Npc(n) => format!("  \u{00b7} {}", camp.npcs[n].name),
+                    TableRow::WorldNpc(n) => format!("  \u{00b7} {}", self.world.npcs[n].name),
+                    TableRow::Place(p) => places[p].name.clone(),
+                };
+                let row_text = crust::truncate_ansi(&format!("{} {} {}",
+                    if i == cursor { "\u{2192}" } else { " " },
+                    if current { "\u{25B6}" } else { " " }, text), w);
+                left.push(if i == cursor {
+                    cursor_line = left.len();
+                    if left_active { style::bold(&style::fg(&row_text, t::ACCENT)).to_string() }
+                    else { style::fg(&row_text, t::FG_DIM).to_string() }
+                } else if current {
+                    style::bold(&style::fg(&row_text, t::OK)).to_string()
+                } else if muted {
+                    style::fg(&row_text, t::FG_MUTED).to_string()
+                } else { row_text });
+                if g == "Here" { pinned = left.len(); }
+            }
+            // Right pane: whatever the cursor is on.
+            let mut portrait: Option<(usize, usize, usize, usize, String)> = None;
+            let mut place = |l: &crate::store::Location| {
+                let (mut lines, img) = self.render_location(l);
+                lines.truncate(lines.len().saturating_sub(2)); // drop the Book's key hint
+                if let Some(path) = img {
+                    let row = lines.len() + 1;
+                    let pw = (self.right_pane.w as usize).saturating_sub(4);
+                    let ph = (self.right_pane.h as usize).saturating_sub(row).max(3);
+                    portrait = Some((2, row, pw, ph, path));
+                }
+                lines
+            };
+            let content: Vec<String> = match rows.get(cursor).copied() {
+                Some(TableRow::Scene(s)) => self.render_adventure_section(camp, ai.unwrap(), s).0,
+                Some(TableRow::Here) => match places.iter().find(|l| l.name.eq_ignore_ascii_case(here)) {
+                    Some(l) => place(l),
+                    None if here.is_empty() => vec![String::new(),
+                        "  Press g and type a place to set where the party is.".into()],
+                    None => vec![String::new(), style::bold(&style::fg(&format!(" {}", here), t::ACCENT)).to_string(),
+                        style::fg("   Not on the map: add it in the World tab.", t::FG_MUTED).to_string()],
+                },
+                Some(TableRow::Place(p)) => place(places[p]),
+                Some(TableRow::Pc(_) | TableRow::Npc(_) | TableRow::WorldNpc(_)) => {
+                    let ch = match rows[cursor] {
+                        TableRow::Pc(i) => &camp.pcs[i],
+                        TableRow::Npc(i) => &camp.npcs[i],
+                        TableRow::WorldNpc(i) => &self.world.npcs[i],
+                        _ => unreachable!(),
+                    };
+                    let (lines, _, port) = self.render_pc_sheet(ch, None);
+                    portrait = port;
+                    lines
+                }
+                None => vec![],
+            };
+            (left, cursor_line, pinned, content, portrait)
+        };
+        // The lines down to the party's place stay put; the rest scrolls
+        // to keep the cursor in view.
+        let (top, rest) = left.split_at(pinned.min(left.len()));
+        let room = (self.left_pane.h as usize).saturating_sub(top.len()).max(1);
+        let off = scroll_offset(cursor_line.saturating_sub(top.len()), rest.len(), room);
+        let shown: Vec<&String> = top.iter().chain(rest.iter().skip(off).take(room)).collect();
+        self.left_pane.set_text(&shown.iter().map(|l| l.as_str()).collect::<Vec<_>>().join("\n"));
+        self.left_pane.ix = 0;
+        self.left_pane.full_refresh();
+        self.right_pane.set_text(&content.join("\n"));
+        self.right_pane.full_refresh();
+        match portrait {
+            Some((col, row, w, h, path)) => self.overlay_portrait(col, row, w, h, &path),
+            None => if self.adv_image_shown { self.clear_overlay_image(); },
+        }
+    }
+
+    fn handle_table_key(&mut self, key: &str) {
+        match key {
+            "S-DOWN"  => { self.right_pane.linedown(); return; }
+            "S-UP"    => { self.right_pane.lineup();   return; }
+            "S-RIGHT" => { self.right_pane.pagedown(); return; }
+            "S-LEFT"  => { self.right_pane.pageup();   return; }
+            _ => {}
+        }
+        if self.focus == Focus::Right {
+            match key {
+                "j" | "DOWN" => self.right_pane.linedown(),
+                "k" | "UP"   => self.right_pane.lineup(),
+                "PgDOWN" | " " | "SPACE" => self.right_pane.pagedown(),
+                "PgUP" => self.right_pane.pageup(),
+                "g" | "HOME" => self.right_pane.ix = 0,
+                _ => {}
+            }
+            return;
+        }
+        let rows = self.table_rows();
+        let cur = self.table_cursor(&rows);
+        let go = |app: &mut App, i: usize| {
+            app.table_idx = Some(i);
+            app.right_pane.ix = 0;
+        };
+        match key {
+            "j" | "DOWN" if cur + 1 < rows.len() => go(self, cur + 1),
+            "k" | "UP" if cur > 0 => go(self, cur - 1),
+            "PgDOWN" => go(self, (cur + 10).min(rows.len().saturating_sub(1))),
+            "PgUP" => go(self, cur.saturating_sub(10)),
+            "HOME" => go(self, 0),
+            "END" => go(self, rows.len().saturating_sub(1)),
+            " " | "SPACE" => self.table_step_scene(true),
+            "," => self.table_step_scene(false),
+            "g" => self.table_go(),
+            "f" => {
+                let extra = self.campaign.as_ref().map(|c| {
+                    let here = c.party_location.trim().to_lowercase();
+                    (0..c.npcs.len())
+                        .filter(|i| !here.is_empty() && c.npcs[*i].location.to_lowercase() == here)
+                        .map(crate::store::CombatRef::Npc).collect()
+                }).unwrap_or_default();
+                self.combat_launch(extra);
+            }
+            "/" => { self.set_tab(Tab::Campaign); self.campaign_search(); }
+            "ENTER" | "l" | "RIGHT" => {
+                let Some(row) = rows.get(cur).copied() else { return };
+                match (row, key) {
+                    (TableRow::Scene(s), "ENTER") => {
+                        if let Some(ai) = self.campaign.as_ref().and_then(|c| c.active_adventure_idx()) {
+                            self.adventure_jump_to_section(ai, s);
+                            self.table_idx = None;
+                        }
+                    }
+                    (TableRow::Scene(s), _) => {
+                        let path = self.campaign.as_ref().and_then(|c| {
+                            let adv = &c.adventures[c.active_adventure_idx()?];
+                            Some(adv.absolute(adv.sections.get(s)?.attached_images.first()?))
+                        });
+                        match path {
+                            Some(p) => self.open_in_viewer(&p),
+                            None => self.status_msg("No image for this scene.", t::WARN),
+                        }
+                    }
+                    (TableRow::Pc(i), _) => self.book_open(CampNode::Pc(i), "PCs"),
+                    (TableRow::Npc(i), _) => self.book_open(CampNode::Npc(i), "NPCs"),
+                    (TableRow::Place(p), "ENTER") => {
+                        let name = self.places()[p].name.clone();
+                        self.travel_to(&name);
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// SPACE / `,` — move the current-scene marker to the next or
+    /// previous scene, skipping NPC stat blocks.
+    fn table_step_scene(&mut self, forward: bool) {
+        let Some((ai, next)) = self.campaign.as_ref().and_then(|c| {
+            let ai = c.active_adventure_idx()?;
+            let adv = &c.adventures[ai];
+            let scene = |i: &usize| !crate::adventure::is_stat_block_heading(&adv.sections[*i].heading);
+            let n = adv.sections.len();
+            Some((ai, match (adv.current_section, forward) {
+                (None, true) => (0..n).find(scene),
+                (None, false) => None,
+                (Some(c), true) => (c + 1..n).find(scene),
+                (Some(c), false) => (0..c).rev().find(scene),
+            }))
+        }) else {
+            self.status_msg("No active adventure: press a on one in the Book tab.", t::WARN);
+            return;
+        };
+        match next {
+            Some(s) => {
+                self.adventure_jump_to_section(ai, s);
+                self.table_idx = None;
+                self.right_pane.ix = 0;
+            }
+            None => self.status_msg(if forward { "That was the last scene." } else { "This is the first scene." }, t::WARN),
+        }
+    }
+
+    /// `g` — ask where the party goes; a known place wins over the typed text.
+    fn table_go(&mut self) {
+        let Some(q) = self.footer.ask_or_cancel(" Go to: ", "") else { return };
+        let q = q.trim();
+        if q.is_empty() { return; }
+        let ql = q.to_lowercase();
+        let name = self.places().iter()
+            .filter_map(|l| name_match_score(&ql, &l.name).filter(|s| *s < 5000).map(|s| (s, &l.name)))
+            .min_by_key(|(s, _)| *s)
+            .map(|(_, n)| n.clone())
+            .unwrap_or_else(|| q.to_string());
+        self.travel_to(&name);
+    }
+
+    /// Set where the party is and note the trip in the diary.
+    fn travel_to(&mut self, name: &str) {
+        let Some(c) = self.campaign.as_mut() else { return };
+        if c.party_location.eq_ignore_ascii_case(name) {
+            self.status_msg(&format!("Already in {}.", name), t::WARN);
+            return;
+        }
+        c.party_location = name.to_string();
+        let d = c.date;
+        c.add_diary(d, &format!("Travelled to {}", name));
+        let _ = c.save();
+        self.table_idx = self.table_rows().iter().position(|r| *r == TableRow::Here);
+        self.right_pane.ix = 0;
+        self.status_msg(&format!("The party is in {}.", name), t::OK);
+    }
+
+    /// Open a PC or NPC in the Book tab, with its section unfolded.
+    fn book_open(&mut self, node: CampNode, section: &str) {
+        if !self.camp_expanded.iter().any(|e| e == section) {
+            self.camp_expanded.push(section.to_string());
+        }
+        let idx = self.campaign.as_ref().and_then(|c| build_camp_tree(c, &self.camp_expanded)
+            .iter().position(|t| t.node == node));
+        if let Some(i) = idx { self.camp_idx = i; }
+        self.set_tab(Tab::Campaign);
     }
 
 
@@ -796,7 +1174,11 @@ impl App {
     /// Launch a fresh combat from the tag pool + all active campaign
     /// PCs. Confirms before scrubbing an in-progress combat. Drains
     /// the tag pool, populates the CombatState, jumps to Combat tab.
-    fn combat_launch_from_tags(&mut self) {
+    fn combat_launch_from_tags(&mut self) { self.combat_launch(Vec::new()); }
+
+    /// Start a fight: the tag pool, then `extra` (`f` on the Table adds
+    /// the NPCs where the party is), then every active PC.
+    fn combat_launch(&mut self, extra: Vec<crate::store::CombatRef>) {
         if self.campaign.as_ref()
             .map(|c| c.combat.is_some()).unwrap_or(false)
         {
@@ -809,6 +1191,9 @@ impl App {
         // then every ACTIVE PC not already present. PCs toggled
         // inactive (`a` on the roster row) sit the fight out.
         let mut refs: Vec<crate::store::CombatRef> = c.tagged.refs.clone();
+        for r in extra {
+            if !refs.contains(&r) { refs.push(r); }
+        }
         for i in 0..c.pcs.len() {
             if !c.pcs[i].active { continue; }
             let r = crate::store::CombatRef::Pc(i);
@@ -824,6 +1209,7 @@ impl App {
         let mut cb = crate::combat::CombatState::new();
         cb.participants = participants;
         cb.selected = 0;
+        cb.adventure_id = c.active_adventure_id;
         c.combat = Some(cb);
         c.tagged.clear();
         let n = c.combat.as_ref().map(|x| x.participants.len()).unwrap_or(0);
@@ -2977,9 +3363,14 @@ impl App {
             let id = c.adventures.get(adv_idx).map(|a| a.id);
             if let Some(id) = id {
                 c.active_adventure_id = Some(id);
+                // A fight belongs to its adventure: leave it behind.
+                let cleared = c.combat.as_ref().map(|cb| cb.adventure_id != Some(id)).unwrap_or(false);
+                if cleared { c.combat = None; }
                 let _ = c.save();
                 let name = c.adventures[adv_idx].name.clone();
-                self.status_msg(&format!("Active adventure: '{}'", name), t::OK);
+                let note = if cleared { " (the old fight is cleared)" } else { "" };
+                self.table_idx = None;
+                self.status_msg(&format!("Active adventure: '{}'{}", name, note), t::OK);
             }
         }
     }
@@ -3141,6 +3532,8 @@ impl App {
     fn expand_key_for_node(&self, node: &CampNode, camp: &Campaign) -> Option<String> {
         match node {
             CampNode::Section(sec) => Some(sec.id().to_string()),
+            CampNode::Earlier(CampSection::Npcs) => Some("earlier:npc".into()),
+            CampNode::Earlier(_) => Some("earlier:adv".into()),
             CampNode::Adventure(i) => camp.adventures.get(*i)
                 .map(|a| format!("adv:{}", a.id)),
             CampNode::AdventureGroup(i, kind) => camp.adventures.get(*i)
@@ -3198,6 +3591,7 @@ impl App {
             CampNode::Location(_) => Some(CampSection::Locations),
             CampNode::SavedForge(_, _) => Some(CampSection::SavedForge),
             CampNode::Placeholder { section, .. } => Some(*section),
+            CampNode::Earlier(section) => Some(*section),
         };
         let target_section = target_section?;
         tree.iter().position(|it| matches!(&it.node,
@@ -4304,6 +4698,7 @@ impl App {
             // delegate left+right content to the per-tab renderer.
             self.paint_focus_markers();
             match self.tab {
+                Tab::Table    => self.render_table_panes(),
                 Tab::World    => self.render_world_panes(),
                 Tab::Lore     => self.render_lore_panes(),
                 Tab::Campaign => self.render_campaign_panes(),
@@ -4440,6 +4835,10 @@ impl App {
             return;
         }
         let hint = match self.tab {
+            Tab::Table    => match self.focus {
+                Focus::Left  => " SPACE/,:next/prev scene  j/k:move  ENTER:play/open  \u{2192}:img  g:go to  f:fight  ESC:home  TAB:focus  ?:help",
+                Focus::Right => " TAB:focus-list  j/k:line  PgUp/PgDn:page  ESC:home",
+            },
             Tab::World    => match self.focus {
                 Focus::Left  => " TAB:focus  /:search  j/k:tree  l/h:expand  ENTER:edit-desc  \u{2192}:img  C-\u{2191}\u{2193}:move  o/O:roll  ?:help",
                 Focus::Right => " TAB:focus-tree  j/k:line  PgUp/PgDn:page  g/G:top/end  o/O:roll",
@@ -5207,6 +5606,8 @@ impl App {
             Some(CampNode::Placeholder { msg, .. }) => {
                 vec![String::new(), style::fg(&format!("  {}", msg), t::FG_MUTED).to_string()]
             }
+            Some(CampNode::Earlier(_)) => vec![String::new(), style::fg(
+                "  Other adventures than the active one. l opens the fold.", t::FG_MUTED).to_string()],
             None => vec![],
         };
         // EITHER text OR image, never both (an image overlaid on top of the
@@ -5853,14 +6254,17 @@ impl App {
     /// active. Saves the campaign so the next launch resumes here.
     fn adventure_jump_to_section(&mut self, adv_idx: usize, sec_idx: usize) {
         if let Some(c) = self.campaign.as_mut() {
-            let adv_id = match c.adventures.get_mut(adv_idx) {
+            let (adv_id, line) = match c.adventures.get_mut(adv_idx) {
                 Some(adv) => {
                     adv.current_section = Some(sec_idx);
-                    adv.id
+                    let heading = adv.sections.get(sec_idx).map(|s| s.heading.clone()).unwrap_or_default();
+                    (adv.id, format!("{}: {}", adv.name, heading))
                 }
                 None => return,
             };
             c.active_adventure_id = Some(adv_id);
+            let d = c.date;
+            c.set_scene_line(d, &line);
             let _ = c.save();
         }
         self.status_msg("Section marked current.", t::OK);
@@ -7276,17 +7680,18 @@ impl App {
     fn show_help(&mut self) {
         let help = format!("\n  \
             amar v{} - Amar RPG companion\n  \
-            4-tab TUI honoring d6gaming.org canon.\n\n  \
+            5-tab TUI honoring d6gaming.org canon.\n\n  \
             TABS\n  \
-              1   World      The shared world — locations + major NPCs (all campaigns)\n  \
-              2   Campaign   One campaign — calendar/diary, PCs, its NPCs, adventures\n  \
+              1   Table      The game now — active adventure, party, where they are\n  \
+              2   World      The shared world — locations + major NPCs (all campaigns)\n  \
               3   Combat     Combat HUD — populated from encounters + active PCs\n  \
               4   Lore       Browsable canon (wiki + setting + author additions)\n  \
+              5   Book       The whole campaign — calendar/diary, PCs, NPCs, adventures\n  \
               (Forge + Inspire retired as tabs — run a companion Claude Code\n  \
                session in a sibling window; amar picks up campaign.json edits\n  \
                live, on the next keypress.)\n\n  \
             NAVIGATION\n  \
-              1-4            Jump to tab\n  \
+              1-5            Jump to tab\n  \
               C-RIGHT/LEFT   Next / previous tab\n  \
               TAB            Toggle focus between left + right pane\n  \
               ESC            Drop focus back to left pane\n  \
@@ -7294,7 +7699,17 @@ impl App {
               j / k          Down / up (Down/Up walk this help line-by-line)\n  \
               ?              This help\n  \
               C-A            A full Claude session about the campaign\n\n  \
-            WORLD (tab 1)\n  \
+            TABLE (tab 1, the opening screen)\n  \
+              SPACE / ,      Next / previous scene (moves \u{25B6}; today's diary\n  \
+                             keeps one \u{201c}\u{25B6} scene\u{201d} line)\n  \
+              j / k          Move; the right pane shows scene, sheet or place\n  \
+              ENTER          Scene: make current. PC/NPC: edit in the Book.\n  \
+                             Nearby place: travel there\n  \
+              \u{2192} / l          Open the scene's image\n  \
+              g              Go to a place (sets Here, diary \u{201c}Travelled to X\u{201d})\n  \
+              f              Fight: party + NPCs here + tag pool, in Combat\n  \
+              ESC            Back to the current scene\n\n  \
+            WORLD (tab 2)\n  \
               ONE tree: region folds \u{2192} locations \u{2192} each location's\n  \
               NPCs nested beneath it. \u{201c}Other\u{201d} holds the unbound\n  \
               (travellers etc.). Folds work like a hyperlist \u{2014} l/ENTER\n  \
@@ -7310,12 +7725,13 @@ impl App {
               ,              Step the current day back (removes the underline)\n  \
               T              Set the current day to the selected day\n  \
               g              Jump back to the current day\n\n  \
-            CAMPAIGN\n  \
+            BOOK (tab 5; other adventures and their NPCs fold under \u{201c}Earlier\u{201d})\n  \
               C       Create a new campaign   L  Load   X  Delete (asks twice)\n  \
               e/ENTER Edit the cursor adventure's narrative in scribe\n  \
               a       On a PC row: toggle the PC ACTIVE/inactive (inactive\n  \
                       PCs are dimmed and sit out combats).\n  \
-                      On an adventure: mark it ACTIVE (persists).\n  \
+                      On an adventure: mark it ACTIVE (persists; a fight\n  \
+                      from another adventure is cleared).\n  \
               c       On a saved encounter: take the whole encounter + the\n  \
                       active PCs into COMBAT. Elsewhere: rename the asset.\n  \
               /       Search — jump to the closest matching PC / NPC /\n  \
@@ -8052,133 +8468,23 @@ fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
                         expandable: false, expanded: false,
                     });
                 } else {
-                    // Each adventure is depth-1 and expandable; the
-                    // expansion key is "adv:<id>" so it survives
-                    // re-ordering.
-                    for (i, adv) in camp.adventures.iter().enumerate() {
-                        let adv_id_key = format!("adv:{}", adv.id);
-                        let adv_expanded = expanded.iter().any(|e| e == &adv_id_key);
-                        out.push(CampTreeItem {
-                            node: CampNode::Adventure(i),
-                            depth: 1,
-                            expandable: true, expanded: adv_expanded,
-                        });
-                        if !adv_expanded { continue; }
-                        // Adventure sub-groups: Sections / Scenes /
-                        // Floorplans / NPC Portraits / NPC Docs.
-                        // Each group is itself expandable so the tree
-                        // stays scannable when an adventure has 30+
-                        // assets in one bucket.
-                        for (kind, count, label) in [
-                            (AdventureGroupKind::Sections,     adv.sections.len(),       "Sections"),
-                            (AdventureGroupKind::Scenes,       adv.scenes.len(),         "Scenes"),
-                            (AdventureGroupKind::Floorplans,   adv.floorplans.len(),     "Floorplans"),
-                            (AdventureGroupKind::NpcPortraits, adv.npc_portraits.len(),  "NPC portraits"),
-                            (AdventureGroupKind::NpcDocs,      adv.npc_docs.len(),       "NPC docs"),
-                        ] {
-                            let _ = label;
-                            if count == 0 { continue; }
-                            let grp_key = format!("adv:{}:{:?}", adv.id, kind);
-                            let grp_expanded = expanded.iter().any(|e| e == &grp_key);
-                            out.push(CampTreeItem {
-                                node: CampNode::AdventureGroup(i, kind),
-                                depth: 2,
-                                expandable: true, expanded: grp_expanded,
-                            });
-                            if !grp_expanded { continue; }
-                            // Leaves.
-                            match kind {
-                                AdventureGroupKind::Sections => {
-                                    // Nest sub-sections by markdown
-                                    // heading level: ## sections sit
-                                    // at depth 3, ### at depth 4,
-                                    // #### at depth 5, etc. A parent
-                                    // section can collapse to hide
-                                    // its children — same key shape
-                                    // as everything else:
-                                    // "advsec:<adv_id>:<line_start>".
-                                    // Visible-stack tracks which
-                                    // levels are currently open so
-                                    // we skip emitting deeper rows
-                                    // under a collapsed parent.
-                                    //
-                                    // The cursor-on-a-closed-row
-                                    // gracefully stops it growing.
-                                    let mut visible_stack: Vec<(u8, bool)> = Vec::new();
-                                    for j in 0..adv.sections.len() {
-                                        let sec = &adv.sections[j];
-                                        let level = sec.level.max(2);
-                                        // Pop stack down to anything
-                                        // higher than current level.
-                                        while visible_stack.last()
-                                            .map(|(l, _)| *l >= level).unwrap_or(false)
-                                        {
-                                            visible_stack.pop();
-                                        }
-                                        let parent_visible = visible_stack.iter().all(|(_, e)| *e);
-                                        if !parent_visible {
-                                            // Still push self onto
-                                            // stack with expanded=false
-                                            // so deeper levels stay
-                                            // hidden too.
-                                            visible_stack.push((level, false));
-                                            continue;
-                                        }
-                                        let has_children = section_has_children(adv, j);
-                                        let key = format!("advsec:{}:{}",
-                                            adv.id, sec.line_start);
-                                        let expanded = expanded.iter().any(|e| e == &key);
-                                        // Map markdown level to tree
-                                        // depth. Anchor ## (level 2)
-                                        // at depth 3 (under the
-                                        // Sections group at depth 2).
-                                        let depth = (level - 2 + 3) as u8;
-                                        out.push(CampTreeItem {
-                                            node: CampNode::AdventureSection(i, j),
-                                            depth,
-                                            expandable: has_children,
-                                            expanded,
-                                        });
-                                        visible_stack.push((level, expanded));
-                                    }
-                                }
-                                AdventureGroupKind::Scenes => {
-                                    for j in 0..adv.scenes.len() {
-                                        out.push(CampTreeItem {
-                                            node: CampNode::AdventureAsset(i, AdventureAssetKind::Scene, j),
-                                            depth: 3,
-                                            expandable: false, expanded: false,
-                                        });
-                                    }
-                                }
-                                AdventureGroupKind::Floorplans => {
-                                    for j in 0..adv.floorplans.len() {
-                                        out.push(CampTreeItem {
-                                            node: CampNode::AdventureAsset(i, AdventureAssetKind::Floorplan, j),
-                                            depth: 3,
-                                            expandable: false, expanded: false,
-                                        });
-                                    }
-                                }
-                                AdventureGroupKind::NpcPortraits => {
-                                    for j in 0..adv.npc_portraits.len() {
-                                        out.push(CampTreeItem {
-                                            node: CampNode::AdventureAsset(i, AdventureAssetKind::NpcPortrait, j),
-                                            depth: 3,
-                                            expandable: false, expanded: false,
-                                        });
-                                    }
-                                }
-                                AdventureGroupKind::NpcDocs => {
-                                    for j in 0..adv.npc_docs.len() {
-                                        out.push(CampTreeItem {
-                                            node: CampNode::AdventureAsset(i, AdventureAssetKind::NpcDoc, j),
-                                            depth: 3,
-                                            expandable: false, expanded: false,
-                                        });
-                                    }
-                                }
-                            }
+                    // Each adventure is expandable; the expansion key
+                    // is "adv:<id>" so it survives re-ordering.
+                    // The active adventure first, the rest under an
+                    // "Earlier" fold so they stay out of the way.
+                    let active = camp.active_adventure_idx();
+                    if let Some(a) = active {
+                        push_adventure_rows(&mut out, &camp.adventures[a], a, 1, expanded);
+                    }
+                    let rest: Vec<usize> = (0..camp.adventures.len()).filter(|i| Some(*i) != active).collect();
+                    if active.is_none() {
+                        for i in rest { push_adventure_rows(&mut out, &camp.adventures[i], i, 1, expanded); }
+                    } else if !rest.is_empty() {
+                        let open = expanded.iter().any(|e| e == "earlier:adv");
+                        out.push(CampTreeItem { node: CampNode::Earlier(sec), depth: 1,
+                            expandable: true, expanded: open });
+                        if open {
+                            for i in rest { push_adventure_rows(&mut out, &camp.adventures[i], i, 2, expanded); }
                         }
                     }
                 }
@@ -8192,12 +8498,25 @@ fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
                         expandable: false, expanded: false,
                     });
                 } else {
-                    for i in 0..camp.npcs.len() {
-                        out.push(CampTreeItem {
-                            node: CampNode::Npc(i),
-                            depth: 1,
-                            expandable: false, expanded: false,
-                        });
+                    // NPCs of the active adventure (and untagged ones)
+                    // first; other adventures' NPCs under "Earlier".
+                    let mine = |n: &crate::pc::Character| camp.active_adventure_id.is_none()
+                        || n.adventure_id.is_none() || n.adventure_id == camp.active_adventure_id;
+                    for i in (0..camp.npcs.len()).filter(|i| mine(&camp.npcs[*i])) {
+                        out.push(CampTreeItem { node: CampNode::Npc(i), depth: 1,
+                            expandable: false, expanded: false });
+                    }
+                    let rest: Vec<usize> = (0..camp.npcs.len()).filter(|i| !mine(&camp.npcs[*i])).collect();
+                    if !rest.is_empty() {
+                        let open = expanded.iter().any(|e| e == "earlier:npc");
+                        out.push(CampTreeItem { node: CampNode::Earlier(sec), depth: 1,
+                            expandable: true, expanded: open });
+                        if open {
+                            for i in rest {
+                                out.push(CampTreeItem { node: CampNode::Npc(i), depth: 2,
+                                    expandable: false, expanded: false });
+                            }
+                        }
                     }
                 }
             }
@@ -8269,6 +8588,137 @@ fn build_camp_tree(camp: &Campaign, expanded: &[String]) -> Vec<CampTreeItem> {
         }
     }
     out
+}
+
+/// The tree rows for one adventure, its groups and leaves, with the
+/// adventure itself at `base` depth.
+fn push_adventure_rows(out: &mut Vec<CampTreeItem>, adv: &crate::adventure::Adventure,
+    i: usize, base: u8, expanded: &[String])
+{
+    let adv_id_key = format!("adv:{}", adv.id);
+    let adv_expanded = expanded.iter().any(|e| e == &adv_id_key);
+    out.push(CampTreeItem {
+        node: CampNode::Adventure(i),
+        depth: base,
+        expandable: true, expanded: adv_expanded,
+    });
+    if !adv_expanded { return; }
+    // Adventure sub-groups: Sections / Scenes /
+    // Floorplans / NPC Portraits / NPC Docs.
+    // Each group is itself expandable so the tree
+    // stays scannable when an adventure has 30+
+    // assets in one bucket.
+    for (kind, count, label) in [
+        (AdventureGroupKind::Sections,     adv.sections.len(),       "Sections"),
+        (AdventureGroupKind::Scenes,       adv.scenes.len(),         "Scenes"),
+        (AdventureGroupKind::Floorplans,   adv.floorplans.len(),     "Floorplans"),
+        (AdventureGroupKind::NpcPortraits, adv.npc_portraits.len(),  "NPC portraits"),
+        (AdventureGroupKind::NpcDocs,      adv.npc_docs.len(),       "NPC docs"),
+    ] {
+        let _ = label;
+        if count == 0 { continue; }
+        let grp_key = format!("adv:{}:{:?}", adv.id, kind);
+        let grp_expanded = expanded.iter().any(|e| e == &grp_key);
+        out.push(CampTreeItem {
+            node: CampNode::AdventureGroup(i, kind),
+            depth: base + 1,
+            expandable: true, expanded: grp_expanded,
+        });
+        if !grp_expanded { continue; }
+        // Leaves.
+        match kind {
+            AdventureGroupKind::Sections => {
+                // Nest sub-sections by markdown
+                // heading level: ## sections sit
+                // at depth 3, ### at depth 4,
+                // #### at depth 5, etc. A parent
+                // section can collapse to hide
+                // its children — same key shape
+                // as everything else:
+                // "advsec:<adv_id>:<line_start>".
+                // Visible-stack tracks which
+                // levels are currently open so
+                // we skip emitting deeper rows
+                // under a collapsed parent.
+                //
+                // The cursor-on-a-closed-row
+                // gracefully stops it growing.
+                let mut visible_stack: Vec<(u8, bool)> = Vec::new();
+                for j in 0..adv.sections.len() {
+                    let sec = &adv.sections[j];
+                    let level = sec.level.max(2);
+                    // Pop stack down to anything
+                    // higher than current level.
+                    while visible_stack.last()
+                        .map(|(l, _)| *l >= level).unwrap_or(false)
+                    {
+                        visible_stack.pop();
+                    }
+                    let parent_visible = visible_stack.iter().all(|(_, e)| *e);
+                    if !parent_visible {
+                        // Still push self onto
+                        // stack with expanded=false
+                        // so deeper levels stay
+                        // hidden too.
+                        visible_stack.push((level, false));
+                        continue;
+                    }
+                    let has_children = section_has_children(adv, j);
+                    let key = format!("advsec:{}:{}",
+                        adv.id, sec.line_start);
+                    let expanded = expanded.iter().any(|e| e == &key);
+                    // Map markdown level to tree
+                    // depth. Anchor ## (level 2)
+                    // at depth 3 (under the
+                    // Sections group at depth 2).
+                    let depth = level - 2 + base + 2;
+                    out.push(CampTreeItem {
+                        node: CampNode::AdventureSection(i, j),
+                        depth,
+                        expandable: has_children,
+                        expanded,
+                    });
+                    visible_stack.push((level, expanded));
+                }
+            }
+            AdventureGroupKind::Scenes => {
+                for j in 0..adv.scenes.len() {
+                    out.push(CampTreeItem {
+                        node: CampNode::AdventureAsset(i, AdventureAssetKind::Scene, j),
+                        depth: base + 2,
+                        expandable: false, expanded: false,
+                    });
+                }
+            }
+            AdventureGroupKind::Floorplans => {
+                for j in 0..adv.floorplans.len() {
+                    out.push(CampTreeItem {
+                        node: CampNode::AdventureAsset(i, AdventureAssetKind::Floorplan, j),
+                        depth: base + 2,
+                        expandable: false, expanded: false,
+                    });
+                }
+            }
+            AdventureGroupKind::NpcPortraits => {
+                for j in 0..adv.npc_portraits.len() {
+                    out.push(CampTreeItem {
+                        node: CampNode::AdventureAsset(i, AdventureAssetKind::NpcPortrait, j),
+                        depth: base + 2,
+                        expandable: false, expanded: false,
+                    });
+                }
+            }
+            AdventureGroupKind::NpcDocs => {
+                for j in 0..adv.npc_docs.len() {
+                    out.push(CampTreeItem {
+                        node: CampNode::AdventureAsset(i, AdventureAssetKind::NpcDoc, j),
+                        depth: base + 2,
+                        expandable: false, expanded: false,
+                    });
+                }
+            }
+        }
+    }
 }
 
 /// Title shown in the left pane for one tree node.
@@ -8376,6 +8826,15 @@ fn camp_node_title(camp: &Campaign, node: &CampNode) -> String {
         CampNode::Npc(idx) => {
             camp.npcs.get(*idx).map(|n| n.name.clone())
                 .unwrap_or_else(|| "(missing NPC)".to_string())
+        }
+        CampNode::Earlier(sec) => {
+            let active = camp.active_adventure_id;
+            let n = match sec {
+                CampSection::Npcs => camp.npcs.iter()
+                    .filter(|n| n.adventure_id.is_some() && n.adventure_id != active).count(),
+                _ => camp.adventures.len().saturating_sub(1),
+            };
+            format!("Earlier ({})", n)
         }
         CampNode::Location(idx) => camp.locations.get(*idx)
             .map(|l| if l.kind.is_empty() { l.name.clone() }
@@ -9509,5 +9968,42 @@ mod search_tests {
         let a = name_match_score("durgan", "Durgan Stonehand").unwrap();
         let b = name_match_score("durgan", "Durgan Stonehand the Elder of Borgheim").unwrap();
         assert!(a < b);
+    }
+}
+
+#[cfg(test)]
+mod tree_tests {
+    use super::*;
+
+    fn sec(heading: &str, level: u8, line: usize) -> crate::adventure::AdventureSection {
+        crate::adventure::AdventureSection { heading: heading.into(), level,
+            line_start: line, line_end: line, ..Default::default() }
+    }
+
+    #[test]
+    fn earlier_adventures_fold_and_keep_all_sections() {
+        let mut c = Campaign::new("t");
+        for id in [1u64, 2] {
+            let mut a = crate::adventure::Adventure::default();
+            a.id = id;
+            a.name = format!("A{}", id);
+            a.sections = vec![sec("One", 2, 1), sec("Sub", 3, 2), sec("Two", 2, 3)];
+            c.adventures.push(a);
+        }
+        c.active_adventure_id = Some(2);
+        let mut open: Vec<String> = vec!["Adventures".into()];
+        let names = |open: &[String]| build_camp_tree(&c, open).iter()
+            .map(|t| camp_node_title(&c, &t.node)).collect::<Vec<_>>();
+        // The active adventure first, the other one folded away.
+        let rows = names(&open);
+        assert!(rows.iter().any(|r| r.ends_with("A2")));
+        assert!(rows.iter().any(|r| r == "Earlier (1)"));
+        assert!(!rows.iter().any(|r| r.ends_with("A1")));
+        // Open the fold, the adventure and its sections: both ## rows show.
+        open.extend(["earlier:adv", "adv:1", "adv:1:Sections"].map(String::from));
+        let tree = build_camp_tree(&c, &open);
+        let shown: Vec<_> = tree.iter().filter(|t| matches!(t.node, CampNode::AdventureSection(0, _)))
+            .map(|t| t.depth).collect();
+        assert_eq!(shown, vec![4, 4]);
     }
 }
