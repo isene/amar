@@ -2,7 +2,9 @@
 //! default Fe2O3 "bright cyan + bright yellow + gray" scheme, which
 //! reads as a debugging tool rather than a fantasy companion. This
 //! module routes every colour through named constants tuned for the
-//! kingdom's tone: deep forest, slate steel, warm tan, parchment.
+//! kingdom's tone: green for what is live (cursor, active tab, the
+//! current scene), brown for structure (headings, rules), parchment
+//! for text.
 //!
 //! Numbers are xterm-256 indices, chosen so the palette renders
 //! consistently across xterm/wezterm/kitty without requiring true
@@ -27,11 +29,10 @@ pub const BG_BAR: u8 = 236;
 
 // --- Fantasy accents -----------------------------------------------
 
-/// Primary highlight — warm copper-gold. Active tab, cursor, primary
-/// callouts. Replaces the original bright yellow (226).
-pub const ACCENT: u8 = 215;
-/// Stronger amber for bold focus markers and the +1 critical line.
-pub const AMBER: u8 = 222;
+/// Primary highlight — fresh leaf green. Active tab, cursor, titles.
+pub const ACCENT: u8 = 114;
+/// Light tan brown — sub-headings and secondary callouts.
+pub const AMBER: u8 = 180;
 
 /// Forest green — section titles, success status, weather banner.
 pub const FOREST: u8 = 71;
@@ -46,8 +47,8 @@ pub const SKY: u8 = 109;
 
 /// Warm tan / leather brown — character & NPC headings.
 pub const TAN: u8 = 137;
-/// Deeper bark brown — table rules and decorative dividers.
-pub const BARK: u8 = 95;
+/// Deeper bark brown — rules and decorative dividers.
+pub const BARK: u8 = 94;
 
 // --- Status -------------------------------------------------------
 
@@ -58,6 +59,6 @@ pub const WARN: u8 = 173;
 /// Error — faded brick, replaces the original bright red (196).
 pub const ERR: u8 = 131;
 /// Info / progress — slate steel.
-pub const INFO: u8 = STEEL;
+pub const INFO: u8 = TAN;
 /// Bright callout for critical/celebration moments.
 pub const CALLOUT: u8 = ACCENT;

@@ -691,7 +691,7 @@ impl App {
         let label = if combat { "Combat" } else { "Skill " };
         let mut parts = Vec::<String>::new();
         // Header label.
-        parts.push(style::fg(label, t::STEEL).to_string());
+        parts.push(style::fg(label, t::TAN).to_string());
         // Total — bold-bright, color-coded by outcome.
         let (total_color, tag, status_color) = match r.outcome {
             dice::Outcome::Critical => (46u8,  " CRITICAL", 46u8),
@@ -751,7 +751,7 @@ impl App {
         self.config.pane_width = self.pane_width;
         let _ = self.config.save();
         self.rebuild_panes();
-        self.status_msg(&format!("Pane width: {} / 6", self.pane_width), t::STEEL);
+        self.status_msg(&format!("Pane width: {} / 6", self.pane_width), t::TAN);
         self.render_all();
     }
 
@@ -887,26 +887,40 @@ impl App {
             let ai = camp.active_adventure_idx();
             let places = self.places();
             let here = camp.party_location.trim();
-            // Header: adventure and day, then date and weather.
+            // Title card: the adventure in green, then day, date and
+            // weather in brown.
+            let here_place = places.iter().find(|l| l.name.eq_ignore_ascii_case(here));
             let mut left: Vec<String> = Vec::new();
-            let title = match ai.map(|i| &camp.adventures[i]) {
+            let mut sub: Vec<String> = Vec::new();
+            match ai.map(|i| &camp.adventures[i]) {
                 Some(a) => {
+                    left.push(style::bold(&style::fg(&crust::truncate_ansi(&format!(" {}", a.name), w), t::ACCENT)).to_string());
                     let lin = |d: crate::calendar::AmarDate|
                         d.year as i64 * crate::calendar::DAYS_PER_YEAR as i64 + d.day_of_year as i64;
-                    match (a.start, a.end) {
-                        (Some(s), Some(e)) if (lin(s)..=lin(e)).contains(&lin(camp.date)) => format!(" {}  \u{00b7}  day {} of {}",
-                            a.name, lin(camp.date) - lin(s) + 1, lin(e) - lin(s) + 1),
-                        _ => format!(" {}", a.name),
+                    if let (Some(s), Some(e)) = (a.start, a.end) {
+                        if (lin(s)..=lin(e)).contains(&lin(camp.date)) {
+                            sub.push(format!("day {} of {}", lin(camp.date) - lin(s) + 1, lin(e) - lin(s) + 1));
+                        }
                     }
                 }
-                None => " No active adventure (Book tab: a)".to_string(),
+                None => left.push(style::bold(&style::fg(" No active adventure: a on one in the Book", t::FG_MUTED)).to_string()),
+            }
+            sub.push(camp.date.fmt_header());
+            if let Some(x) = camp.weather_for(camp.date) {
+                sub.push(format!("{} {}", x.weather_emoji(), x.weather_text()));
+            }
+            left.push(style::fg(&crust::truncate_ansi(&format!(" {}", sub.join("  \u{00b7}  ")), w), t::TAN).to_string());
+            // A group heading is a brown rule with its name in it.
+            let heading = |label: &str| {
+                let rule = "\u{2500}".repeat(w.saturating_sub(crust::display_width(label) + 5));
+                format!(" {} {} {}", style::fg("\u{2500}\u{2500}", t::BARK),
+                    style::bold(&style::fg(label, t::TAN)), style::fg(&rule, t::BARK))
             };
-            left.push(style::bold(&crust::truncate_ansi(&title, w)).to_string());
-            let wx = camp.weather_for(camp.date)
-                .map(|x| format!("  \u{00b7}  {} {}", x.weather_emoji(), x.weather_text()))
-                .unwrap_or_default();
-            left.push(style::fg(&crust::truncate_ansi(
-                &format!(" {}{}", camp.date.fmt_header(), wx), w), t::FG_MUTED).to_string());
+            // Party names share one width, so the BP bars line up beside them.
+            let name_w = rows.iter().filter_map(|r| match r {
+                TableRow::Pc(p) => Some(crust::display_width(&camp.pcs[*p].name)),
+                _ => None,
+            }).max().unwrap_or(0) + 2;
             let mut cursor_line = 0;
             let mut pinned = 0;
             let mut group = "";
@@ -919,32 +933,60 @@ impl App {
                 };
                 if g != group {
                     left.push(String::new());
-                    left.push(style::fg(&format!(" {}", g), t::STEEL).to_string());
+                    let label = match (g, here_place) {
+                        ("Nearby", Some(l)) => format!("Nearby in {}", l.region),
+                        _ => g.to_string(),
+                    };
+                    left.push(heading(&label));
                     group = g;
                 }
                 let mut muted = false;
                 let mut current = false;
+                let mut strong = false;
+                // `suffix` is styled on its own and kept off the row colour.
+                let mut suffix = String::new();
                 let text = match *row {
                     TableRow::Scene(s) => {
                         let adv = &camp.adventures[ai.unwrap()];
                         let sec = &adv.sections[s];
                         current = adv.current_section == Some(s);
+                        strong = sec.level <= 2;
                         let indent = "  ".repeat(sec.level.saturating_sub(2) as usize);
                         if crate::adventure::is_stat_block_heading(&sec.heading) {
-                            // A stat block: just the name.
+                            // A stat block is a person: the name only.
                             muted = true;
+                            strong = false;
                             let name = sec.heading.split(" (").next().unwrap_or(&sec.heading);
-                            format!("{}{}", indent, name.split(" - ").next().unwrap_or(name))
+                            format!("{}\u{00b7} {}", indent, name.split(" - ").next().unwrap_or(name))
                         } else {
                             format!("{}{}", indent, sec.heading)
                         }
                     }
                     TableRow::Pc(p) => {
+                        // Name, then a BP bar that turns brown, then red, as wounds mount.
                         let pc = &camp.pcs[p];
-                        format!("{}  BP {}/{}", pc.name, pc.bp_current, pc.bp_max())
+                        let (cur, max) = (pc.bp_current.max(0), pc.bp_max().max(1));
+                        let cells = max.min(10) as usize;
+                        let full = ((cur * cells as i32 + max - 1) / max).min(cells as i32) as usize;
+                        let colour = if cur * 2 > max { t::OK } else if cur * 4 > max { 179 }
+                            else if cur > 0 { t::WARN } else { 167 };
+                        suffix = format!(" {}{} {}",
+                            style::fg(&"\u{25B0}".repeat(full), colour),
+                            style::fg(&"\u{25B1}".repeat(cells - full), t::FG_FAINT),
+                            style::fg(&format!("{:>2}/{:<2}", pc.bp_current, max), t::FG_MUTED));
+                        let nw = name_w.min(w.saturating_sub(4 + cells + 8));
+                        let name = crust::truncate_ansi(&pc.name, nw);
+                        let pad = nw.saturating_sub(crust::display_width(&name));
+                        format!("{}{}", name, " ".repeat(pad))
                     }
                     TableRow::Here if here.is_empty() => { muted = true; "g sets where the party is".into() }
-                    TableRow::Here => here.to_string(),
+                    TableRow::Here => {
+                        strong = true;
+                        if let Some(l) = here_place.filter(|l| !l.kind.is_empty()) {
+                            suffix = style::fg(&format!("  {}", l.kind), t::FG_MUTED).to_string();
+                        }
+                        here.to_string()
+                    }
                     TableRow::Npc(n) => format!("  \u{00b7} {}", camp.npcs[n].name),
                     TableRow::WorldNpc(n) => format!("  \u{00b7} {}", self.world.npcs[n].name),
                     TableRow::Place(p) => places[p].name.clone(),
@@ -952,7 +994,7 @@ impl App {
                 let row_text = crust::truncate_ansi(&format!("{} {} {}",
                     if i == cursor { "\u{2192}" } else { " " },
                     if current { "\u{25B6}" } else { " " }, text), w);
-                left.push(if i == cursor {
+                let styled = if i == cursor {
                     cursor_line = left.len();
                     if left_active { style::bold(&style::fg(&row_text, t::ACCENT)).to_string() }
                     else { style::fg(&row_text, t::FG_DIM).to_string() }
@@ -960,7 +1002,13 @@ impl App {
                     style::bold(&style::fg(&row_text, t::OK)).to_string()
                 } else if muted {
                     style::fg(&row_text, t::FG_MUTED).to_string()
-                } else { row_text });
+                } else if strong {
+                    style::bold(&style::fg(&row_text, t::FG_BRIGHT)).to_string()
+                } else { style::fg(&row_text, t::FG).to_string() };
+                // The suffix only shows where it fits.
+                let room = w.saturating_sub(crust::display_width(&row_text));
+                left.push(if crust::display_width(&suffix) <= room { styled + &suffix }
+                          else { styled + &crust::truncate_ansi(&suffix, room) });
                 if g == "Here" { pinned = left.len(); }
             }
             // Right pane: whatever the cursor is on.
@@ -4102,7 +4150,7 @@ impl App {
                 else { style::fg(&row, t::FG_DIM) }
             } else {
                 match node {
-                    WorldNode::SecLoc => style::fg(&row, t::STEEL),
+                    WorldNode::SecLoc => style::fg(&row, t::TAN),
                     WorldNode::LocRegion(_) => style::fg(&row, t::AMBER),
                     WorldNode::Empty(_) => style::fg(&row, t::FG_MUTED),
                     _ => row,
@@ -4660,15 +4708,15 @@ impl App {
             .map(|c| c.name.clone())
             .unwrap_or_else(|| "(no campaign)".to_string());
 
-        // Tab strip — highlight the active tab with bold + bright fg.
-        // Avoid changing bg here: SGR 49 (bg-reset) goes to terminal
-        // default, NOT back to the pane bg, so any `style::bg` segment
-        // in mid-line would leave a black hole for the rest of the row.
+        // Tab strip — the active tab is a green tab with dark text. SGR 49
+        // (bg-reset) goes to the terminal default, NOT back to the bar's
+        // bg, so the bar colour is set again by hand right after it.
         let mut tab_strip = String::new();
         for (i, tab) in Tab::all().iter().enumerate() {
-            let label = format!(" [{}] {} ", i + 1, tab.name());
+            let label = format!(" {} {} ", i + 1, tab.name());
             if *tab == self.tab {
-                tab_strip.push_str(&style::bold(&style::fg(&label, t::ACCENT)));
+                tab_strip.push_str(&format!("\x1b[1;38;5;{};48;5;{}m{}\x1b[22;38;5;{};48;5;{}m",
+                    t::BG_BAR, t::ACCENT, label, t::FG_BRIGHT, t::BG_BAR));
             } else {
                 tab_strip.push_str(&style::fg(&label, t::FG_MUTED));
             }
@@ -4769,7 +4817,7 @@ impl App {
             } else {
                 match &item.node {
                     Node::Doc { .. } => row,
-                    Node::CanonCategory { .. } => style::fg(&row, t::STEEL),
+                    Node::CanonCategory { .. } => style::fg(&row, t::TAN),
                     Node::CanonEntry { .. } => style::fg(&row, t::FG),
                 }
             };
@@ -5486,7 +5534,7 @@ impl App {
                 }
             } else {
                 match &item.node {
-                    CampNode::Section(_) => style::fg(&row, t::STEEL),
+                    CampNode::Section(_) => style::fg(&row, t::TAN),
                     CampNode::Placeholder { .. } => style::fg(&row, t::FG_MUTED),
                     // Adventure rows wear their own colour (set with `Y`), so a
                     // colour-coded adventure stands out in the tree.
@@ -6156,6 +6204,8 @@ impl App {
         let body = crate::adventure::section_body(adv, sec_idx);
         let mut out: Vec<String> = vec![String::new()];
         out.push(style::bold(&style::fg(&sec.heading, t::ACCENT)).to_string());
+        let rule_w = crust::display_width(&sec.heading).min((self.right_pane.w as usize).saturating_sub(2));
+        out.push(style::fg(&"\u{2500}".repeat(rule_w), t::BARK).to_string());
         if camp.active_adventure_id == Some(adv.id) && adv.current_section == Some(sec_idx) {
             out.push(style::fg("  ● current section", t::OK).to_string());
         }
@@ -6351,15 +6401,15 @@ impl App {
         -> (Vec<String>, Vec<EditableField>, Option<(usize, usize, usize, usize, String)>) {
         use crate::pc::{ATTRIBUTES, SKILLS, Char, HIT_LOCATIONS, bp_for_location};
         const LBL_ID:    u8 = 245;
-        const LBL_PHYS:  u8 = 174;
-        const LBL_HIT:   u8 = 117;
-        const DICE:      u8 = 220;
-        const TITLE:     u8 = 226;
+        const LBL_PHYS:  u8 = t::TAN;
+        const LBL_HIT:   u8 = t::TAN;
+        const DICE:      u8 = t::AMBER;
+        const TITLE:     u8 = t::ACCENT;
         const PLAYER:    u8 = 244;
-        const STATUS_OK: u8 = 46;
-        const STATUS_W:  u8 = 220;
-        const STATUS_HW: u8 = 208;
-        const STATUS_X:  u8 = 196;
+        const STATUS_OK: u8 = t::OK;
+        const STATUS_W:  u8 = 179;
+        const STATUS_HW: u8 = t::WARN;
+        const STATUS_X:  u8 = 167;
         const LBL: u8 = LBL_ID;
         let mut out: Vec<String> = Vec::new();
         let mut edits: Vec<EditableField> = Vec::new();
@@ -8031,7 +8081,7 @@ fn emit_cell(label_color: u8, label: &str, value: &str, active: bool) -> String 
         // Always highlight at least one cell — use a single space when
         // the value is empty so the cursor is visible.
         let inner = if value.is_empty() { " ".to_string() } else { v_disp };
-        crust::style::bold(&crust::style::bg(&inner, 24))
+        crust::style::bold(&crust::style::bg(&inner, 22))
     } else {
         v_disp
     };
@@ -8053,7 +8103,7 @@ fn value_cell(value: &str, min_w: usize, active: bool) -> String {
         else { format!("{}{}", value, " ".repeat(min_w - w)) }
     };
     if active {
-        crust::style::bold(&crust::style::bg(&padded, 24))
+        crust::style::bold(&crust::style::bg(&padded, 22))
     } else if value.is_empty() {
         format!("{:<width$}", "—", width = min_w)
     } else {
@@ -8082,7 +8132,7 @@ fn push_add_row(
         current: String::new(),
     });
     let cell = if active {
-        style::bold(&style::bg(visible, 24))
+        style::bold(&style::bg(visible, 22))
     } else {
         style::fg(visible, t::FG_DIM)
     };

@@ -132,7 +132,7 @@ pub fn render_markdown(body: &str, max_width: usize) -> Vec<String> {
             out.push(style::fg(&"-".repeat(rest.chars().count()), t::FG_DIM));
         } else if let Some(rest) = line.strip_prefix("## ") {
             out.push(String::new());
-            out.push(style::bold(&style::fg(rest, t::STEEL)));
+            out.push(style::bold(&style::fg(rest, t::TAN)));
         } else if let Some(rest) = line.strip_prefix("### ") {
             out.push(style::bold(&style::fg(rest, t::FG)));
         } else if let Some(rest) = line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")) {
@@ -214,7 +214,7 @@ fn apply_inline_styles(s: &str) -> String {
                     if c2 == ')' { break; }
                     if c2 == '\n' { break; }
                 }
-                out.push_str(&style::fg(&text, t::STEEL));
+                out.push_str(&style::fg(&text, t::TAN));
             } else if closed {
                 out.push('[');
                 out.push_str(&text);
@@ -240,7 +240,7 @@ pub fn render_canon_entry(entry: &Entry) -> Vec<String> {
     out.push(style::bold(&style::fg(&entry.name, t::ACCENT)));
     out.push(style::fg(&"-".repeat(entry.name.chars().count()), t::FG_DIM));
     if !entry.domains.is_empty() {
-        out.push(style::fg(&format!("Domains: {}", entry.domains.join(", ")), t::STEEL));
+        out.push(style::fg(&format!("Domains: {}", entry.domains.join(", ")), t::TAN));
     }
     out.push(String::new());
 
