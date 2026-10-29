@@ -4,7 +4,7 @@
 
 **The Amar RPG companion. Written in Rust.**
 
-![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.1-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
+![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.2-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
 Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five tabs: the Table for the game being played now, the shared World, a Combat HUD, browsable Lore from the canon wiki, and the Book that keeps the whole campaign. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
 
@@ -108,6 +108,7 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | ENTER | On a scene: make it current. On a PC or NPC: edit it in the Book. On a nearby place: travel there |
 | → / l | Open the scene's image |
 | g | Go to a place (fuzzy name); sets where the party is and writes "Travelled to X" in the diary |
+| G | Go to the cursor's scene or nearby place (a room number like "3." is dropped) |
 | f | Fight: the party, the NPCs where the party is and the tag pool, in the Combat tab |
 | ESC | Back to the current scene |
 | / | Search the Book |
@@ -121,7 +122,7 @@ Press `?` for the in-app help. Press `q` to quit (saves campaign + config).
 | + | Promote NPC → roster (default NPC; press `p` for PC list) |
 | I | Import an adventure directory into the campaign |
 | N | On Adventures header → scaffold new adventure; on a section row → append session note |
-| a | Mark cursor adventure as ACTIVE (persists between sessions) |
+| a | Mark cursor adventure as ACTIVE (persists between sessions). On the active one: clear it, so the Table shows "Between adventures" |
 | R | Re-scan adventure root for new scenes / NPCs / .md edits |
 | V | Push cursor image to player display (`feh --class amar-player`) |
 | G | Generate scene image for the cursor section |

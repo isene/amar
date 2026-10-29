@@ -158,8 +158,9 @@ externally with →. In-app: `n` adds, ENTER edits description, `c` renames,
 ## The Table, the party's place and adventure tags (v0.3.0)
 
 The Table tab (opens first) shows the ACTIVE adventure (`active_adventure_id`)
-and its `current_section` (▶). Keep these fields right and the GM's screen
-follows:
+and its `current_section` (▶). `active_adventure_id: null` means "between
+adventures": the Table shows the party, the place and its people, and no
+scenes. Keep these fields right and the GM's screen follows:
 
 - `campaign.party_location` (string): where the party is, matched by name
   (case-insensitive) against `world.json locations[]`. The Table shows that

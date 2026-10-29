@@ -903,7 +903,7 @@ impl App {
                         }
                     }
                 }
-                None => left.push(style::bold(&style::fg(" No active adventure: a on one in the Book", t::FG_MUTED)).to_string()),
+                None => left.push(style::bold(&style::fg(" Between adventures", t::ACCENT)).to_string()),
             }
             sub.push(camp.date.fmt_header());
             if let Some(x) = camp.weather_for(camp.date) {
@@ -1101,6 +1101,21 @@ impl App {
             " " | "SPACE" => self.table_step_scene(true),
             "," => self.table_step_scene(false),
             "g" => self.table_go(),
+            "G" => {
+                // Go to the cursor's scene or nearby place, no typing.
+                let name = self.campaign.as_ref().and_then(|c| match rows.get(cur)? {
+                    TableRow::Scene(s) => {
+                        let h = &c.adventures[c.active_adventure_idx()?].sections.get(*s)?.heading;
+                        Some(self.place_name(strip_scene_number(h)))
+                    }
+                    TableRow::Place(p) => Some(self.places()[*p].name.clone()),
+                    _ => None,
+                });
+                match name {
+                    Some(n) => self.travel_to(&n),
+                    None => self.status_msg("G works on a scene or a nearby place.", t::WARN),
+                }
+            }
             "f" => {
                 let extra = self.campaign.as_ref().map(|c| {
                     let here = c.party_location.trim().to_lowercase();
@@ -1176,13 +1191,18 @@ impl App {
         let Some(q) = self.footer.ask_or_cancel(" Go to: ", "") else { return };
         let q = q.trim();
         if q.is_empty() { return; }
+        let name = self.place_name(q);
+        self.travel_to(&name);
+    }
+
+    /// The known place `q` names best, else `q` as typed.
+    fn place_name(&self, q: &str) -> String {
         let ql = q.to_lowercase();
-        let name = self.places().iter()
+        self.places().iter()
             .filter_map(|l| name_match_score(&ql, &l.name).filter(|s| *s < 5000).map(|s| (s, &l.name)))
             .min_by_key(|(s, _)| *s)
             .map(|(_, n)| n.clone())
-            .unwrap_or_else(|| q.to_string());
-        self.travel_to(&name);
+            .unwrap_or_else(|| q.to_string())
     }
 
     /// Set where the party is and note the trip in the diary.
@@ -3410,15 +3430,21 @@ impl App {
         if let Some(c) = self.campaign.as_mut() {
             let id = c.adventures.get(adv_idx).map(|a| a.id);
             if let Some(id) = id {
-                c.active_adventure_id = Some(id);
+                // `a` on the active adventure clears it: between adventures.
+                let new = if c.active_adventure_id == Some(id) { None } else { Some(id) };
+                c.active_adventure_id = new;
                 // A fight belongs to its adventure: leave it behind.
-                let cleared = c.combat.as_ref().map(|cb| cb.adventure_id != Some(id)).unwrap_or(false);
+                let cleared = c.combat.as_ref().map(|cb| cb.adventure_id != new).unwrap_or(false);
                 if cleared { c.combat = None; }
                 let _ = c.save();
                 let name = c.adventures[adv_idx].name.clone();
                 let note = if cleared { " (the old fight is cleared)" } else { "" };
                 self.table_idx = None;
-                self.status_msg(&format!("Active adventure: '{}'{}", name, note), t::OK);
+                let msg = match new {
+                    Some(_) => format!("Active adventure: '{}'{}", name, note),
+                    None => format!("Between adventures: '{}' is off the Table{}", name, note),
+                };
+                self.status_msg(&msg, t::OK);
             }
         }
     }
@@ -4884,7 +4910,7 @@ impl App {
         }
         let hint = match self.tab {
             Tab::Table    => match self.focus {
-                Focus::Left  => " SPACE/,:next/prev scene  j/k:move  ENTER:play/open  \u{2192}:img  g:go to  f:fight  ESC:home  TAB:focus  ?:help",
+                Focus::Left  => " SPACE/,:next/prev scene  j/k:move  ENTER:play/open  \u{2192}:img  g/G:go to  f:fight  ESC:home  TAB:focus  ?:help",
                 Focus::Right => " TAB:focus-list  j/k:line  PgUp/PgDn:page  ESC:home",
             },
             Tab::World    => match self.focus {
@@ -7757,6 +7783,7 @@ impl App {
                              Nearby place: travel there\n  \
               \u{2192} / l          Open the scene's image\n  \
               g              Go to a place (sets Here, diary \u{201c}Travelled to X\u{201d})\n  \
+              G              Go to the cursor's scene or nearby place\n  \
               f              Fight: party + NPCs here + tag pool, in Combat\n  \
               ESC            Back to the current scene\n\n  \
             WORLD (tab 2)\n  \
@@ -7781,7 +7808,8 @@ impl App {
               a       On a PC row: toggle the PC ACTIVE/inactive (inactive\n  \
                       PCs are dimmed and sit out combats).\n  \
                       On an adventure: mark it ACTIVE (persists; a fight\n  \
-                      from another adventure is cleared).\n  \
+                      from another adventure is cleared). On the active\n  \
+                      one: clear it, so the Table is between adventures.\n  \
               c       On a saved encounter: take the whole encounter + the\n  \
                       active PCs into COMBAT. Elsewhere: rename the asset.\n  \
               /       Search — jump to the closest matching PC / NPC /\n  \
@@ -9172,6 +9200,15 @@ fn wrap_plain(text: &str, w: usize) -> Vec<String> {
     out
 }
 
+/// "3. The Sealers' Ledger" -> "The Sealers' Ledger"; other headings stay.
+fn strip_scene_number(h: &str) -> &str {
+    let rest = h.trim_start_matches(|c: char| c.is_ascii_digit());
+    match rest.strip_prefix(". ") {
+        Some(r) if rest.len() < h.len() => r.trim(),
+        _ => h.trim(),
+    }
+}
+
 /// Closest-name match score for `/` search (lower = better): exact <
 /// prefix < word-start < substring < in-order subsequence (fuzzy typo
 /// tolerance); `None` = not a plausible match. Shorter names win ties so
@@ -10055,5 +10092,18 @@ mod tree_tests {
         let shown: Vec<_> = tree.iter().filter(|t| matches!(t.node, CampNode::AdventureSection(0, _)))
             .map(|t| t.depth).collect();
         assert_eq!(shown, vec![4, 4]);
+        // Between adventures: no fold, every adventure in the list.
+        c.active_adventure_id = None;
+        let rows: Vec<_> = build_camp_tree(&c, &["Adventures".to_string()]).iter()
+            .map(|t| camp_node_title(&c, &t.node)).collect();
+        assert!(!rows.iter().any(|r| r.starts_with("Earlier")));
+        assert!(rows.iter().any(|r| r.ends_with("A1")) && rows.iter().any(|r| r.ends_with("A2")));
+    }
+
+    #[test]
+    fn scene_numbers_are_cut_from_place_names() {
+        assert_eq!(strip_scene_number("3. The Sealers' Ledger"), "The Sealers' Ledger");
+        assert_eq!(strip_scene_number("Aftermath"), "Aftermath");
+        assert_eq!(strip_scene_number("1984 Revisited"), "1984 Revisited");
     }
 }
