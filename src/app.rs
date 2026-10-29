@@ -906,23 +906,24 @@ impl App {
                 None => left.push(style::bold(&style::fg(" Between adventures", t::ACCENT)).to_string()),
             }
             sub.push(camp.date.fmt_header());
-            if let Some(x) = camp.weather_for(camp.date) {
-                sub.push(format!("{} {}", x.weather_emoji(), x.weather_text()));
-            }
             left.push(String::new());
             left.push(style::fg(&crust::truncate_ansi(&format!(" {}", sub.join("  \u{00b7}  ")), w), t::TAN).to_string());
-            // The week ahead: day of the month and its weather, today in green.
+            // Today's sky and wind, then the week ahead: day of the month,
+            // sky and a wind arrow coloured by strength, today in green.
+            if let Some(x) = camp.weather_for(camp.date) {
+                left.push(String::new());
+                left.push(crust::truncate_ansi(&format!(" {} {}  {}  {}", x.weather_emoji(),
+                    style::fg(x.weather_text(), t::TAN), style::fg("\u{00b7}", t::TAN),
+                    style::fg(&format!("{} {}", x.wind_arrow(), x.wind_text()).trim_start(), x.wind_color())), w));
+            }
             let week: Vec<String> = (0..7).filter_map(|i| {
                 let d = camp.date.advance(i);
                 let x = camp.weather_for(d)?;
                 let n = d.day_of_month().to_string();
                 let n = if i == 0 { style::bold(&style::fg(&n, t::ACCENT)).to_string() } else { style::fg(&n, t::TAN).to_string() };
-                Some(format!("{}{}", n, x.weather_emoji()))
+                Some(format!("{}{}{}", n, x.weather_emoji(), style::fg(x.wind_arrow(), x.wind_color())))
             }).collect();
-            if !week.is_empty() {
-                left.push(String::new());
-                left.push(crust::truncate_ansi(&format!(" {}", week.join("  ")), w));
-            }
+            if !week.is_empty() { left.push(crust::truncate_ansi(&format!(" {}", week.join("  ")), w)); }
             // A group heading is a brown rule with its name in it.
             let heading = |label: &str| {
                 let rule = "\u{2500}".repeat(w.saturating_sub(crust::display_width(label) + 5));
