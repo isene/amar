@@ -48,7 +48,7 @@ impl Tab {
     // window instead, which injects into campaign.json directly (amar
     // picks the edits up live via the mtime watch in run()).
     fn all() -> [Tab; 5] {
-        [Tab::Table, Tab::World, Tab::Combat, Tab::Lore, Tab::Campaign]
+        [Tab::Campaign, Tab::Table, Tab::Combat, Tab::World, Tab::Lore]
     }
     fn next(self) -> Tab {
         let all = Tab::all();
@@ -524,11 +524,11 @@ impl App {
                     let _ = self.config.save();
                     break;
                 }
-                "1" => { self.set_tab(Tab::Table); }
-                "2" => { self.set_tab(Tab::World); }
+                "1" => { self.set_tab(Tab::Campaign); }
+                "2" => { self.set_tab(Tab::Table); }
                 "3" => { self.set_tab(Tab::Combat); }
-                "4" => { self.set_tab(Tab::Lore); }
-                "5" => { self.set_tab(Tab::Campaign); }
+                "4" => { self.set_tab(Tab::World); }
+                "5" => { self.set_tab(Tab::Lore); }
                 // O6 rolls into the status line: o = skill roll, O = combat
                 // roll. Not on the Combat tab, where o rolls OFF for the
                 // selected combatant. `6` / `^` remain as aliases.
@@ -7758,11 +7758,11 @@ impl App {
             amar v{} - Amar RPG companion\n  \
             5-tab TUI honoring d6gaming.org canon.\n\n  \
             TABS\n  \
-              1   Table      The game now — active adventure, party, where they are\n  \
-              2   World      The shared world — locations + major NPCs (all campaigns)\n  \
+              1   Book       The whole campaign — calendar/diary, PCs, NPCs, adventures\n  \
+              2   Table      The game now — active adventure, party, where they are\n  \
               3   Combat     Combat HUD — populated from encounters + active PCs\n  \
-              4   Lore       Browsable canon (wiki + setting + author additions)\n  \
-              5   Book       The whole campaign — calendar/diary, PCs, NPCs, adventures\n  \
+              4   World      The shared world — locations + major NPCs (all campaigns)\n  \
+              5   Lore       Browsable canon (wiki + setting + author additions)\n  \
               (Forge + Inspire retired as tabs — run a companion Claude Code\n  \
                session in a sibling window; amar picks up campaign.json edits\n  \
                live, on the next keypress.)\n\n  \
@@ -7775,7 +7775,7 @@ impl App {
               j / k          Down / up (Down/Up walk this help line-by-line)\n  \
               ?              This help\n  \
               C-A            A full Claude session about the campaign\n\n  \
-            TABLE (tab 1, the opening screen)\n  \
+            TABLE (tab 2, the opening screen)\n  \
               SPACE / ,      Next / previous scene (moves \u{25B6}; today's diary\n  \
                              keeps one \u{201c}\u{25B6} scene\u{201d} line)\n  \
               j / k          Move; the right pane shows scene, sheet or place\n  \
@@ -7786,7 +7786,7 @@ impl App {
               G              Go to the cursor's scene or nearby place\n  \
               f              Fight: party + NPCs here + tag pool, in Combat\n  \
               ESC            Back to the current scene\n\n  \
-            WORLD (tab 2)\n  \
+            WORLD (tab 4)\n  \
               ONE tree: region folds \u{2192} locations \u{2192} each location's\n  \
               NPCs nested beneath it. \u{201c}Other\u{201d} holds the unbound\n  \
               (travellers etc.). Folds work like a hyperlist \u{2014} l/ENTER\n  \
@@ -7802,7 +7802,7 @@ impl App {
               ,              Step the current day back (removes the underline)\n  \
               T              Set the current day to the selected day\n  \
               g              Jump back to the current day\n\n  \
-            BOOK (tab 5; other adventures and their NPCs fold under \u{201c}Earlier\u{201d})\n  \
+            BOOK (tab 1; other adventures and their NPCs fold under \u{201c}Earlier\u{201d})\n  \
               C       Create a new campaign   L  Load   X  Delete (asks twice)\n  \
               e/ENTER Edit the cursor adventure's narrative in scribe\n  \
               a       On a PC row: toggle the PC ACTIVE/inactive (inactive\n  \

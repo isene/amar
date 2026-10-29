@@ -9,7 +9,7 @@ companion session replaces them.
 
 ## World vs Campaign (v0.2.0)
 
-Tabs: 1 Table, 2 World, 3 Combat, 4 Lore, 5 Book (the Campaign tab).
+Tabs: 1 Book (the Campaign tab), 2 Table (opens first), 3 Combat, 4 World, 5 Lore.
 
 `~/.amar/world.json` holds what exists independently of any campaign:
 

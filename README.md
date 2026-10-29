@@ -4,7 +4,7 @@
 
 **The Amar RPG companion. Written in Rust.**
 
-![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.2-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
+![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.3-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
 Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five tabs: the Table for the game being played now, the shared World, a Combat HUD, browsable Lore from the canon wiki, and the Book that keeps the whole campaign. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
 
@@ -35,11 +35,11 @@ Part of the [Fe₂O₃ Rust terminal suite](https://github.com/isene/fe2o3).
 ## Features
 
 - **5 tabs**
-  - **Table** (opens first) — the active adventure's scenes, the party, where they are, who is there and the places nearby
-  - **World** — the shared places and major NPCs, across all campaigns
-  - **Combat** — live combat HUD
-  - **Lore** — browsable canon: mythology, kingdom, world, calendar, spells, rituals, potions
   - **Book** — the whole campaign: calendar and diary, PCs, NPCs, adventures; other adventures sit under an "Earlier" fold
+  - **Table** (opens first) — the active adventure's scenes, the party, where they are, who is there and the places nearby
+  - **Combat** — live combat HUD
+  - **World** — the shared places and major NPCs, across all campaigns
+  - **Lore** — browsable canon: mythology, kingdom, world, calendar, spells, rituals, potions
 - **3-tier d6 character system** (Char + Attribute + Skill = Total) honored throughout
 - **187 wiki entries** scraped from d6gaming.org (spells / rituals / potions), bundled offline
 - **Adventure import**: point at a directory, amar walks `*.md` + `Scenes/` + `Floorplans/` + `NPCs/`, parses heading-level sections, auto-attaches scene images to their sections
