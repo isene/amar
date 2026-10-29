@@ -1101,6 +1101,8 @@ impl App {
             " " | "SPACE" => self.table_step_scene(true),
             "," => self.table_step_scene(false),
             "g" => self.table_go(),
+            "." | ">" => self.advance_current_day(),
+            "<" => self.retreat_current_day(),
             "G" => {
                 // Go to the cursor's scene or nearby place, no typing.
                 let name = self.campaign.as_ref().and_then(|c| match rows.get(cur)? {
@@ -4910,7 +4912,7 @@ impl App {
         }
         let hint = match self.tab {
             Tab::Table    => match self.focus {
-                Focus::Left  => " SPACE/,:next/prev scene  j/k:move  ENTER:play/open  \u{2192}:img  g/G:go to  f:fight  ESC:home  TAB:focus  ?:help",
+                Focus::Left  => " SPACE/,:next/prev scene  j/k:move  ENTER:play/open  \u{2192}:img  g/G:go to  .:next day  f:fight  ESC:home  TAB:focus  ?:help",
                 Focus::Right => " TAB:focus-list  j/k:line  PgUp/PgDn:page  ESC:home",
             },
             Tab::World    => match self.focus {
@@ -7784,6 +7786,7 @@ impl App {
               \u{2192} / l          Open the scene's image\n  \
               g              Go to a place (sets Here, diary \u{201c}Travelled to X\u{201d})\n  \
               G              Go to the cursor's scene or nearby place\n  \
+              . / <          Next / previous day (weather follows)\n  \
               f              Fight: party + NPCs here + tag pool, in Combat\n  \
               ESC            Back to the current scene\n\n  \
             WORLD (tab 4)\n  \
