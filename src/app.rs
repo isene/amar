@@ -909,6 +909,7 @@ impl App {
             if let Some(x) = camp.weather_for(camp.date) {
                 sub.push(format!("{} {}", x.weather_emoji(), x.weather_text()));
             }
+            left.push(String::new());
             left.push(style::fg(&crust::truncate_ansi(&format!(" {}", sub.join("  \u{00b7}  ")), w), t::TAN).to_string());
             // The week ahead: day of the month and its weather, today in green.
             let week: Vec<String> = (0..7).filter_map(|i| {
@@ -918,7 +919,10 @@ impl App {
                 let n = if i == 0 { style::bold(&style::fg(&n, t::ACCENT)).to_string() } else { style::fg(&n, t::TAN).to_string() };
                 Some(format!("{}{}", n, x.weather_emoji()))
             }).collect();
-            if !week.is_empty() { left.push(crust::truncate_ansi(&format!(" {}", week.join("  ")), w)); }
+            if !week.is_empty() {
+                left.push(String::new());
+                left.push(crust::truncate_ansi(&format!(" {}", week.join("  ")), w));
+            }
             // A group heading is a brown rule with its name in it.
             let heading = |label: &str| {
                 let rule = "\u{2500}".repeat(w.saturating_sub(crust::display_width(label) + 5));

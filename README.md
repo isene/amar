@@ -4,7 +4,7 @@
 
 **The Amar RPG companion. Written in Rust.**
 
-![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.5-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
+![Rust](https://img.shields.io/badge/language-Rust-f74c00) ![License](https://img.shields.io/badge/license-Unlicense-green) ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue) ![Version](https://img.shields.io/badge/version-0.3.6-blue) ![Canon](https://img.shields.io/badge/canon-d6gaming.org-7a5cff) ![Fe2O3](https://img.shields.io/badge/Fe%E2%82%82O%E2%83%93-suite-b7410e) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
 Terminal companion for the **[Amar RPG](https://d6gaming.org)** — Geir Isene's three-tier d6 system (O6). Five tabs: the Table for the game being played now, the shared World, a Combat HUD, browsable Lore from the canon wiki, and the Book that keeps the whole campaign. Built on [crust](https://github.com/isene/crust) (TUI) and [glow](https://github.com/isene/glow) (kitty graphics).
 
