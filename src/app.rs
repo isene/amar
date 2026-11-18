@@ -4910,13 +4910,13 @@ impl App {
         // into a wrapped second row.
         let cols = self.cols as usize;
         if let Some((ref msg, color)) = self.status {
-            let right = format!("amar v{} ", VERSION);
+            let right = crust::version_tag("amar", VERSION);
             let rw = crust::display_width(&right);
             let msg_fit = crust::truncate_ansi(msg, cols.saturating_sub(1));
             let mw = crust::display_width(&msg_fit);
             let line = if mw + rw < cols {
                 format!("{}{}{}", style::fg(&msg_fit, color),
-                    " ".repeat(cols - mw - rw), style::fg(&right, t::FG_DIM))
+                    " ".repeat(cols - mw - rw), right)
             } else {
                 style::fg(&msg_fit, color).to_string()
             };
@@ -4948,13 +4948,13 @@ impl App {
             Tab::Inspire  => " 1-3:tabs  o/O:O6-roll  C:new-camp  L:load  ?:help  q:quit",
             Tab::Combat   => " ←↑↓→:select  i/I:init  o/d/D:roll  r:round  s:status  w:weapon  +/-:BP  a:add  x:remove  C:scrub",
         };
-        let right = format!("amar v{} ", VERSION);
+        let right = crust::version_tag("amar", VERSION);
         let hint_fit = crust::truncate_ansi(hint, cols.saturating_sub(1));
         let hw = crust::display_width(&hint_fit);
         let rw = crust::display_width(&right);
         let line = if hw + rw < cols {
             format!("{}{}{}", style::fg(&hint_fit, t::FG_DIM),
-                " ".repeat(cols - hw - rw), style::fg(&right, t::FG_DIM))
+                " ".repeat(cols - hw - rw), right)
         } else {
             style::fg(&hint_fit, t::FG_DIM).to_string()
         };
